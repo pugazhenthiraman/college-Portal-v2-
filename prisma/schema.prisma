@@ -38,7 +38,6 @@ model User {
   student    Student?
 }
 
-
 model SuperAdmin {
   id     Int  @id @default(autoincrement())
   // One-to-one relation with User
@@ -47,105 +46,100 @@ model SuperAdmin {
 }
 
 model College {
-  id                      Int           @id @default(autoincrement())
+  id     Int  @id @default(autoincrement())
   // One-to-one relation with User
-  userId                  Int           @unique
-  user                    User          @relation(fields: [userId], references: [id])
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
 
-  
-  name                    String        @unique
-  secondaryEmailId        String?        @unique
-  address                 String?
-  affiliatedUniversity   String
-  deemedUniversity       String
-  recognitionStatus      String
-  instituteCode          String?
-  councilIssuingCode      String
-  remark                  String?
-  status                  CollegeStatus @default(PENDING)
-  createdAt               DateTime      @default(now())
+  name                 String        @unique
+  secondaryEmailId     String?       @unique
+  address              String?
+  affiliatedUniversity String
+  deemedUniversity     String
+  recognitionStatus    String
+  instituteCode        String?
+  councilIssuingCode   String
+  remark               String?
+  status               CollegeStatus @default(PENDING)
+  createdAt            DateTime      @default(now())
 
   // Reverse relations
-  departments             Department[]
-  hods                    HOD[]
-  faculty                 Faculty[]
-  students                Student[]
+  departments Department[]
+  hods        HOD[]
+  faculty     Faculty[]
+  students    Student[]
 }
-
 
 model Department {
-  id        Int      @id @default(autoincrement())
+  id     Int  @id @default(autoincrement())
   // One-to-one relation with User (if you need department-specific authentication)
-  userId    Int      @unique
-  user      User     @relation(fields: [userId], references: [id])
-  
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
   name      String
   collegeId Int
-  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   // One-to-one relation: each department may have one HOD
-  hod       HOD?
-  
-  faculty   Faculty[]
-  students  Student[]
-}
+  hod HOD?
 
+  faculty  Faculty[]
+  students Student[]
+}
 
 model HOD {
-  id           Int         @id @default(autoincrement())
+  id     Int  @id @default(autoincrement())
   // One-to-one relation with User
-  userId       Int         @unique
-  user         User        @relation(fields: [userId], references: [id])
-  
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
   name         String
   collegeId    Int
-  college      College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  departmentId Int         @unique
-  department   Department  @relation(fields: [departmentId], references: [id])
-  createdAt    DateTime    @default(now())
-  
-  faculty      Faculty[]
-  students     Student[]
-}
+  college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  departmentId Int        @unique
+  department   Department @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime   @default(now())
 
+  faculty  Faculty[]
+  students Student[]
+}
 
 model Faculty {
-  id           Int        @id @default(autoincrement())
+  id     Int  @id @default(autoincrement())
   // One-to-one relation with User
-  userId       Int        @unique
-  user         User       @relation(fields: [userId], references: [id])
-  
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
   name         String
   collegeId    Int
   college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   departmentId Int
   department   Department @relation(fields: [departmentId], references: [id])
-  
-  hodId        Int?    
-  hod          HOD?       @relation(fields: [hodId], references: [id])
-  
-  createdAt    DateTime   @default(now())
-  students     Student[]  @relation("FacultyStudents")
+
+  hodId Int?
+  hod   HOD? @relation(fields: [hodId], references: [id])
+
+  createdAt DateTime  @default(now())
+  students  Student[] @relation("FacultyStudents")
 }
 
-
 model Student {
-  id           Int        @id @default(autoincrement())
+  id     Int  @id @default(autoincrement())
   // One-to-one relation with User
-  userId       Int        @unique
-  user         User       @relation(fields: [userId], references: [id])
-  
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
   name         String
   collegeId    Int
   college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   departmentId Int
   department   Department @relation(fields: [departmentId], references: [id])
-  
-  facultyId    Int
-  faculty      Faculty?   @relation("FacultyStudents", fields: [facultyId], references: [id])
-  
-  hodId        Int?
-  hod          HOD?       @relation(fields: [hodId], references: [id])
-  
-  createdAt    DateTime   @default(now())
+
+  facultyId Int
+  faculty   Faculty? @relation("FacultyStudents", fields: [facultyId], references: [id])
+
+  hodId Int?
+  hod   HOD? @relation(fields: [hodId], references: [id])
+
+  createdAt DateTime @default(now())
 }
