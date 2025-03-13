@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
@@ -26,7 +26,7 @@ async function main() {
   });
   console.log("✅ Super Admin Created:", superAdminUser.email);
 
-  // COLLEGE (College Admin)
+  // COLLEGE
   const collegeUser = await prisma.user.create({
     data: {
       email: "admin@college.com",
@@ -43,7 +43,6 @@ async function main() {
       recognitionStatus: "NAAC",
       instituteCode: "STS",
       councilIssuingCode: "INST",
-      // address and remark are optional; status defaults to PENDING.
     }
   });
   console.log("✅ College Created:", college.name);
@@ -65,7 +64,7 @@ async function main() {
   });
   console.log("✅ Department Created:", department.name);
 
-  // HEAD OF DEPARTMENT (HOD)
+  // HOD
   const hodUser = await prisma.user.create({
     data: {
       email: "hod@hod.com",
@@ -115,8 +114,17 @@ async function main() {
       userId: studentUser.id,
       name: "test student",
       collegeId: college.id,
-      departmentId: department.id,
+      departmentId: department.id,  // Optional, can be null
       facultyId: faculty.id,
+      rollNo: "STS01",
+      personalEmail: "test.student1@gmail.com",
+      DOB: new Date("2000-01-01"),
+      phoneNo: "+1234567890",
+      nationality: "Indian",
+      countryCode: "IN",
+      departmentName: "Computer Science",
+      passportNo: "P987654321",
+      passportExpiryDate: new Date("2030-12-31"),
     }
   });
   console.log("✅ Student Created:", student.name);
@@ -130,5 +138,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-export {};

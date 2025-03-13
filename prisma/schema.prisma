@@ -129,17 +129,30 @@ model Student {
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
 
-  name         String
-  collegeId    Int
-  college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id])
+  name             String
+  collegeId        Int
+  college          College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  
+  departmentId     Int?
+  department       Department? @relation(fields: [departmentId], references: [id])
 
-  facultyId Int
-  faculty   Faculty? @relation("FacultyStudents", fields: [facultyId], references: [id])
+  facultyId        Int?
+  faculty          Faculty? @relation("FacultyStudents", fields: [facultyId], references: [id])
 
-  hodId Int?
-  hod   HOD? @relation(fields: [hodId], references: [id])
+  hodId            Int?
+  hod              HOD? @relation(fields: [hodId], references: [id])
+
+  rollNo            String @unique
+  photo             String?  
+  personalEmail     String  @unique
+  DOB               DateTime
+  phoneNo           String
+  nationality       String
+  countryCode       String
+  departmentName    String
+  passportNo        String?
+  passportExpiryDate DateTime?
 
   createdAt DateTime @default(now())
 }
+

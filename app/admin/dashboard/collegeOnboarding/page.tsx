@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../../components/ui/Tabs";
 import { Button } from "@/components/ui/button";
-import { CollegeDetailsModal } from "../../../../components/approvals/collegeDetailsModel";
+import { CollegeDetailsModal } from "@/components/approvals/collegeDetailsModel";
 import { College } from "../../../type";
 
 const Pagination = ({ currentPage, totalPages, onPageChange } : {currentPage: number, totalPages: number, onPageChange: any}) => {

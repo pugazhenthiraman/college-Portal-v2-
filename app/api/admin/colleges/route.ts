@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { PrismaClient, CollegeStatus } from "@prisma/client";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 const prisma = new PrismaClient();
+
+
 
 export async function GET(req: NextRequest) {
   try {
