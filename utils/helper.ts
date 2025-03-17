@@ -55,6 +55,10 @@ export const insertStudents = async (data: any[]) => {
     console.error("❌ No valid student data to insert");
     return { success: false, message: "No valid students to insert" };
   }
+  if(studentsData){
+    console.log("Student Data:", studentsData);
+    
+  }
   
   await prisma.$executeRawUnsafe(`
     INSERT INTO "Student" ("userId", "name", "collegeId", "departmentName", "rollNo", "personalEmail", "DOB", "phoneNo", "nationality",

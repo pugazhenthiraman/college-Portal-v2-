@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 
@@ -15,6 +15,14 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const searchParams = useSearchParams();
+
+//Fuction to  Capitalize the first letter of the string
+const capitalizeFirstLetter = (str:string)=>{
+  return str.charAt(0).toUpperCase()+str.slice(1).toLowerCase();
+}
+//update the role based on the user role
+ const role=capitalizeFirstLetter(searchParams.get("role")||"");
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
@@ -74,7 +82,7 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="max-w-md w-full bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-3xl font-bold text-center mb-6">Admin Login</h2>
+        <h2 className="text-3xl font-bold text-center mb-6"> <span className="text-indigo-600"> {role} </span> Login</h2>
 
         {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
 
