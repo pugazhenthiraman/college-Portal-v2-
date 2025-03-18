@@ -6,7 +6,7 @@ export const insertStudents = async (data: any[]) => {
     // 1️⃣ Insert Users First (Prisma `createMany()`)
     const usersData = data.map(item => ({
       email: item.email,
-      password: item.hashedPassword,
+      password: item.password,
       role: UserRole.STUDENT
     }));
 
