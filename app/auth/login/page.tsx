@@ -27,6 +27,8 @@ const capitalizeFirstLetter = (str:string)=>{
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     setErrorMessage("");
+
+    
   
     try {
       const res = await signIn("credentials", {
@@ -35,10 +37,12 @@ const capitalizeFirstLetter = (str:string)=>{
         redirect: false, // Prevent automatic redirect
       });
   
-      if (res?.error) {
-        throw new Error("Invalid credentials");
+     if (res?.error) {
+        // Use the error message returned from the backend
+        throw new Error(res.error);
       }
-  
+
+      
       // Fetch session manually
       const response = await fetch("/api/auth/session");
       const session = await response.json();

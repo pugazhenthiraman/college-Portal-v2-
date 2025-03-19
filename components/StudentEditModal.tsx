@@ -1,33 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { Modal } from "@/components/ui/modal";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 
-
-interface Student {
-    name : string,
-    personalEmail : string,
-    DOB : string,
-    phoneNo : string
-
-
-}
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  student: Student | null;
-  onSave: (updatedStudent: Student) => void;
+  student: any | null;
+  onSave: (updatedStudent: any) => void;
 };
 
-export function StudentEditModal({ isOpen, onClose, student, onSave }: Props) {
-  const [editedStudent, setEditedStudent] = useState<Student | null>(student);
+export const StudentEditModal = ({ isOpen, onClose, student, onSave }: Props) => {
+  const [editedStudent, setEditedStudent] = useState<any | null>(student);
 
-  if (!student) return null; // Don't render if no student is selected
+  useEffect(() => {
+    setEditedStudent(student);
+  }, [student]);
+
+  if (!isOpen || !student) return null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditedStudent((prev) => (prev ? { ...prev, [name]: value } : null));
+    // For the email field, update nested user.email if it exists
+    if (name === "email") {
+      setEditedStudent((prev) =>
+        prev ? { ...prev, user: { ...prev.user, email: value } } : null
+      );
+    } else {
+      setEditedStudent((prev) =>
+        prev ? { ...prev, [name]: value } : null
+      );
+    }
   };
 
   const handleSave = () => {
@@ -37,69 +41,131 @@ export function StudentEditModal({ isOpen, onClose, student, onSave }: Props) {
     }
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Student Details">
-      <div className="p-4 bg-white rounded-xl shadow-md">
-        <h3 className="text-lg font-semibold text-indigo-700 mb-4">
-          Edit Student Information
-        </h3>
-
-        <div className="grid grid-cols-1 gap-4 text-gray-600">
-          <label className="block">
-            Name:
-            <input
-              type="text"
-              name="name"
-              value={student?.name || ""}
-              onChange={handleInputChange}
-              className="w-full mt-1 p-2 border rounded-md"
-            />
-          </label>
-
-          <label className="block">
-            Email:
-            <input
-              type="email"
-              name="email"
-              value={student?.personalEmail || ""}
-              onChange={handleInputChange}
-              className="w-full mt-1 p-2 border rounded-md"
-            />
-          </label>
-
-          <label className="block">
-            DOB:
-            <input
-              type="date"
-              name="DOB"
-              value={student?.DOB ? new Date(student.DOB).toISOString().split("T")[0] : ""}
-              onChange={handleInputChange}
-              className="w-full mt-1 p-2 border rounded-md"
-            />
-          </label>
-
-          <label className="block">
-            Phone No:
-            <input
-              type="text"
-              name="phoneNo"
-              value={student?.phoneNo || ""}
-              onChange={handleInputChange}
-              className="w-full mt-1 p-2 border rounded-md"
-            />
-          </label>
-        </div>
-
-        {/* Modal Footer */}
-        <div className="flex justify-end space-x-3 mt-6">
-          <Button onClick={onClose} className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg">
-            Save Changes
-          </Button>
+  return createPortal(
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      {/* Outer container with margin, reduced max height, and hidden scrollbar */}
+      <div
+        className="m-4 max-h-[70vh] overflow-y-auto"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {/* Hide scrollbar for Webkit browsers */}
+        <style jsx>{`
+          ::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-md border border-indigo-600">
+          {/* Modal Header */}
+          <div className="bg-indigo-600 text-white px-6 py-4 rounded-t-xl">
+            <h3 className="text-lg font-semibold">Edit Student Details</h3>
+          </div>
+          {/* Modal Content */}
+          <div className="p-6">
+            <div className="grid grid-cols-1 gap-4 text-gray-700">
+              <label className="block">
+                Name:
+                <input
+                  type="text"
+                  name="name"
+                  value={editedStudent?.name || ""}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+              <label className="block">
+                Email:
+                <input
+                  type="email"
+                  name="email"
+                  value={editedStudent?.user?.email || ""}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+              <label className="block">
+                Roll No:
+                <input
+                  type="text"
+                  name="rollNo"
+                  value={editedStudent?.rollNo || ""}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+              <label className="block">
+                Personal Email:
+                <input
+                  type="email"
+                  name="personalEmail"
+                  value={editedStudent?.personalEmail || ""}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+              <label className="block">
+                DOB:
+                <input
+                  type="date"
+                  name="DOB"
+                  value={
+                    editedStudent?.DOB
+                      ? new Date(editedStudent.DOB).toISOString().split("T")[0]
+                      : ""
+                  }
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+              <label className="block">
+                Phone No:
+                <input
+                  type="text"
+                  name="phoneNo"
+                  value={editedStudent?.phoneNo || ""}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+              <label className="block">
+                Nationality:
+                <input
+                  type="text"
+                  name="nationality"
+                  value={editedStudent?.nationality || ""}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+              <label className="block">
+                Department Name:
+                <input
+                  type="text"
+                  name="departmentName"
+                  value={editedStudent?.departmentName || ""}
+                  onChange={handleInputChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md"
+                />
+              </label>
+            </div>
+          </div>
+          {/* Modal Footer */}
+          <div className="flex justify-end space-x-3 px-6 py-4 bg-gray-50 rounded-b-xl">
+            <Button
+              onClick={onClose}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+            >
+              Save Changes
+            </Button>
+          </div>
         </div>
       </div>
-    </Modal>
+    </div>,
+    document.body
   );
 }

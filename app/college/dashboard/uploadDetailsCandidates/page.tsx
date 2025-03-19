@@ -1,35 +1,35 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader, Download } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 import { StudentEditModal } from "@/components/StudentEditModal";
-import { Student } from "@prisma/client";
-
 export default function UploadDetailsCandidatesPage() {
-  const [data, setData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
+  const [filteredData, setFilteredData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
 
-  // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
 
-  // Sorting States
   const [sortColumn, setSortColumn] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    handleSearch(search); // Apply search on data load
+    handleSearch(search);
   }, [data]);
 
   const fetchData = async () => {
@@ -50,12 +50,12 @@ export default function UploadDetailsCandidatesPage() {
   const handleSearch = (searchTerm: string) => {
     setSearch(searchTerm);
     const filtered = data.filter((row) =>
-      Object.values(row).some(
-        (value) => value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      Object.values(row).some((value) =>
+        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
     setFilteredData(filtered);
-    setCurrentPage(1); // Reset to first page after search
+    setCurrentPage(1);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,27 +71,24 @@ export default function UploadDetailsCandidatesPage() {
       alert("❌ Please select a file before uploading.");
       return;
     }
-
     if (confirm(`Are you sure you want to upload ${fileName}?`)) {
       setLoading(true);
       const formData = new FormData();
       formData.append("studentsExcelData", selectedFile);
-
       try {
         const response = await fetch("/api/college/upload-student", {
           method: "POST",
           body: formData,
         });
-
         if (response.ok) {
-          alert("✅ File uploaded successfully!");
+          toast.success("✅ File uploaded successfully!");
           fetchData();
         } else {
-          alert("❌ Upload failed.");
+          toast.error("❌ Upload failed.");
         }
       } catch (error) {
         console.error(error);
-        alert("❌ Error uploading file. Please try again.");
+        toast.error("❌ Error uploading file. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -106,15 +103,14 @@ export default function UploadDetailsCandidatesPage() {
     { key: "DOB", label: "DOB" },
     { key: "phoneNo", label: "Phone No" },
     { key: "nationality", label: "Nationality" },
-    { key: "countryCode", label: "Country Code" },
     { key: "departmentName", label: "Department Name" },
   ];
 
   const handleSort = (column: string) => {
-    const newDirection = sortColumn === column && sortDirection === "asc" ? "desc" : "asc";
+    const newDirection =
+      sortColumn === column && sortDirection === "asc" ? "desc" : "asc";
     setSortColumn(column);
     setSortDirection(newDirection);
-
     const sortedData = [...filteredData].sort((a, b) => {
       const valueA = a[column] || "";
       const valueB = b[column] || "";
@@ -122,185 +118,214 @@ export default function UploadDetailsCandidatesPage() {
         ? valueA.toString().localeCompare(valueB.toString())
         : valueB.toString().localeCompare(valueA.toString());
     });
-
     setFilteredData(sortedData);
   };
 
-  // Pagination Logic
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
 
-
-
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-
   const handleEditClick = (student: any) => {
-    console.log(student)
+    console.log(student);
     setSelectedStudent(student);
     setIsEditModalOpen(true);
   };
 
-  const handleSaveChanges = async (updatedStudent: Student) => {
+  const handleSaveChanges = async (updatedStudent: any) => {
     try {
-      const response = await fetch(`/api/college/update-student/${updatedStudent.id}`, {
+      const response = await fetch(`/api/college/upload-student/${updatedStudent.userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedStudent),
       });
-  
       if (response.ok) {
-        alert("✅ Student updated successfully!");
-        fetchData(); // Refresh data after update
+        toast.success("✅ Student updated successfully!");
+        fetchData();
         setIsEditModalOpen(false);
       } else {
-        alert("❌ Failed to update student.");
+        const errorData = await response.json();
+        toast.error(`❌ Failed to update student: ${errorData.error}`);
       }
     } catch (error) {
       console.error("Error updating student:", error);
-      alert("❌ An error occurred.");
+      toast.error("❌ An error occurred.");
     }
   };
-  
-
-  
-
 
   return (
     <div className="pt-28 px-6">
+      <Toaster position="top-right" />
       {loading ? (
         <div className="flex items-center justify-center h-screen">
           <Loader className="animate-spin h-16 w-16 text-indigo-600" />
         </div>
       ) : (
         <>
-          {/* Upload Section (Keeps its Original Layout) */}
+          {/* Upload & File Section */}
           <div className="max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-gray-800">
-                📁 <span className="text-indigo-600">Upload Students</span> Informations
+                {/* Title can be removed if not needed */}
               </h2>
-  
-              <div className="flex space-x-2">
-                <a href="/collegePortalExcel/collegePortal-test1.xlsx" download="college-template.xlsx">
+              <div className="flex justify-end items-center">
+                <a
+                  href="/collegePortalExcel/collegePortal-test1.xlsx"
+                  download="college-template.xlsx"
+                  className="mr-4"
+                >
                   <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-md transition-all duration-300 transform hover:scale-105">
                     <Download className="h-5 w-5" />
                     Download Template
                   </Button>
                 </a>
-                <Input
-                  type="text"
-                  placeholder="🔍 Search students..."
-                  className="w-56 h-10 px-4 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-indigo-200 transition-all mt-3"
-                  value={search}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
               </div>
             </div>
-  
-            {/* Upload Section (Limited to max-w-6xl) */}
-            <div className="bg-gray-50 p-6 rounded-xl shadow-md mb-6">
-              <label htmlFor="file-upload" className="block mb-2 font-medium text-gray-700">
-                Upload Excel File 📂
-              </label>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".xls,.xlsx"
-                onChange={handleFileChange}
-                className="w-full mb-4 p-2 border rounded-md bg-gray-100 cursor-pointer"
-              />
-              {fileName && (
-                <div className="flex justify-between bg-white p-2 rounded-md shadow-sm mb-4">
-                  <span className="font-medium">📂 Selected File: {fileName}</span>
-                  <Button variant="destructive" onClick={() => { setFileName(""); setSelectedFile(null); }}>
-                    Remove
-                  </Button>
+            {/* Modern Upload File Section */}
+            <div className="max-w-2xl mx-auto mb-6">
+              <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300 justify-start">
+                <label htmlFor="file-upload" className="block text-2xl font-bold mb-3">
+                  <span className="bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent animate-shine">
+                    Upload Excel
+                  </span>{" "}
+                  File 📂
+                </label>
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-indigo-500 transition-colors duration-300">
+                  <svg
+                    className="w-8 h-8 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M7 16l-4-4m0 0l4-4m-4 4h18"
+                    />
+                  </svg>
+                  <p className="mt-2 text-gray-600 text-sm">
+                    Drag and drop your file here, or click to select
+                  </p>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    accept=".xls,.xlsx"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="mt-3 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 px-4 rounded-lg transition transform hover:scale-105 cursor-pointer text-sm"
+                  >
+                    Choose File
+                  </label>
                 </div>
-              )}
-              <Button className="py-3 text-lg bg-indigo-600 hover:bg-indigo-700 text-white rounded-md w-full" onClick={handleUpload}>
-                {loading ? "Uploading..." : "📤 Upload"}
-              </Button>
+                {fileName && (
+                  <div className="mt-3 flex items-center justify-between bg-gray-100 p-2 rounded-md shadow-sm">
+                    <span className="text-gray-700 font-medium text-sm">{fileName}</span>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setFileName("");
+                        setSelectedFile(null);
+                      }}
+                      className="px-3 py-1 text-xs"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  className="mt-4 w-full py-2 text-base bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition transform hover:scale-105"
+                  onClick={handleUpload}
+                >
+                  {loading ? "Uploading..." : "📤 Upload"}
+                </Button>
+              </div>
             </div>
           </div>
-  
-          {/* Full-Width Table Section */}
-          <div className="w-full">
-            <div className="bg-white shadow-lg rounded-lg overflow-hidden border p-5 w-full">
-              <div className="overflow-x-auto w-full">
-                <table className="w-full border-collapse table-auto">
-                  {/* Table Header */}
-                  <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm uppercase">
+          {/* Search Input Section (Aligned to Right) */}
+          <div className="max-w-xl mx-auto mb-6">
+            <div className="flex justify-end">
+              <Input
+                type="text"
+                placeholder="🔍 Search students..."
+                className="w-56 h-12 px-4 py-2 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition transform hover:scale-105 ease-in-out duration-300"
+                value={search}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+          </div>
+          {/* Table Section in One Scrollable Container */}
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white shadow-lg rounded-lg border p-5 w-full">
+              <div className="overflow-auto max-h-[500px]">
+                <table className="w-full border-collapse table-auto text-sm">
+                  <thead className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-indigo-600 text-white uppercase">
                     <tr>
                       {columns.map(({ key, label }) => (
                         <th
                           key={key}
-                          className="p-4 text-center font-semibold tracking-wide border-b border-blue-300"
+                          className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 cursor-pointer whitespace-nowrap"
                           onClick={() => handleSort(key)}
                         >
-                          {label} {sortColumn === key ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                          {label}{" "}
+                          {sortColumn === key ? (sortDirection === "asc" ? "▲" : "▼") : ""}
                         </th>
                       ))}
+                      <th className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 whitespace-nowrap">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
-  
-                  {/* Table Body */}
-                  <tbody>
+                  <tbody className="text-gray-800">
                     {currentRows.map((row, index) => (
-                      <tr
-                        key={index}
-                        className="border-b text-gray-800 text-center hover:bg-indigo-50 transition duration-200"
+                      <motion.tr
+                        key={row.userId}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        className="border-b hover:bg-indigo-50 transition duration-200"
                       >
                         {columns.map(({ key }) => (
-                          <td
-                          key={key}
-                          className="p-4 border text-gray-700 break-words whitespace-normal max-w-xs"
-                        >
-                          {key === "email" || key === "password"
-                            ? row.user?.[key] || "N/A"
-                            : key === "DOB"
-                            ? new Date(row[key]).toLocaleDateString("en-GB") // Converts to DD/MM/YYYY format
-                            : row[key]}
-                        </td>
+                          <td key={key} className="px-2 py-2 border text-gray-700 break-words whitespace-normal">
+                            {key === "email" || key === "password"
+                              ? row.user?.[key] || "N/A"
+                              : key === "DOB"
+                              ? new Date(row[key]).toLocaleDateString("en-GB")
+                              : row[key]}
+                          </td>
                         ))}
-                         <td className="p-4 border">
-        <Button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-          onClick={() => handleEditClick(row)}
-        >
-          ✏️ Edit
-        </Button>
-        </td>
-                      </tr>
+                        <td className="px-2 py-2 border">
+                          <Button
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs"
+                            onClick={() => handleEditClick(row)}
+                          >
+                            ✏️ Edit
+                          </Button>
+                        </td>
+                      </motion.tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-  
-              {/* Pagination Controls */}
               <div className="flex justify-between items-center mt-4">
                 <button
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`px-5 py-2 rounded-lg font-medium text-sm transition-all ${
-                    currentPage === 1
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                  className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+                    currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-500 hover:bg-indigo-600 text-white"
                   }`}
                 >
                   Prev
                 </button>
-  
                 <span className="text-md font-semibold text-gray-700">Page {currentPage}</span>
-  
                 <button
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={indexOfLastRow >= filteredData.length}
-                  className={`px-5 py-2 rounded-lg font-medium text-sm transition-all ${
-                    indexOfLastRow >= filteredData.length
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                  className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+                    indexOfLastRow >= filteredData.length ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-500 hover:bg-indigo-600 text-white"
                   }`}
                 >
                   Next
@@ -311,14 +336,11 @@ export default function UploadDetailsCandidatesPage() {
         </>
       )}
       <StudentEditModal
-  isOpen={isEditModalOpen}
-  onClose={() => setIsEditModalOpen(false)}
-  student={selectedStudent}
-  onSave={handleSaveChanges}
-/>
-
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        student={selectedStudent}
+        onSave={handleSaveChanges}
+      />
     </div>
   );
-  
-  
 }

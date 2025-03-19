@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image"; // ✅ Import Next.js Image component
-import { redirect, usePathname, useRouter } from "next/navigation";
-import { User, LogOut, Home, ArrowLeftCircle } from "lucide-react";
+import {  usePathname, useRouter } from "next/navigation";
+import { User,  Home,  } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 export default function Navbar() {

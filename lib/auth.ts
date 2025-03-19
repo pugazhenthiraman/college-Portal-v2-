@@ -3,8 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { CollegeStatus } from "@prisma/client";
 
-export const authOptions: AuthOptions = {  // ✅ Ensure it's explicitly exported
+export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
@@ -28,12 +29,28 @@ export const authOptions: AuthOptions = {  // ✅ Ensure it's explicitly exporte
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { superAdmin: true, college: true, department: true, hod: true, faculty: true, student: true },
+          include: {
+            superAdmin: true,
+            college: true,
+            department: true,
+            hod: true,
+            faculty: true,
+            student: true,
+          },
         });
 
         if (!user) throw new Error("No user found");
 
-        const passwordMatch = await bcrypt.compare(credentials.password, user.password);
+        if (user.role === "COLLEGE") {
+          if (!user.college || user.college.status !== CollegeStatus.ACTIVE) {
+            throw new Error("Your registration is pending for Admin approval.");
+          }
+        }
+
+        const passwordMatch = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
         if (!passwordMatch) throw new Error("Invalid password");
 
         return {
@@ -64,6 +81,3 @@ export const authOptions: AuthOptions = {  // ✅ Ensure it's explicitly exporte
     signIn: "/auth/login",
   },
 };
-
-
-
