@@ -40,6 +40,7 @@ model User {
 
 model SuperAdmin {
   id     Int  @id @default(autoincrement())
+  //one to one realtion
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
 }
@@ -64,25 +65,25 @@ model College {
   councilIssuingCode   String
   remark               String?
   status               CollegeStatus @default(PENDING)
-  collegeType          CollegeType   // Set during registration
+  collegeType          CollegeType // Set during registration
   createdAt            DateTime      @default(now())
 
-  departments          Department[]
-  hods                 HOD[]
-  faculty              Faculty[]
-  students             Student[]
+  departments Department[]
+  hods        HOD[]
+  faculty     Faculty[]
+  students    Student[]
 }
 
 model Department {
   id        Int     @id @default(autoincrement())
   collegeId Int
   college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  name      String  // Stores the selected department name (e.g., "History" or "Computer Science")
-  
+  name      String // Stores the selected department name (e.g., "History" or "Computer Science")
+
   // Each department may have one HOD and can have multiple faculty and students
-  hod       HOD?
-  faculty   Faculty[]
-  students  Student[]
+  hod      HOD?
+  faculty  Faculty[]
+  students Student[]
 }
 
 model HOD {
@@ -96,41 +97,41 @@ model HOD {
   department   Department @relation(fields: [departmentId], references: [id])
   createdAt    DateTime   @default(now())
 
-  faculty   Faculty[]
-  students  Student[]
+  faculty  Faculty[]
+  students Student[]
 }
 
 model Faculty {
-  id           Int       @id @default(autoincrement())
-  userId       Int       @unique
-  user         User      @relation(fields: [userId], references: [id])
+  id           Int        @id @default(autoincrement())
+  userId       Int        @unique
+  user         User       @relation(fields: [userId], references: [id])
   name         String
   collegeId    Int
-  college      College   @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   departmentId Int
   department   Department @relation(fields: [departmentId], references: [id])
   hodId        Int?
-  hod          HOD?      @relation(fields: [hodId], references: [id])
-  createdAt    DateTime  @default(now())
-  students     Student[] @relation("FacultyStudents")
+  hod          HOD?       @relation(fields: [hodId], references: [id])
+  createdAt    DateTime   @default(now())
+  students     Student[]  @relation("FacultyStudents")
 }
 
 model Student {
-  id                 Int        @id @default(autoincrement())
-  userId             Int        @unique
-  user               User       @relation(fields: [userId], references: [id])
+  id                 Int         @id @default(autoincrement())
+  userId             Int         @unique
+  user               User        @relation(fields: [userId], references: [id])
   name               String
   collegeId          Int
-  college            College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college            College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   departmentId       Int?
   department         Department? @relation(fields: [departmentId], references: [id])
   facultyId          Int?
-  faculty            Faculty?   @relation("FacultyStudents", fields: [facultyId], references: [id])
+  faculty            Faculty?    @relation("FacultyStudents", fields: [facultyId], references: [id])
   hodId              Int?
-  hod                HOD?       @relation(fields: [hodId], references: [id])
-  rollNo             String     @unique
+  hod                HOD?        @relation(fields: [hodId], references: [id])
+  rollNo             String      @unique
   photo              String?
-  personalEmail      String     @unique
+  personalEmail      String      @unique
   DOB                DateTime
   phoneNo            String
   nationality        String
@@ -138,5 +139,5 @@ model Student {
   departmentName     String
   passportNo         String?
   passportExpiryDate DateTime?
-  createdAt          DateTime   @default(now())
+  createdAt          DateTime    @default(now())
 }

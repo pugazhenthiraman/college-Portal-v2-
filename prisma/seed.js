@@ -67,7 +67,7 @@ async function main() {
       role: "HOD",
     },
   });
-  const hod = await prisma.hod.create({
+  const hod = await prisma.hOD.create({
     data: {
       userId: hodUser.id,
       name: "test hod",
