@@ -4,11 +4,11 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export const authOptions: AuthOptions = {  // ✅ Ensure it's explicitly exported
+export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
-    maxAge: 8 * 60 * 60,
+    maxAge: 8 * 60 * 60, // 8 hours
   },
   jwt: {
     maxAge: 8 * 60 * 60,
@@ -28,13 +28,19 @@ export const authOptions: AuthOptions = {  // ✅ Ensure it's explicitly exporte
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { superAdmin: true, college: true, department: true, hod: true, faculty: true, student: true },
+          include: {
+            superAdmin: true,
+            college: true,
+            hod: true,
+            faculty: true,
+            student: true,
+          },
         });
 
         if (!user) throw new Error("No user found");
 
-        const passwordMatch = await bcrypt.compare(credentials.password, user.password);
-        if (!passwordMatch) throw new Error("Invalid password");
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) throw new Error("Invalid password");
 
         return {
           id: user.id.toString(),
@@ -64,6 +70,3 @@ export const authOptions: AuthOptions = {  // ✅ Ensure it's explicitly exporte
     signIn: "/auth/login",
   },
 };
-
-
-

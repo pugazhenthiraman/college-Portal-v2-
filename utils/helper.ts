@@ -1,87 +1,97 @@
-import { PrismaClient, UserRole } from "@prisma/client";
-import  prisma  from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
+import prisma from "@/lib/prisma";
 
 export const insertStudents = async (data: any[]) => {
   try {
-    // 1️⃣ Insert Users First (Prisma `createMany()`)
-    const usersData = data.map(item => ({
-      email: item.email,
-      password: item.password,
-      role: UserRole.STUDENT
+    // 1️⃣ Insert Users
+    const userData = data.map(d => ({
+      email: d.email,
+      password: d.password,
+      role: UserRole.STUDENT,
     }));
 
     await prisma.user.createMany({
-      data: usersData,
-      skipDuplicates: true, // Prevent duplicate emails
+      data: userData,
+      skipDuplicates: true,
     });
 
-    // 2️⃣ Fetch Inserted User IDs
-    const userRecords = await prisma.user.findMany({
+    // 2️⃣ Fetch inserted users to map userIds
+    const users = await prisma.user.findMany({
       where: { email: { in: data.map(d => d.email) } },
-      select: { id: true, email: true }
+      select: { id: true, email: true },
     });
 
-    console.log("User Records Before Mapping:", userRecords);
-
-    const userIdMap = userRecords.reduce((acc, user) => {
+    const userMap = users.reduce((acc, user) => {
       acc[user.email] = user.id;
       return acc;
     }, {} as Record<string, number>);
 
-    console.log("User ID Map:", userIdMap); // ✅ Debugging user ID mapping
+    // 3️⃣ Prepare raw SQL
+    const values = data
+      .map((item) => {
+        const userId = userMap[item.email];
+        if (!userId) return null;
 
-    const studentsData = data
-    .map((item) => {
-      const userId = userIdMap[item.email];
-      if (!userId) {
-        console.error(`❌ Missing userId for ${item.email}`);
-        return null; // Skip invalid rows
-      }
-  
-      // ✅ Properly escape single quotes in strings
-      const name = item.name.replace(/'/g, "''");
-      const rollNo = item.rollNo.replace(/'/g, "''");
-      const personalEmail = item.personalEmail.replace(/'/g, "''");
-      const departmentName = item.departmentName.replace(/'/g, "''");
-  
-      return `(${userId}, '${name}', ${item.collegeId}, '${departmentName}', '${rollNo}', 
-        '${personalEmail}', '${item.DOB}', '${item.phoneNo}', '${item.nationality}', 
-        '${item.countryCode}', ${item.facultyId ? item.facultyId : "NULL"}, ${item.hodId ? item.hodId : "NULL"})`;
-    })
-    .filter(Boolean) // ✅ Remove invalid rows
-    .join(",");
-  
-  if (!studentsData) {
-    console.error("❌ No valid student data to insert");
-    return { success: false, message: "No valid students to insert" };
-  }
-  if(studentsData){
-    console.log("Student Data:", studentsData);
-    
-  }
-  
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO "Student" ("userId", "name", "collegeId", "departmentName", "rollNo", "personalEmail", "DOB", "phoneNo", "nationality",
-    "countryCode", "facultyId", "hodId") 
-    VALUES ${studentsData} 
-    ON CONFLICT ("rollNo") 
-    DO UPDATE SET 
-      "name" = EXCLUDED."name",
-      "collegeId" = EXCLUDED."collegeId",
-      "departmentName" = EXCLUDED."departmentName",
-      "personalEmail" = EXCLUDED."personalEmail",
-      "DOB" = EXCLUDED."DOB",
-      "phoneNo" = EXCLUDED."phoneNo",
-      "nationality" = EXCLUDED."nationality",
-      "countryCode" = EXCLUDED."countryCode",
-      "facultyId" = EXCLUDED."facultyId",
-      "hodId" = EXCLUDED."hodId";
-  `);
-  
+        const format = (val: string | null | undefined) =>
+          val ? `'${String(val).replace(/'/g, "''")}'` : "NULL";
+
+        return `(
+          ${userId},
+          ${format(item.firstName)},
+          ${format(item.middleName)},
+          ${format(item.lastName)},
+          ${format(item.rollNo)},
+          ${format(item.personalEmail)},
+          '${item.DOB.toISOString()}',
+          ${format(item.phoneNo)},
+          ${format(item.secondaryPhoneNo)},
+          ${format(item.nationality)},
+          ${format(item.countryCode)},
+          ${format(item.departmentName)},
+          ${item.collegeId},
+          ${item.departmentId ?? "NULL"},
+          ${item.facultyId ?? "NULL"},
+          ${item.hodId ?? "NULL"},
+          ${format(item.passportNo)},
+          ${item.passportExpiryDate ? `'${item.passportExpiryDate.toISOString()}'` : "NULL"}
+        )`;
+      })
+      .filter(Boolean)
+      .join(",");
+
+    if (!values) return { success: false, message: "No valid data to insert" };
+
+    // 4️⃣ Execute fast UPSERT via raw SQL
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "Student" (
+        "userId", "firstName", "middleName", "lastName", "rollNo",
+        "personalEmailId", "DOB", "phoneNo", "secondaryPhoneNo", "nationality",
+        "countryCode", "departmentName", "collegeId", "departmentId",
+        "facultyId", "hodId", "passportNo", "passportExpiryDate"
+      )
+      VALUES ${values}
+      ON CONFLICT ("rollNo") DO UPDATE SET
+        "firstName" = EXCLUDED."firstName",
+        "middleName" = EXCLUDED."middleName",
+        "lastName" = EXCLUDED."lastName",
+        "personalEmailId" = EXCLUDED."personalEmailId",
+        "DOB" = EXCLUDED."DOB",
+        "phoneNo" = EXCLUDED."phoneNo",
+        "secondaryPhoneNo" = EXCLUDED."secondaryPhoneNo",
+        "nationality" = EXCLUDED."nationality",
+        "countryCode" = EXCLUDED."countryCode",
+        "departmentName" = EXCLUDED."departmentName",
+        "collegeId" = EXCLUDED."collegeId",
+        "departmentId" = EXCLUDED."departmentId",
+        "facultyId" = EXCLUDED."facultyId",
+        "hodId" = EXCLUDED."hodId",
+        "passportNo" = EXCLUDED."passportNo",
+        "passportExpiryDate" = EXCLUDED."passportExpiryDate";
+    `);
 
     return { success: true, message: "Students inserted successfully" };
-  } catch (error) {
-    console.error("Error inserting students:", error);
+  } catch (error: any) {
+    console.error("❌ Error inserting students:", error);
     return { success: false, message: error.message };
   }
 };
