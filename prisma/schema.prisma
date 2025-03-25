@@ -94,11 +94,13 @@ model HOD {
   userId       Int         @unique
   user         User        @relation(fields: [userId], references: [id])
   name         String
+  phoneNo      String
   collegeId    Int
   college      College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   departmentId Int         @unique
   department   Department  @relation(fields: [departmentId], references: [id])
   createdAt    DateTime    @default(now())
+  adhaarNo     String
 
   faculty      Faculty[]
   students     Student[]
@@ -153,10 +155,12 @@ model Student {
   secondaryPhoneNo   String
   lastLogin          DateTime? 
   
-  nationality        String
-  countryCode        String
+  country        String
+  district        String
+  state           String
   departmentName     String
-  
+
+  adhaarNo           String?
   passportNo         String?
   passportExpiryDate DateTime?
 
