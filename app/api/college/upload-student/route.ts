@@ -3,52 +3,43 @@ import * as XLSX from "xlsx";
 import bcrypt from "bcrypt";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { insertStudents } from "@/utils/helper";
 import prisma from "@/lib/prisma";
+import { insertStudents } from "@/utils/helper";
 
-// Required columns for validation
 const REQUIRED_COLUMNS = [
-  "name", "email", "password", "departmentId", "rollNo",
-  "personalEmail", "DOB", "phoneNo", "nationality", "countryCode", "departmentName"
+  "email", "password", "firstName", "middleName", "rollNo", "DOB", "phoneNo",
+  "secondaryPhoneNo", "nationality", "countryCode", "departmentName"
 ];
 
 export async function POST(req: NextRequest) {
   try {
-    // 🔥 Fetch session & user details from NextAuth
     const session: any = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized: Please log in" }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Extract `collegeId` from user session
-    const userId = session.user.id;
     const user = await prisma.user.findUnique({
-      where: { id: Number(userId) },
-      include: { college: true }, // Ensure college details are fetched
+      where: { id: Number(session.user.id) },
+      include: { college: true },
     });
 
-    if (!user || !user.college) {
-      return NextResponse.json({ error: "Unauthorized: College ID not found" }, { status: 401 });
+    if (!user?.college) {
+      return NextResponse.json({ error: "College ID not found" }, { status: 401 });
     }
-    const collegeId = user.college.id; // Extract `collegeId`
 
-    // Parse formData
+    const collegeId = user.college.id;
+
     const formData = await req.formData();
     const file = formData.get("studentsExcelData") as File;
-
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // ✅ Read the file directly in memory (NO SAVING)
     const workbook = XLSX.read(await file.arrayBuffer(), { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-    console.log("Parsed JSON Data:", jsonData); // Debug log
-
-    // Validate headers
     const fileColumns = Object.keys(jsonData[0] || {});
     console.log("File Columns:", fileColumns); // Debug log
     //trim the column names
@@ -58,88 +49,82 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Missing columns: ${missingColumns.join(", ")}` }, { status: 400 });
     }
 
-    // Validate and Hash Passwords
+    // Prepare student & user data
     const validData = await Promise.all(
       jsonData.map(async (row: any, index) => {
-        if (!row.name || !row.email || !row.password) {
-          console.log(`❌ Row ${index + 1} is missing required fields`, row);
-          throw new Error(`Row ${index + 1} has missing values`);
+        const requiredFields = [...REQUIRED_COLUMNS];
+        for (const field of requiredFields) {
+          if (!row[field]) throw new Error(`Row ${index + 1} is missing required field: ${field}`);
         }
 
-        console.log(`✅ Row ${index + 1} received departmentId:`, row.departmentId); // Debug Log
-
-        // Hash password before storing
         const hashedPassword = await bcrypt.hash(row.password, 10);
 
-        return { 
-          ...row, 
-          password: hashedPassword, 
-          collegeId, 
-          departmentId: Number(row.departmentId) || null  // Ensure it's a valid number
+        return {
+          email: row.email,
+          password: hashedPassword,
+          firstName: row.firstName,
+          middleName: row.middleName,
+          lastName: row.lastName || null,
+          rollNo: row.rollNo,
+          DOB: new Date(row.DOB),
+          phoneNo: row.phoneNo,
+          secondaryPhoneNo: row.secondaryPhoneNo,
+          nationality: row.nationality,
+          countryCode: row.countryCode,
+          departmentName: row.departmentName,
+          personalEmail: row.personalEmail || null,
+          passportNo: row.passportNo || null,
+          passportExpiryDate: row.passportExpiryDate ? new Date(row.passportExpiryDate) : null,
+          departmentId: Number(row.departmentId) || null,
+          facultyId: Number(row.facultyId) || null,
+          hodId: Number(row.hodId) || null,
+          collegeId,
         };
       })
     );
 
-    console.log("Valid Data to Insert:", validData); // Debug log
-
-    // Insert data efficiently in batches
-    const batchSize = 500;
-    for (let i = 0; i < validData.length; i += batchSize) {
-      const batch = validData.slice(i, i + batchSize);
-      await insertStudents(batch);
-    }
-
-    return NextResponse.json({ message: "Students inserted successfully" }, { status: 200 });
+    const result = await insertStudents(validData);
+    return NextResponse.json(result, { status: result.success ? 200 : 500 });
   } catch (error: any) {
-    console.log("error: ", error);
+    console.error("❌ Error in POST /students:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // 🔥 Fetch session & user details from NextAuth
     const session: any = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized: Please log in" }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Extract `collegeId` from user session
-    const userId = session.user.id;
     const user = await prisma.user.findUnique({
-      where: { id: Number(userId) },
+      where: { id: Number(session.user.id) },
       include: { college: true },
     });
 
-    if (!user || !user.college) {
-      return NextResponse.json({ error: "Unauthorized: College ID not found" }, { status: 401 });
+    if (!user?.college) {
+      return NextResponse.json({ error: "College ID not found" }, { status: 401 });
     }
-    const collegeId = user.college.id;
 
-    // ✅ Fetch students for the respective college & include `email` & `password` from `User`
     const students = await prisma.student.findMany({
-      where: { collegeId: collegeId },
+      where: { collegeId: user.college.id },
       include: {
         user: {
-          select: {
-            email: true,
-            password: true
-          }
-        }
-      }
+          select: { email: true },
+        },
+      },
     });
 
-    console.log("Fetched Students Data:", JSON.stringify(students, null, 2)); // Debug log
-
     return NextResponse.json({ students }, { status: 200 });
-  } catch (error: any) {
-    console.log("error: ", error);
+  } catch (error) {
+    console.error("❌ Error fetching students:", error);
     return NextResponse.json({ error: "Failed to fetch students" }, { status: 500 });
   }
 }
 
 export const config = {
   api: {
-    bodyParser: false, // Required for handling file uploads
+    bodyParser: false,
   },
 };

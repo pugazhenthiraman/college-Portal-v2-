@@ -9,7 +9,7 @@ export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
-    maxAge: 8 * 60 * 60,
+    maxAge: 8 * 60 * 60, // 8 hours
   },
   jwt: {
     maxAge: 8 * 60 * 60,
@@ -32,7 +32,6 @@ export const authOptions: AuthOptions = {
           include: {
             superAdmin: true,
             college: true,
-            department: true,
             hod: true,
             faculty: true,
             student: true,
@@ -41,17 +40,8 @@ export const authOptions: AuthOptions = {
 
         if (!user) throw new Error("No user found");
 
-        if (user.role === "COLLEGE") {
-          if (!user.college || user.college.status !== CollegeStatus.ACTIVE) {
-            throw new Error("Your registration is pending for Admin approval.");
-          }
-        }
-
-        const passwordMatch = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-        if (!passwordMatch) throw new Error("Invalid password");
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) throw new Error("Invalid password");
 
         return {
           id: user.id.toString(),

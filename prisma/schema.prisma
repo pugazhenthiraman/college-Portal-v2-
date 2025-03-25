@@ -16,10 +16,14 @@ enum CollegeStatus {
 enum UserRole {
   SUPER_ADMIN
   COLLEGE
-  DEPARTMENT
   HOD
   FACULTY
   STUDENT
+}
+
+enum CollegeType {
+  ENGINEERING
+  ARTS
 }
 
 model User {
@@ -32,7 +36,7 @@ model User {
   // One-to-one relations to role-specific details (only one should be non-null)
   superAdmin SuperAdmin?
   college    College?
-  department Department?
+  // Removed relation for department login
   hod        HOD?
   faculty    Faculty?
   student    Student?
@@ -50,6 +54,8 @@ model College {
   // One-to-one relation with User
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
+
+  collegeType           CollegeType
 
   name                 String        @unique
   secondaryEmailId     String?       @unique
@@ -71,88 +77,88 @@ model College {
 }
 
 model Department {
-  id     Int  @id @default(autoincrement())
-  // One-to-one relation with User (if you need department-specific authentication)
-  userId Int  @unique
-  user   User @relation(fields: [userId], references: [id])
-
+  id        Int    @id @default(autoincrement())
   name      String
   collegeId Int
   college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
-  // One-to-one relation: each department may have one HOD
-  hod HOD?
+  
+  hod       HOD?
 
-  faculty  Faculty[]
-  students Student[]
+  faculty   Faculty[]
+  students  Student[]
 }
 
 model HOD {
-  id     Int  @id @default(autoincrement())
-  // One-to-one relation with User
-  userId Int  @unique
-  user   User @relation(fields: [userId], references: [id])
-
+  id           Int         @id @default(autoincrement())
+  userId       Int         @unique
+  user         User        @relation(fields: [userId], references: [id])
   name         String
   collegeId    Int
-  college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  departmentId Int        @unique
-  department   Department @relation(fields: [departmentId], references: [id])
-  createdAt    DateTime   @default(now())
+  college      College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  departmentId Int         @unique
+  department   Department  @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime    @default(now())
 
-  faculty  Faculty[]
-  students Student[]
+  faculty      Faculty[]
+  students     Student[]
 }
 
 model Faculty {
-  id     Int  @id @default(autoincrement())
-  // One-to-one relation with User
-  userId Int  @unique
-  user   User @relation(fields: [userId], references: [id])
-
+  id           Int         @id @default(autoincrement())
+  userId       Int         @unique
+  user         User        @relation(fields: [userId], references: [id])
   name         String
   collegeId    Int
-  college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college      College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id])
-
-  hodId Int?
-  hod   HOD? @relation(fields: [hodId], references: [id])
-
-  createdAt DateTime  @default(now())
-  students  Student[] @relation("FacultyStudents")
+  department   Department  @relation(fields: [departmentId], references: [id])
+  hodId        Int?
+  hod          HOD?        @relation(fields: [hodId], references: [id])
+  createdAt    DateTime    @default(now())
+  students     Student[]   @relation("FacultyStudents")
 }
 
 model Student {
-  id     Int  @id @default(autoincrement())
+  id                 Int         @id @default(autoincrement())
   // One-to-one relation with User
-  userId Int  @unique
-  user   User @relation(fields: [userId], references: [id])
-
-  name             String
-  collegeId        Int
-  college          College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  userId             Int         @unique
+  user               User        @relation(fields: [userId], references: [id])
   
-  departmentId     Int?
-  department       Department? @relation(fields: [departmentId], references: [id])
+  // Name fields
+  firstName          String
+  middleName         String?
+  lastName           String  
 
-  facultyId        Int?
-  faculty          Faculty? @relation("FacultyStudents", fields: [facultyId], references: [id])
+  photo              String?  
 
-  hodId            Int?
-  hod              HOD? @relation(fields: [hodId], references: [id])
+  personalEmailId    String  
 
-  rollNo            String @unique
-  photo             String?  
-  personalEmail     String  @unique
-  DOB               DateTime
-  phoneNo           String
-  nationality       String
-  countryCode       String
-  departmentName    String
-  passportNo        String?
+  collegeId          Int
+  college            College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  
+  departmentId       Int?
+  department         Department? @relation(fields: [departmentId], references: [id])
+  
+  facultyId          Int?
+  faculty            Faculty?    @relation("FacultyStudents", fields: [facultyId], references: [id])
+  
+  hodId              Int?
+  hod                HOD?        @relation(fields: [hodId], references: [id])
+  
+  rollNo             String      @unique
+  
+  DOB                DateTime
+  phoneNo            String
+  secondaryPhoneNo   String
+  lastLogin          DateTime? 
+  
+  nationality        String
+  countryCode        String
+  departmentName     String
+  
+  passportNo         String?
   passportExpiryDate DateTime?
 
-  createdAt DateTime @default(now())
+  createdAt          DateTime    @default(now())
 }
-

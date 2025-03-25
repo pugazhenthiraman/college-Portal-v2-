@@ -6,7 +6,6 @@ async function main() {
   // Hash passwords for all roles
   const hashedSuperAdminPassword = await bcrypt.hash('superadmin123', 10);
   const hashedCollegePassword = await bcrypt.hash('college123', 10);
-  const hashedDepartmentPassword = await bcrypt.hash('dept123', 10);
   const hashedHODPassword = await bcrypt.hash('hod123', 10);
   const hashedFacultyPassword = await bcrypt.hash('faculty123', 10);
   const hashedStudentPassword = await bcrypt.hash('student123', 10);
@@ -43,21 +42,14 @@ async function main() {
       recognitionStatus: "NAAC",
       instituteCode: "STS",
       councilIssuingCode: "INST",
+      collegeType: "ENGINEERING"
     }
   });
   console.log("✅ College Created:", college.name);
 
-  // DEPARTMENT
-  const departmentUser = await prisma.user.create({
-    data: {
-      email: "dept@dept.com",
-      password: hashedDepartmentPassword,
-      role: "DEPARTMENT"
-    }
-  });
+  // DEPARTMENT (No login credentials for department)
   const department = await prisma.department.create({
     data: {
-      userId: departmentUser.id,
       name: "test_dept",
       collegeId: college.id,
     }
@@ -112,22 +104,38 @@ async function main() {
   const student = await prisma.student.create({
     data: {
       userId: studentUser.id,
-      name: "test student",
+      // Updated name fields
+      firstName: "Test",
+      middleName: null,
+      lastName: "Student",
+      
+      // Optional photo field (Base64 string if needed)
+      photo: null,
+      
+      // Updated personal email field (optional)
+      personalEmailId: "test.student1@gmail.com",
+      
       collegeId: college.id,
-      departmentId: department.id,  // Optional, can be null
+      departmentId: department.id,  // Optional, can be null if not assigned
       facultyId: faculty.id,
+      hodId: hod.id,  // Optional, can be null if not assigned
+      
       rollNo: "STS01",
-      personalEmail: "test.student1@gmail.com",
+      
       DOB: new Date("2000-01-01"),
       phoneNo: "+1234567890",
+      secondaryPhoneNo: "+0987654321",
+      lastLogin: null, // Set to a Date if needed
+      
       nationality: "Indian",
       countryCode: "IN",
       departmentName: "Computer Science",
+      
       passportNo: "P987654321",
       passportExpiryDate: new Date("2030-12-31"),
     }
   });
-  console.log("✅ Student Created:", student.name);
+  console.log("✅ Student Created:", student.firstName, student.lastName);
 }
 
 main()
