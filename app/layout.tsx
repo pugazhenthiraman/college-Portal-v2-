@@ -1,9 +1,10 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/navbar";
 import AdminLayout from "../app/admin/adminlayout";
-import AuthProvider from "@/components/AuthProvider"; // ✅ New Auth Provider
+import AuthProvider from "@/components/AuthProvider"; // Make sure this file uses <SessionProvider>
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,10 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col`}>
-       
+        <AuthProvider>
           <Navbar />
           <AdminLayout>{children}</AdminLayout>
-        
+        </AuthProvider>
       </body>
     </html>
   );

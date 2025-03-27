@@ -3,7 +3,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { CollegeStatus } from "@prisma/client";
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -43,10 +42,14 @@ export const authOptions: AuthOptions = {
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) throw new Error("Invalid password");
 
+        // Include collegeType in the returned user object if available
         return {
           id: user.id.toString(),
           email: user.email,
           role: user.role,
+          collegeType: user.college?.collegeType || null,// Add collegeType
+          collegeId: user.college?.id,  // add collegeId for later use
+
         };
       },
     }),
@@ -56,6 +59,8 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.collegeType = token.collegeType; // Add collegeType to session
+        session.user.collegeId = token.collegeId; // Add collegeId to session
       }
       return session;
     },
@@ -63,6 +68,8 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.collegeType = user.collegeType; // Add collegeType to JWT
+        token.collegeId = user.collegeId; // Add collegeId
       }
       return token;
     },

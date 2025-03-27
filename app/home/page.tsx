@@ -1,15 +1,18 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
-import { useRouter } from "next/navigation";
 
 const HomePage: React.FC = () => {
   const router = useRouter();
 
   // Navigate with role parameter
   const handleLoginRedirect = (role: string) => {
+    console.log("Role:", role);
     router.push(`/auth/login?role=${role}`);
   };
+
+  console.log("HomePage rendered");
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-white">
@@ -33,7 +36,6 @@ const HomePage: React.FC = () => {
             students, and administrators, making academic management more
             efficient and accessible.
           </p>
-          <br />
         </div>
       </article>
       <div className="flex gap-10 mt-10">

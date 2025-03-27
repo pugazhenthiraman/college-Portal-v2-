@@ -1,18 +1,26 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useMemo } from "react";
 
 export default function SessionWrapper({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Define public routes that should be accessible without a session
+  const publicRoutes = useMemo(() => ["/", "/home", "/auth/login"], []);
 
   useEffect(() => {
+    // If the current route is public, don't force a redirect
+    if (publicRoutes.includes(pathname)) return;
+
+    // Otherwise, if unauthenticated, redirect to login
     if (status === "unauthenticated") {
-      router.push("/auth/login"); // ✅ Redirect to login if not authenticated
+      router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [status, router, pathname, publicRoutes]);
 
   if (status === "loading") {
     return (
@@ -22,5 +30,6 @@ export default function SessionWrapper({ children }: { children: React.ReactNode
     );
   }
 
-  return <>{session ? children : null}</>;
+  // Return children even if session is null when on a public route
+  return <>{children}</>;
 }

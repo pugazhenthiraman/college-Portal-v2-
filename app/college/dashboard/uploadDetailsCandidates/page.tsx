@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Assume this is your UI button
 import { Input } from "@/components/ui/input";
 import { Loader, Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentEditModal } from "@/components/StudentEditModal";
+
 export default function UploadDetailsCandidatesPage() {
   const [data, setData] = useState<any[]>([]);
   const [filteredData, setFilteredData] = useState<any[]>([]);
@@ -164,19 +165,22 @@ export default function UploadDetailsCandidatesPage() {
           {/* Upload & File Section */}
           <div className="max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-800">
-                {/* Title can be removed if not needed */}
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-800"></h2>
               <div className="flex justify-end items-center">
                 <a
                   href="/collegePortalExcel/collegePortal-test1.xlsx"
                   download="college-template.xlsx"
                   className="mr-4"
                 >
-                  <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-md transition-all duration-300 transform hover:scale-105">
-                    <Download className="h-5 w-5" />
-                    Download Template
-                  </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-md transition-all duration-300">
+                      <Download className="h-5 w-5" />
+                      Download Template
+                    </Button>
+                  </motion.div>
                 </a>
               </div>
             </div>
@@ -214,47 +218,55 @@ export default function UploadDetailsCandidatesPage() {
                     onChange={handleFileChange}
                     className="hidden"
                   />
-                  <label
+                  <motion.label
                     htmlFor="file-upload"
-                    className="mt-3 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 px-4 rounded-lg transition transform hover:scale-105 cursor-pointer text-sm"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                    className="mt-3 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 px-4 rounded-lg transition transform cursor-pointer text-sm"
                   >
                     Choose File
-                  </label>
+                  </motion.label>
                 </div>
                 {fileName && (
                   <div className="mt-3 flex items-center justify-between bg-gray-100 p-2 rounded-md shadow-sm">
                     <span className="text-gray-700 font-medium text-sm">{fileName}</span>
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        setFileName("");
-                        setSelectedFile(null);
-                      }}
-                      className="px-3 py-1 text-xs"
-                    >
-                      Remove
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          setFileName("");
+                          setSelectedFile(null);
+                        }}
+                        className="px-3 py-1 text-xs"
+                      >
+                        Remove
+                      </Button>
+                    </motion.div>
                   </div>
                 )}
-                <Button
-                  className="mt-4 w-full py-2 text-base bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition transform hover:scale-105"
-                  onClick={handleUpload}
-                >
-                  {loading ? "Uploading..." : "📤 Upload"}
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+                  <Button
+                    className="mt-4 w-full py-2 text-base bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition transform"
+                    onClick={handleUpload}
+                  >
+                    {loading ? "Uploading..." : "📤 Upload"}
+                  </Button>
+                </motion.div>
               </div>
             </div>
           </div>
           {/* Search Input Section (Aligned to Right) */}
           <div className="max-w-xl mx-auto mb-6">
             <div className="flex justify-end">
-              <Input
-                type="text"
-                placeholder="🔍 Search students..."
-                className="w-56 h-12 px-4 py-2 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition transform hover:scale-105 ease-in-out duration-300"
-                value={search}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
+              <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+                <Input
+                  type="text"
+                  placeholder="🔍 Search students..."
+                  className="w-56 h-12 px-4 py-2 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition transform"
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </motion.div>
             </div>
           </div>
           {/* Table Section in One Scrollable Container */}
@@ -265,18 +277,23 @@ export default function UploadDetailsCandidatesPage() {
                   <thead className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-indigo-600 text-white uppercase">
                     <tr>
                       {columns.map(({ key, label }) => (
-                        <th
+                        <motion.th
                           key={key}
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ duration: 0.2 }}
                           className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 cursor-pointer whitespace-nowrap"
                           onClick={() => handleSort(key)}
                         >
-                          {label}{" "}
-                          {sortColumn === key ? (sortDirection === "asc" ? "▲" : "▼") : ""}
-                        </th>
+                          {label} {sortColumn === key ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                        </motion.th>
                       ))}
-                      <th className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 whitespace-nowrap">
+                      <motion.th
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ duration: 0.2 }}
+                        className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 whitespace-nowrap"
+                      >
                         Actions
-                      </th>
+                      </motion.th>
                     </tr>
                   </thead>
                   <tbody className="text-gray-800">
@@ -298,12 +315,14 @@ export default function UploadDetailsCandidatesPage() {
                           </td>
                         ))}
                         <td className="px-2 py-2 border">
-                          <Button
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs"
-                            onClick={() => handleEditClick(row)}
-                          >
-                            ✏️ Edit
-                          </Button>
+                          <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+                            <Button
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs"
+                              onClick={() => handleEditClick(row)}
+                            >
+                              ✏️ Edit
+                            </Button>
+                          </motion.div>
                         </td>
                       </motion.tr>
                     ))}
@@ -311,7 +330,9 @@ export default function UploadDetailsCandidatesPage() {
                 </table>
               </div>
               <div className="flex justify-between items-center mt-4">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.2 }}
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1}
                   className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
@@ -319,9 +340,11 @@ export default function UploadDetailsCandidatesPage() {
                   }`}
                 >
                   Prev
-                </button>
+                </motion.button>
                 <span className="text-md font-semibold text-gray-700">Page {currentPage}</span>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.2 }}
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={indexOfLastRow >= filteredData.length}
                   className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
@@ -329,7 +352,7 @@ export default function UploadDetailsCandidatesPage() {
                   }`}
                 >
                   Next
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>

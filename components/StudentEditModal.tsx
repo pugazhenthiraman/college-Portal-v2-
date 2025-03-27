@@ -24,11 +24,11 @@ export const StudentEditModal = ({ isOpen, onClose, student, onSave }: Props) =>
     const { name, value } = e.target;
     // For the email field, update nested user.email if it exists
     if (name === "email") {
-      setEditedStudent((prev) =>
+      setEditedStudent((prev: { user: any; }) =>
         prev ? { ...prev, user: { ...prev.user, email: value } } : null
       );
     } else {
-      setEditedStudent((prev) =>
+      setEditedStudent((prev: any) =>
         prev ? { ...prev, [name]: value } : null
       );
     }
