@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image"; // ✅ Import Next.js Image component
-import {  usePathname, useRouter } from "next/navigation";
-import { User,  Home,  } from "lucide-react";
+import React, { useState } from "react";
+import Image from "next/image"; // Next.js Image component
+import { useRouter, usePathname } from "next/navigation";
+import { User, Home } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 export default function Navbar() {
@@ -11,36 +11,41 @@ export default function Navbar() {
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // ✅ Hide profile icon on Home, Login, and Register pages
+  // Hide profile icon on Home, Login, and Register pages
   const hideProfileIcon = ["/", "/home", "/auth/login"].includes(pathname);
 
-  // ✅ Show Home button ONLY on login pages
+  // Show Home button ONLY on login pages
   const showHomeButton = ["/auth/login"].includes(pathname);
 
-  // ✅ Show "Back to Login" button ONLY on college register page
-  // const showBackToLoginButton = pathname === "/college/register";
-
-  const handleLogout = () => {
-    signOut({callbackUrl: '/auth/login'});
+  // Logout handler with dynamic callback URL if provided via env
+  const handleLogout = async () => {
+    try {
+      await signOut({ 
+        redirect: true, 
+        callbackUrl: process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/login` : '/auth/login'
+      });
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
   };
 
   return (
     <nav className="bg-indigo-600 text-white p-4 flex justify-between items-center shadow-md h-20 fixed top-0 left-0 w-full z-50">
-      {/* ✅ Logo on the left side */}
+      {/* Logo on the left side */}
       <div className="flex items-center space-x-3">
         <Image
-          src="/logo.png" // ✅ Path to your logo inside `public` folder
+          src="/logo.png" // Path to your logo in `public`
           alt="Education Master Logo"
-          width={50} // Adjust width as needed
-          height={50} // Adjust height as needed
-          className="cursor-pointer "
-          onClick={() => router.push("/")} // Redirect to home when clicked
+          width={50}
+          height={50}
+          className="cursor-pointer"
+          onClick={() => router.push("/")}
         />
         <h1 className="text-3xl font-bold">Education Master</h1>
       </div>
 
       <div className="flex items-center space-x-6">
-        {/* ✅ Show Home button ONLY on login pages */}
+        {/* Show Home button ONLY on login pages */}
         {showHomeButton && (
           <button
             onClick={() => router.push("/home")}
@@ -51,18 +56,33 @@ export default function Navbar() {
           </button>
         )}
 
-        {/* ✅ Profile and Logout functionality (No Changes) */}
+        {/* Profile and Logout functionality */}
         {!hideProfileIcon && (
           <div className="relative">
-            <button onClick={() => setShowDropdown(!showDropdown)} className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center space-x-2"
+              aria-label="Open user menu"
+            >
               <User className="w-8 h-8 text-white cursor-pointer" />
             </button>
 
             {/* Dropdown Menu */}
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg p-2">
-                <button className="w-full px-4 py-2 text-gray-700 hover:bg-gray-100 text-left">Profile</button>
-                <button onClick={handleLogout} className="w-full px-4 py-2 text-red-500 hover:bg-gray-100 text-left">Logout</button>
+                <button 
+                  className="w-full px-4 py-2 text-gray-700 hover:bg-gray-100 text-left" 
+                  aria-label="View profile"
+                >
+                  Profile
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2 text-red-500 hover:bg-gray-100 text-left"
+                  aria-label="Logout"
+                >
+                  Logout
+                </button>
               </div>
             )}
           </div>

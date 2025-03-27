@@ -7,13 +7,10 @@ import DepartmentTable, { Department } from "../../../../components/department/d
 import { departmentList } from "@/utils/departmentList";
 import { useSession } from "next-auth/react";
 import HodAssignmentModal, { HodData } from "../../../../components/department/hod/hodAssignmodel";
-// Import HodDetailsModal from its dedicated file
 import HodDetailsModal from "../../../../components/department/hod/hodModel";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 import RemoveConfirmationModal from "@/components/department/removeConfirmationModel";
-
-
 
 const DepartmentPage: React.FC = () => {
   const { data: session, status } = useSession();
@@ -25,14 +22,13 @@ const DepartmentPage: React.FC = () => {
   const [hodModalOpen, setHodModalOpen] = useState<boolean>(false);
   const [currentDepartmentForHOD, setCurrentDepartmentForHOD] = useState<Department | null>(null);
   const [removalModalOpen, setRemovalModalOpen] = useState<boolean>(false);
-  const [removalAction, setRemovalAction] = useState<"all" | "hod" | null>(null);
   const [removalDepartment, setRemovalDepartment] = useState<Department | null>(null);
-
+  
   // State for viewing HOD details in a modal
   const [hodDetailsModalOpen, setHodDetailsModalOpen] = useState(false);
   const [currentHodDetails, setCurrentHodDetails] = useState<Department["hod"] | null>(null);
 
-  // Fetch departments from backend (which include HOD data)
+  // Fetch departments (which include HOD data) from the backend
   useEffect(() => {
     if (status === "loading" || !session) return;
     const user = session.user as {
@@ -72,17 +68,13 @@ const DepartmentPage: React.FC = () => {
     role: string;
   };
 
-  // Options for the dropdown based on college type
+  // Dropdown options based on college type
   const departmentsList = departmentList[user.collegeType];
 
   // Handlers for draft management
-  const handleAdd = (deptName: string) => {
-    setDraftSelected((prev) => [...prev, deptName]);
-  };
-
-  const handleDraftRemove = (deptName: string) => {
+  const handleAdd = (deptName: string) => setDraftSelected((prev) => [...prev, deptName]);
+  const handleDraftRemove = (deptName: string) =>
     setDraftSelected((prev) => prev.filter((d) => d !== deptName));
-  };
 
   const handleSaveDepartments = async () => {
     try {
@@ -109,13 +101,13 @@ const DepartmentPage: React.FC = () => {
     }
   };
 
-  // Handler for opening removal modal
-  const handleOpenRemovalModal = (dept: Department, action: "all" | "hod") => {
+  // Open removal modal (pass department; action will be provided later from the modal)
+  const handleOpenRemovalModal = (dept: Department) => {
     setRemovalDepartment(dept);
-    setRemovalAction(action);
     setRemovalModalOpen(true);
   };
 
+  // Updated removal handler that uses the action parameter from the modal ("all" or "hod")
   const handleConfirmRemoval = async (password: string, action: "all" | "hod") => {
     if (!removalDepartment) return;
     try {
@@ -125,27 +117,25 @@ const DepartmentPage: React.FC = () => {
         body: JSON.stringify({
           collegeId: user.collegeId,
           departmentId: removalDepartment.id,
-          action: removalAction,
+          action, // "all" or "hod"
           password,
         }),
       });
       const result = await response.json();
       if (response.ok) {
-        toast.success(
-          action === "all"
-            ? `Department ${removalDepartment.name} removed successfully!`
-            : `HOD removed for ${removalDepartment.name}`
-        );
+        toast.success(result.message);
         if (action === "all") {
+          // Remove entire department row from state
           setSelectedDepartments((prev) =>
             prev.filter((dept) => dept.id !== removalDepartment.id)
           );
         } else if (action === "hod") {
-          const refreshedResponse = await fetch(`/api/college/dashboard?collegeId=${user.collegeId}`);
-          const refreshedResult = await refreshedResponse.json();
-          if (refreshedResponse.ok) {
-            setSelectedDepartments(refreshedResult.departments);
-          }
+          // Only remove the HOD details; update department's hod field to null
+          setSelectedDepartments((prev) =>
+            prev.map((dept) =>
+              dept.id === removalDepartment.id ? { ...dept, hod: null } : dept
+            )
+          );
         }
       } else {
         toast.error(result.error || "Failed to remove data");
@@ -156,7 +146,6 @@ const DepartmentPage: React.FC = () => {
     } finally {
       setRemovalModalOpen(false);
       setRemovalDepartment(null);
-      setRemovalAction(null);
     }
   };
 
@@ -180,6 +169,12 @@ const DepartmentPage: React.FC = () => {
       const result = await response.json();
       if (response.ok) {
         toast.success(`HOD assigned for ${currentDepartmentForHOD?.name}`);
+        // Optimistically update department's HOD details in state
+        setSelectedDepartments((prev) =>
+          prev.map((dept) =>
+            dept.id === currentDepartmentForHOD?.id ? { ...dept, hod: result.hod } : dept
+          )
+        );
         setHodModalOpen(false);
       } else {
         toast.error(result.error || "Failed to assign HOD");
@@ -225,7 +220,7 @@ const DepartmentPage: React.FC = () => {
         <div className="w-2/3">
           <DepartmentTable
             selectedDepartments={selectedDepartments}
-            onRemove={(dept: Department) => handleOpenRemovalModal(dept, "all")}
+            onRemove={(dept: Department) => handleOpenRemovalModal(dept)}
             onAddHOD={(dept: Department) => handleAddHOD(dept)}
             onViewHODDetails={handleViewHODDetails}
           />
@@ -242,7 +237,7 @@ const DepartmentPage: React.FC = () => {
         onSave={handleHODSave}
       />
       {/* Removal Confirmation Modal */}
-      {removalDepartment && removalAction && (
+      {removalDepartment && (
         <RemoveConfirmationModal
           isOpen={removalModalOpen}
           department={removalDepartment}
@@ -250,7 +245,6 @@ const DepartmentPage: React.FC = () => {
           onCancel={() => {
             setRemovalModalOpen(false);
             setRemovalDepartment(null);
-            setRemovalAction(null);
           }}
         />
       )}
