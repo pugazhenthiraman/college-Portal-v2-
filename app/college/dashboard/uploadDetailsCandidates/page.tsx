@@ -51,8 +51,10 @@ export default function UploadDetailsCandidatesPage() {
   const handleSearch = (searchTerm: string) => {
     setSearch(searchTerm);
     const filtered = data.filter((row) =>
-      Object.values(row).some((value) =>
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      Object.values(row).some(
+        (value) =>
+          value &&
+          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
     setFilteredData(filtered);
@@ -134,11 +136,14 @@ export default function UploadDetailsCandidatesPage() {
 
   const handleSaveChanges = async (updatedStudent: any) => {
     try {
-      const response = await fetch(`/api/college/upload-student/${updatedStudent.userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedStudent),
-      });
+      const response = await fetch(
+        `/api/college/upload-student/${updatedStudent.userId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedStudent),
+        }
+      );
       if (response.ok) {
         toast.success("✅ Student updated successfully!");
         fetchData();
@@ -152,6 +157,32 @@ export default function UploadDetailsCandidatesPage() {
       toast.error("❌ An error occurred.");
     }
   };
+
+  const handleTemplateDownload = async () => {
+    try {
+      const res = await fetch('/api/college/download-template');
+
+      if (!res.ok) {
+        throw new Error('Failed to download template');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'college-template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Something went wrong while downloading the template.');
+    }
+  };
+
+  
 
   return (
     <div className="pt-28 px-6">
@@ -167,27 +198,26 @@ export default function UploadDetailsCandidatesPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-gray-800"></h2>
               <div className="flex justify-end items-center">
-                <a
-                  href="/collegePortalExcel/collegePortal-test1.xlsx"
-                  download="college-template.xlsx"
-                  className="mr-4"
-                >
+             
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <Button className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-md transition-all duration-300">
+                    <Button onClick={handleTemplateDownload} className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-md transition-all duration-300">
                       <Download className="h-5 w-5" />
                       Download Template
                     </Button>
                   </motion.div>
-                </a>
+                
               </div>
             </div>
             {/* Modern Upload File Section */}
             <div className="max-w-2xl mx-auto mb-6">
               <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300 justify-start">
-                <label htmlFor="file-upload" className="block text-2xl font-bold mb-3">
+                <label
+                  htmlFor="file-upload"
+                  className="block text-2xl font-bold mb-3"
+                >
                   <span className="bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent animate-shine">
                     Upload Excel
                   </span>{" "}
@@ -229,8 +259,13 @@ export default function UploadDetailsCandidatesPage() {
                 </div>
                 {fileName && (
                   <div className="mt-3 flex items-center justify-between bg-gray-100 p-2 rounded-md shadow-sm">
-                    <span className="text-gray-700 font-medium text-sm">{fileName}</span>
-                    <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+                    <span className="text-gray-700 font-medium text-sm">
+                      {fileName}
+                    </span>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.2 }}
+                    >
                       <Button
                         variant="destructive"
                         onClick={() => {
@@ -244,7 +279,10 @@ export default function UploadDetailsCandidatesPage() {
                     </motion.div>
                   </div>
                 )}
-                <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <Button
                     className="mt-4 w-full py-2 text-base bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition transform"
                     onClick={handleUpload}
@@ -258,13 +296,16 @@ export default function UploadDetailsCandidatesPage() {
           {/* Search Input Section (Aligned to Right) */}
           <div className="max-w-xl mx-auto mb-6">
             <div className="flex justify-end">
-              <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
                 <Input
                   type="text"
                   placeholder="🔍 Search students..."
                   className="w-56 h-12 px-4 py-2 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition transform"
                   value={search}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  onChange={(e: any) => handleSearch(e.target.value)}
                 />
               </motion.div>
             </div>
@@ -284,7 +325,12 @@ export default function UploadDetailsCandidatesPage() {
                           className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 cursor-pointer whitespace-nowrap"
                           onClick={() => handleSort(key)}
                         >
-                          {label} {sortColumn === key ? (sortDirection === "asc" ? "▲" : "▼") : ""}
+                          {label}{" "}
+                          {sortColumn === key
+                            ? sortDirection === "asc"
+                              ? "▲"
+                              : "▼"
+                            : ""}
                         </motion.th>
                       ))}
                       <motion.th
@@ -306,7 +352,10 @@ export default function UploadDetailsCandidatesPage() {
                         className="border-b hover:bg-indigo-50 transition duration-200"
                       >
                         {columns.map(({ key }) => (
-                          <td key={key} className="px-2 py-2 border text-gray-700 break-words whitespace-normal">
+                          <td
+                            key={key}
+                            className="px-2 py-2 border text-gray-700 break-words whitespace-normal"
+                          >
                             {key === "email" || key === "password"
                               ? row.user?.[key] || "N/A"
                               : key === "DOB"
@@ -315,7 +364,10 @@ export default function UploadDetailsCandidatesPage() {
                           </td>
                         ))}
                         <td className="px-2 py-2 border">
-                          <motion.div whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            transition={{ duration: 0.2 }}
+                          >
                             <Button
                               className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs"
                               onClick={() => handleEditClick(row)}
@@ -336,19 +388,25 @@ export default function UploadDetailsCandidatesPage() {
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1}
                   className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
-                    currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                    currentPage === 1
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
                   }`}
                 >
                   Prev
                 </motion.button>
-                <span className="text-md font-semibold text-gray-700">Page {currentPage}</span>
+                <span className="text-md font-semibold text-gray-700">
+                  Page {currentPage}
+                </span>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   transition={{ duration: 0.2 }}
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={indexOfLastRow >= filteredData.length}
                   className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
-                    indexOfLastRow >= filteredData.length ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                    indexOfLastRow >= filteredData.length
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
                   }`}
                 >
                   Next
