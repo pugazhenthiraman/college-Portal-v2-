@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 interface LoginFormData {
   email: string;
@@ -21,11 +22,20 @@ export default function AdminLoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const searchParams = useSearchParams();
 
+  // State to manage password visibility
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Toggle function for password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword((prevState) => !prevState);
+  };
+
   // Function to capitalize the first letter of the string
   const capitalizeFirstLetter = (str: string) => {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
-  // Update the role based on the user role
+
+  // Update the role based on the user role from query parameters
   const role = capitalizeFirstLetter(searchParams.get("role") || "");
 
   const onSubmit = async (data: LoginFormData) => {
@@ -105,12 +115,20 @@ export default function AdminLoginPage() {
             <p className="text-red-500">{errors.email.message}</p>
           )}
 
-          <input
-            type="password"
-            {...register("password", { required: "Password is required" })}
-            placeholder="Password"
-            className="w-full p-3 border border-gray-300 rounded-lg"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              {...register("password", { required: "Password is required" })}
+              placeholder="Password"
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            />
+            <div
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 cursor-pointer"
+              onClick={togglePasswordVisibility}
+            >
+              {showPassword ? <FaEye /> : <FaEyeSlash />}
+            </div>
+          </div>
           {errors.password && (
             <p className="text-red-500">{errors.password.message}</p>
           )}

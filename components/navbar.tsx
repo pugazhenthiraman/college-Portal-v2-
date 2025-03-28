@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image"; // Next.js Image component
 import { useRouter, usePathname } from "next/navigation";
 import { User, Home } from "lucide-react";
-import { signOut } from "next-auth/react";
+import LogoutButton from "../components/logoutButton";
 
 export default function Navbar() {
   const router = useRouter();
@@ -16,18 +16,6 @@ export default function Navbar() {
 
   // Show Home button ONLY on login pages
   const showHomeButton = ["/auth/login"].includes(pathname);
-
-  // Logout handler with dynamic callback URL if provided via env
-  const handleLogout = async () => {
-    try {
-      await signOut({ 
-        redirect: true, 
-        callbackUrl: process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/login` : '/auth/login'
-      });
-    } catch (error) {
-      console.error("Error during logout:", error);
-    }
-  };
 
   return (
     <nav className="bg-indigo-600 text-white p-4 flex justify-between items-center shadow-md h-20 fixed top-0 left-0 w-full z-50">
@@ -76,13 +64,7 @@ export default function Navbar() {
                 >
                   Profile
                 </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-2 text-red-500 hover:bg-gray-100 text-left"
-                  aria-label="Logout"
-                >
-                  Logout
-                </button>
+                <LogoutButton />
               </div>
             )}
           </div>

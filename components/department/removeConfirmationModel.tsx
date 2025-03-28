@@ -18,7 +18,7 @@ const RemoveConfirmationModal: React.FC<RemoveConfirmationModalProps> = ({
   isOpen,
   department,
   onConfirm,
-  onCancel, // currently not used in rendering, but available if needed
+  onCancel,
 }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -69,7 +69,8 @@ const RemoveConfirmationModal: React.FC<RemoveConfirmationModalProps> = ({
               </button>
             </div>
             <div className="mt-6 flex justify-between">
-              <Button variant="outline" onClick={onCancel}>
+              {/* Cancel Button: reduced size, light red background with white text */}
+              <Button onClick={onCancel} className="px-3 py-1 bg-red-300 text-white">
                 Cancel
               </Button>
               <div className="flex space-x-4">

@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 
 const LogoutButton: React.FC = () => {
   const handleLogout = async () => {
-    await signOut({ redirect: true, callbackUrl: "/auth/login" });
+    try {
+      await signOut({ redirect: true, callbackUrl: "/home" });
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
   };
 
   return (
-    <Button onClick={handleLogout} className="text-red-500">
+    <Button onClick={handleLogout} className="w-full px-4 py-2 text-red-500">
       Logout
     </Button>
   );
