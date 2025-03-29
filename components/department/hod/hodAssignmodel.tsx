@@ -129,10 +129,15 @@ const HodAssignmentModal: React.FC<HodAssignmentModalProps> = ({
               />
             </div>
             <div className="mt-6 flex justify-end space-x-4">
-              <Button variant="outline" onClick={onClose}>
+              <Button
+                onClick={onClose}
+                className="w-24 bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleSave} className="w-24 py-1 px-3 rounded">
+                Save
+              </Button>
             </div>
           </motion.div>
         </motion.div>

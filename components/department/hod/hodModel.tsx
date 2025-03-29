@@ -37,7 +37,7 @@ const HodDetailsModal: React.FC<HodDetailsModalProps> = ({ hod, onClose }) => {
           exit={{ scale: 0.8, opacity: 0 }}
           onClick={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => e.stopPropagation()}
         >
-          {/* Close Button */}
+          {/* Close Icon Button */}
           <div className="flex justify-end">
             <button
               onClick={onClose}
@@ -47,8 +47,10 @@ const HodDetailsModal: React.FC<HodDetailsModalProps> = ({ hod, onClose }) => {
               <X size={24} />
             </button>
           </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-6"> <span className="text-indigo-600 ">HOD</span> Details</h2>
-          <div className="flex flex-col space-y-3 text-left text-1xl">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">
+            <span className="text-indigo-600">HOD</span> Details
+          </h2>
+          <div className="flex flex-col space-y-3 text-left text-lg">
             <div className="flex items-center">
               <span className="font-bold w-24">Name:</span>
               <span>{hod.name}</span>
@@ -73,7 +75,12 @@ const HodDetailsModal: React.FC<HodDetailsModalProps> = ({ hod, onClose }) => {
             )}
           </div>
           <div className="mt-6 flex justify-end">
-            <Button onClick={onClose}>Close</Button>
+            <Button
+              onClick={onClose}
+              className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
+            >
+              Cancel
+            </Button>
           </div>
         </motion.div>
       </motion.div>

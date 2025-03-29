@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button"; // Assume this is your UI button
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader, Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { StudentEditModal } from "@/components/StudentEditModal";
+import { StudentViewModal } from "@/components/studentViewModel";
 
 export default function UploadDetailsCandidatesPage() {
   const [data, setData] = useState<any[]>([]);
@@ -22,7 +22,8 @@ export default function UploadDetailsCandidatesPage() {
   const [sortColumn, setSortColumn] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // Combined view/edit modal state
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   useEffect(() => {
@@ -71,42 +72,44 @@ export default function UploadDetailsCandidatesPage() {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      alert("❌ Please select a file before uploading.");
+      toast.error("❌ Please select a file before uploading.");
       return;
     }
-    if (confirm(`Are you sure you want to upload ${fileName}?`)) {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append("studentsExcelData", selectedFile);
-      try {
-        const response = await fetch("/api/college/upload-student", {
-          method: "POST",
-          body: formData,
-        });
-        if (response.ok) {
-          toast.success("✅ File uploaded successfully!");
-          fetchData();
-        } else {
-          toast.error("❌ Upload failed.");
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("❌ Error uploading file. Please try again.");
-      } finally {
-        setLoading(false);
+    if (!confirm(`Are you sure you want to upload ${fileName}?`)) return;
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("studentsExcelData", selectedFile);
+    try {
+      const response = await fetch("/api/college/upload-student", {
+        method: "POST",
+        body: formData,
+      });
+      if (response.ok) {
+        toast.success("✅ File uploaded successfully!");
+        fetchData();
+      } else {
+        const errorData = await response.json();
+        toast.error(`❌ Upload failed: ${errorData.error}`);
       }
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast.error(`❌ Error uploading file: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Updated columns array including the flattened email field.
+  // Note: The "email" key now renders from row.user.email in the table below.
   const columns = [
-    { key: "name", label: "Name" },
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
     { key: "email", label: "Email" },
+    { key: "personalEmailId", label: "Personal Email" },
     { key: "rollNo", label: "Roll No" },
-    { key: "personalEmail", label: "Personal Email" },
+    { key: "departmentName", label: "Department" },
     { key: "DOB", label: "DOB" },
     { key: "phoneNo", label: "Phone No" },
-    { key: "nationality", label: "Nationality" },
-    { key: "departmentName", label: "Department Name" },
   ];
 
   const handleSort = (column: string) => {
@@ -128,10 +131,10 @@ export default function UploadDetailsCandidatesPage() {
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
 
-  const handleEditClick = (student: any) => {
-    console.log(student);
+  // Open the combined view/edit modal for a student:
+  const handleViewClick = (student: any) => {
     setSelectedStudent(student);
-    setIsEditModalOpen(true);
+    setIsViewModalOpen(true);
   };
 
   const handleSaveChanges = async (updatedStudent: any) => {
@@ -147,7 +150,7 @@ export default function UploadDetailsCandidatesPage() {
       if (response.ok) {
         toast.success("✅ Student updated successfully!");
         fetchData();
-        setIsEditModalOpen(false);
+        setIsViewModalOpen(false);
       } else {
         const errorData = await response.json();
         toast.error(`❌ Failed to update student: ${errorData.error}`);
@@ -160,29 +163,24 @@ export default function UploadDetailsCandidatesPage() {
 
   const handleTemplateDownload = async () => {
     try {
-      const res = await fetch('/api/college/download-template');
-
+      const res = await fetch("/api/college/download-template");
       if (!res.ok) {
-        throw new Error('Failed to download template');
+        throw new Error("Failed to download template");
       }
-
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
-
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = 'college-template.xlsx';
+      link.download = "college-template.xlsx";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Download failed:', err);
-      alert('Something went wrong while downloading the template.');
+      console.error("Download failed:", err);
+      alert("Something went wrong while downloading the template.");
     }
   };
-
-  
 
   return (
     <div className="pt-28 px-6">
@@ -198,17 +196,18 @@ export default function UploadDetailsCandidatesPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-gray-800"></h2>
               <div className="flex justify-end items-center">
-             
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Button
+                    onClick={handleTemplateDownload}
+                    className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-md transition-all duration-300"
                   >
-                    <Button onClick={handleTemplateDownload} className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-md transition-all duration-300">
-                      <Download className="h-5 w-5" />
-                      Download Template
-                    </Button>
-                  </motion.div>
-                
+                    <Download className="h-5 w-5" />
+                    Download Template
+                  </Button>
+                </motion.div>
               </div>
             </div>
             {/* Modern Upload File Section */}
@@ -293,7 +292,7 @@ export default function UploadDetailsCandidatesPage() {
               </div>
             </div>
           </div>
-          {/* Search Input Section (Aligned to Right) */}
+          {/* Search Input Section */}
           <div className="max-w-xl mx-auto mb-6">
             <div className="flex justify-end">
               <motion.div
@@ -310,7 +309,7 @@ export default function UploadDetailsCandidatesPage() {
               </motion.div>
             </div>
           </div>
-          {/* Table Section in One Scrollable Container */}
+          {/* Table Section */}
           <div className="max-w-6xl mx-auto">
             <div className="bg-white shadow-lg rounded-lg border p-5 w-full">
               <div className="overflow-auto max-h-[500px]">
@@ -356,25 +355,27 @@ export default function UploadDetailsCandidatesPage() {
                             key={key}
                             className="px-2 py-2 border text-gray-700 break-words whitespace-normal"
                           >
-                            {key === "email" || key === "password"
-                              ? row.user?.[key] || "N/A"
+                            {key === "email"
+                              ? row.user?.email || "N/A"
                               : key === "DOB"
                               ? new Date(row[key]).toLocaleDateString("en-GB")
-                              : row[key]}
+                              : row[key] || "N/A"}
                           </td>
                         ))}
                         <td className="px-2 py-2 border">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Button
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs"
-                              onClick={() => handleEditClick(row)}
+                          <div className="flex gap-2 justify-center">
+                            <motion.div
+                              whileHover={{ scale: 1.05 }}
+                              transition={{ duration: 0.2 }}
                             >
-                              ✏️ Edit
-                            </Button>
-                          </motion.div>
+                              <Button
+                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-xs"
+                                onClick={() => handleViewClick(row)}
+                              >
+                                View
+                              </Button>
+                            </motion.div>
+                          </div>
                         </td>
                       </motion.tr>
                     ))}
@@ -416,9 +417,9 @@ export default function UploadDetailsCandidatesPage() {
           </div>
         </>
       )}
-      <StudentEditModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+      <StudentViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
         student={selectedStudent}
         onSave={handleSaveChanges}
       />

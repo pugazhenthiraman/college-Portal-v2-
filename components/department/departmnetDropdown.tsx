@@ -31,9 +31,9 @@ const DepartmentDropdown: React.FC<DepartmentDropdownProps> = ({
   const isSaveDisabled = draftSelected.length === 0;
 
   return (
-    <div className="bg-white border rounded shadow-md p-4 w-full transition-all duration-300">
+    <div className="bg-white border rounded shadow-md p-4 w-full md:w-96 min-h-[300px] transition-all duration-300">
       {availableDepartments.length > 0 ? (
-        <ul className="max-h-48 overflow-y-auto scrollbar-hide">
+        <ul className="max-h-60 overflow-y-auto scrollbar-hide">
           {availableDepartments.map((dept) => (
             <li
               key={dept}
@@ -81,14 +81,17 @@ const DepartmentDropdown: React.FC<DepartmentDropdownProps> = ({
       )}
 
       {/* Action buttons */}
-      <div className="mt-4 flex justify-end space-x-2">
-        <button onClick={onClose} className="text-red-600 hover:text-red-800">
+      <div className="mt-4 flex justify-end space-x-4">
+        <button
+          onClick={onClose}
+          className="w-24 bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded"
+        >
           Cancel
         </button>
         <button
           onClick={onSave}
           disabled={isSaveDisabled}
-          className={`bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded transition-opacity ${
+          className={`w-24 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded transition-opacity ${
             isSaveDisabled ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
