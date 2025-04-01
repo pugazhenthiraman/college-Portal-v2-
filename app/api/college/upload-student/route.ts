@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     const rollNoSet = new Set<string>();
     const phoneSet = new Set<string>();
 
-    // Map rows asynchronously to allow for password hashing and validation
+    // Map rows asynchronously to allow for password hashing, validation, and department lookup
     const validData = await Promise.all(
       jsonData.map(async (row: any, index: number) => {
         // Gather missing fields for this row
@@ -132,10 +132,32 @@ export async function POST(req: NextRequest) {
           throw new Error(`Row ${index + 1} has invalid department name: ${row.departmentName}`);
         }
 
+        // Look up the department record by name and collegeId
+        const departmentRecord = await prisma.department.findFirst({
+          where: {
+            name: { equals: row.departmentName.trim(), mode: "insensitive" },
+            collegeId: collegeId,
+          },
+        });
+        if (!departmentRecord) {
+          throw new Error(`Row ${index + 1}: No matching department found for department name: ${row.departmentName}`);
+        }
+
+        // Update row.departmentName to match the true department name from the DB
+        row.departmentName = departmentRecord.name;
+
+        // ----- Begin DOB Validation -----
+        const dob = new Date(row.DOB);
+        if (isNaN(dob.getTime())) {
+          throw new Error(`DOB format is wrong at row ${index + 1}`);
+        }
+        const isoDOB = dob.toISOString();
+        // ----- End DOB Validation -----
+
         // Hash the password for the User record, ensuring it is a string
         const hashedPassword = await bcrypt.hash(String(row.password), 10);
 
-        // Return an object that contains both user and student data.
+        // Return an object that contains both user and student data, including departmentId.
         return {
           // Fields for the User table
           email: row.email,
@@ -145,8 +167,9 @@ export async function POST(req: NextRequest) {
           lastName: row.lastName,
           personalEmailId: row.personalEmailId,
           rollNo: row.rollNo,
-          departmentName: row.departmentName,
-          DOB: new Date(row.DOB),
+          departmentName: row.departmentName, // Updated to match DB
+          departmentId: departmentRecord.id,  // NEW: departmentId from lookup
+          DOB: isoDOB,
           phoneNo: row.phoneNo,
           secondaryPhoneNo: row.secondaryPhoneNo,
           country: row.country,
@@ -156,6 +179,8 @@ export async function POST(req: NextRequest) {
         };
       })
     );
+
+    console.log("Processed student data example:", validData[0]);
 
     const result = await insertStudents(validData);
     return NextResponse.json(result, { status: result.success ? 200 : 500 });

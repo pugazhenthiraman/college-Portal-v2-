@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
 
 export type RemoveConfirmationModalProps = {
   isOpen: boolean;
   department: { id: number; name: string };
   onConfirm: (password: string, action: "all" | "hod") => void;
   onCancel: () => void;
-  action?: "all" | "hod"; // Optional prop to indicate a default or pre-selected removal action
+  action?: "all" | "hod"; // Optional default removal action
 };
 
 const RemoveConfirmationModal: React.FC<RemoveConfirmationModalProps> = ({
@@ -22,6 +23,15 @@ const RemoveConfirmationModal: React.FC<RemoveConfirmationModalProps> = ({
 }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleConfirmClick = (action: "all" | "hod") => {
+    if (!password.trim()) {
+      toast.error("Please enter your college password");
+      return;
+    }
+    onConfirm(password, action);
+    setPassword("");
+  };
 
   return (
     <AnimatePresence>
@@ -41,8 +51,7 @@ const RemoveConfirmationModal: React.FC<RemoveConfirmationModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold mb-4">
-              Remove Data for{" "}
-              <span className="text-indigo-600">{department.name}</span>
+              Remove Data for <span className="text-indigo-600">{department.name}</span>
             </h2>
             <p className="mb-4">
               Please enter your college password to confirm one of the following actions:
@@ -52,9 +61,7 @@ const RemoveConfirmationModal: React.FC<RemoveConfirmationModalProps> = ({
                 type={showPassword ? "text" : "password"}
                 placeholder="College Password"
                 value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setPassword(e.target.value)
-                }
+                onChange={(e: { target: { value: React.SetStateAction<string>; }; }) => setPassword(e.target.value)}
               />
               <button
                 type="button"
@@ -69,25 +76,14 @@ const RemoveConfirmationModal: React.FC<RemoveConfirmationModalProps> = ({
               </button>
             </div>
             <div className="mt-6 flex justify-between">
-              {/* Cancel Button: reduced size, light red background with white text */}
               <Button onClick={onCancel} className="px-3 py-1 bg-red-300 text-white">
                 Cancel
               </Button>
               <div className="flex space-x-4">
-                <Button
-                  onClick={() => {
-                    onConfirm(password, "hod");
-                    setPassword("");
-                  }}
-                >
+                <Button onClick={() => handleConfirmClick("hod")}>
                   Remove HOD
                 </Button>
-                <Button
-                  onClick={() => {
-                    onConfirm(password, "all");
-                    setPassword("");
-                  }}
-                >
+                <Button onClick={() => handleConfirmClick("all")}>
                   Remove All Data
                 </Button>
               </div>

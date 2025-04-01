@@ -23,12 +23,12 @@ type HodDetailsModalProps = {
 const HodDetailsModal: React.FC<HodDetailsModalProps> = ({ hod, onClose }) => {
   return (
     <AnimatePresence>
+      {/** Remove the onClick handler from the outer div so that clicking outside won't close the modal */}
       <motion.div
         className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
       >
         <motion.div
           className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full"

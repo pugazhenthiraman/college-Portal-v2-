@@ -62,18 +62,14 @@ const HodAssignmentModal: React.FC<HodAssignmentModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-            if (e.currentTarget === e.target) onClose();
-          }}
+          // Removed onClick here so clicking outside doesn't close the modal
         >
           <motion.div
             className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            onClick={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
-              e.stopPropagation()
-            }
+            onClick={(e: React.MouseEvent<HTMLDivElement, MouseEvent>) => e.stopPropagation()}
           >
             {/* Top-right Cancel Icon */}
             <button

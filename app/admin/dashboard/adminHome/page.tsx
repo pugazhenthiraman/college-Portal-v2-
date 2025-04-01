@@ -1,7 +1,10 @@
 
 
+
 export default function AdminHome() {
 
+
+  
 
   
 
@@ -11,6 +14,8 @@ export default function AdminHome() {
       <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
             Welcome to <span className="text-indigo-600">Admin Dashboard</span>
           </h2>
+
+
       
       {/* Grid for Dashboard Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

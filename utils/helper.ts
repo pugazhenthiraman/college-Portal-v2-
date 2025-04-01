@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export const insertStudents = async (data: any[]) => {
   try {
     // 1️⃣ Insert Users (for each row, create a User record with email, password, and role STUDENT)
-    const userData = data.map(d => ({
+    const userData = data.map((d) => ({
       email: d.email,
       password: d.password,
       role: UserRole.STUDENT,
@@ -17,7 +17,7 @@ export const insertStudents = async (data: any[]) => {
 
     // 2️⃣ Fetch inserted users to map emails to user IDs
     const users = await prisma.user.findMany({
-      where: { email: { in: data.map(d => d.email) } },
+      where: { email: { in: data.map((d) => d.email) } },
       select: { id: true, email: true },
     });
 
@@ -27,9 +27,7 @@ export const insertStudents = async (data: any[]) => {
     }, {} as Record<string, number>);
 
     // 3️⃣ Prepare raw SQL insertion for the Student table.
-    // We'll insert only the columns for which we have data:
-    // "userId", "firstName", "middleName", "lastName", "rollNo", "personalEmailId",
-    // "DOB", "phoneNo", "secondaryPhoneNo", "country", "district", "state", "departmentName", "collegeId"
+    // We'll insert the columns for which we have data.
     const format = (val: any) => {
       if (val === null || val === undefined) return "NULL";
       return `'${String(val).replace(/'/g, "''")}'`;
@@ -39,6 +37,19 @@ export const insertStudents = async (data: any[]) => {
       .map((item) => {
         const userId = userMap[item.email.toString().toLowerCase()];
         if (!userId) return null;
+
+        // Safely convert DOB:
+        let dobString: string;
+        if (item.DOB instanceof Date) {
+          dobString = item.DOB.toISOString();
+        } else {
+          const parsedDate = new Date(item.DOB);
+          if (isNaN(parsedDate.getTime())) {
+            throw new Error("Invalid time value");
+          }
+          dobString = parsedDate.toISOString();
+        }
+
         return `(
           ${userId},
           ${format(item.firstName)},
@@ -46,7 +57,7 @@ export const insertStudents = async (data: any[]) => {
           ${format(item.lastName)},
           ${format(item.rollNo)},
           ${format(item.personalEmailId)},
-          '${item.DOB.toISOString()}',
+          '${dobString}',
           ${format(item.phoneNo)},
           ${format(item.secondaryPhoneNo)},
           ${format(item.country)},

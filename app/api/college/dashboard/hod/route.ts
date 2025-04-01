@@ -12,6 +12,31 @@ export async function POST(req: Request) {
     const parsedData = hodAssignmentSchema.parse(body);
     const { collegeId, departmentId, hodName, hodEmail, password, contactNo, aadhaarNo } = parsedData;
 
+    // Check if a HOD with the same Aadhaar or phone number already exists in the same college
+    const existingHodAadhaar = await prisma.hOD.findFirst({
+      where: {
+        collegeId,
+        adhaarNo: aadhaarNo,
+      },
+    });
+    const existingHodPhone = await prisma.hOD.findFirst({
+      where: {
+        collegeId,
+        phoneNo: contactNo,
+      },
+    });
+
+    let errorMsg = "";
+    if (existingHodAadhaar) {
+      errorMsg += `A HOD with this Aadhaar number (${aadhaarNo}) already exists. `;
+    }
+    if (existingHodPhone) {
+      errorMsg += `A HOD with this phone number (${contactNo}) already exists.`;
+    }
+    if (errorMsg) {
+      return NextResponse.json({ error: errorMsg.trim() }, { status: 400 });
+    }
+
     // Use upsert to create or update the user record for the HOD.
     // If a user with hodEmail already exists, update their role to "HOD".
     // Otherwise, create a new user with role "HOD".
@@ -20,7 +45,7 @@ export async function POST(req: Request) {
       update: { role: "HOD" },
       create: {
         email: hodEmail,
-        password: password, // In production, ensure you hash the password before storing.
+        password: await bcrypt.hash(password, 10), // hash the password
         role: "HOD",
       },
     });
