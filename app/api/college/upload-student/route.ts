@@ -4,17 +4,16 @@ import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { insertStudents } from "@/utils/helper";
+import { UserRole } from "@prisma/client";
 
-// New required columns based on the updated Excel worksheet template
 const REQUIRED_COLUMNS = [
   "firstName",
   "lastName",
-  "email",              // For the User record
-  "password",           // For the User record (to be hashed)
-  "personalEmailId",    // For the Student record
+  "email",
+  "password",
+  "personalEmailId",
   "rollNo",
-  "departmentName",     // This now appears in the proper column per your template
+  "departmentName",
   "DOB",
   "phoneNo",
   "secondaryPhoneNo",
@@ -36,7 +35,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user?.college) {
-      return NextResponse.json({ error: "College ID not found" }, { status: 401 });
+      return NextResponse.json({ error: "College not found" }, { status: 401 });
     }
     const collegeId = user.college.id;
 
@@ -46,152 +45,181 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Read the file using XLSX and convert the first sheet to JSON
     const workbook = XLSX.read(await file.arrayBuffer(), { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-    // Check if file contains any rows
     if (!jsonData || jsonData.length === 0) {
-      return NextResponse.json(
-        { error: "The Excel file is empty or invalid." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "The Excel file is empty or invalid." }, { status: 400 });
     }
 
-    // Get the columns from the first row and trim them
-    const fileColumns = Object.keys(jsonData[0] || {});
-    const trimmedColumns = fileColumns.map((col) => col.trim());
-    const missingColumns = REQUIRED_COLUMNS.filter(
-      (col) => !trimmedColumns.includes(col)
-    );
+    const fileColumns = Object.keys(jsonData[0] || {}).map((col) => col.trim());
+    const missingColumns = REQUIRED_COLUMNS.filter((col) => !fileColumns.includes(col));
     if (missingColumns.length > 0) {
-      return NextResponse.json(
-        { error: `Missing columns: ${missingColumns.join(", ")}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Missing columns: ${missingColumns.join(", ")}` }, { status: 400 });
     }
 
-    // Fetch valid department names for the college (in lowercase for case-insensitive matching)
-    const validDepartments = await prisma.department.findMany({
+    // Fetch all departments for this college
+    const departments = await prisma.department.findMany({
       where: { collegeId },
-      select: { name: true },
+      select: { id: true, name: true },
     });
-    const validDepartmentNames = validDepartments.map(dep =>
-      dep.name.toLowerCase()
-    );
+    const departmentMap: Record<string, number> = {};
+    for (const dept of departments) {
+      departmentMap[dept.name.toLowerCase()] = dept.id;
+    }
 
-    // Sets for duplicate checking
+    // Fetch all HODs for this college
+    const hods = await prisma.hOD.findMany({
+      where: { collegeId },
+      select: { id: true, departmentId: true },
+    });
+    const hodMap: Record<number, number> = {};
+    for (const hod of hods) {
+      hodMap[hod.departmentId] = hod.id;
+    }
+
     const userEmailSet = new Set<string>();
-    const personalEmailSet = new Set<string>();
     const rollNoSet = new Set<string>();
+    const personalEmailSet = new Set<string>();
     const phoneSet = new Set<string>();
 
-    // Map rows asynchronously to allow for password hashing, validation, and department lookup
-    const validData = await Promise.all(
-      jsonData.map(async (row: any, index: number) => {
-        // Gather missing fields for this row
-        const missingForRow = REQUIRED_COLUMNS.filter(field => !row[field]);
-        if (missingForRow.length > 0) {
-          throw new Error(
-            `Row ${index + 1} is missing required fields: ${missingForRow.join(", ")}`
-          );
-        }
+    const usersToInsert: any[] = [];
+    const studentRecords: any[] = [];
 
-        // Normalize and check duplicates for user email (for User table)
-        const userEmail = row.email.toString().toLowerCase();
-        if (userEmailSet.has(userEmail)) {
-          throw new Error(`Row ${index + 1} has duplicate email: ${row.email}`);
-        }
-        userEmailSet.add(userEmail);
+    for (let index = 0; index < jsonData.length; index++) {
+      const row : any = jsonData[index];
+      const rowNumber = index + 2;
 
-        // Normalize and check duplicates for student personal email
-        const personalEmail = row.personalEmailId.toString().toLowerCase();
-        if (personalEmailSet.has(personalEmail)) {
-          throw new Error(`Row ${index + 1} has duplicate personalEmailId: ${row.personalEmailId}`);
-        }
-        personalEmailSet.add(personalEmail);
+      const missingFields = REQUIRED_COLUMNS.filter((key) => !row[key]);
+      if (missingFields.length) {
+        throw new Error(`Row ${rowNumber}: Missing required fields - ${missingFields.join(", ")}`);
+      }
 
-        // Check duplicate roll number within file
-        const rollNo = row.rollNo.toString();
-        if (rollNoSet.has(rollNo)) {
-          throw new Error(`Row ${index + 1} has duplicate rollNo: ${row.rollNo}`);
-        }
-        rollNoSet.add(rollNo);
+      const email = row.email.toString().toLowerCase();
+      const personalEmail = row.personalEmailId.toString().toLowerCase();
+      const rollNo = row.rollNo.toString();
+      const phoneNo = row.phoneNo.toString();
+      const departmentName = row.departmentName.toString().toLowerCase();
 
-        // Check duplicate phone number within file
-        const phoneNo = row.phoneNo.toString();
-        if (phoneSet.has(phoneNo)) {
-          throw new Error(`Row ${index + 1} has duplicate phoneNo: ${row.phoneNo}`);
-        }
-        phoneSet.add(phoneNo);
+      if (userEmailSet.has(email)) throw new Error(`Row ${rowNumber}: Duplicate email`);
+      if (personalEmailSet.has(personalEmail)) throw new Error(`Row ${rowNumber}: Duplicate personalEmailId`);
+      if (rollNoSet.has(rollNo)) throw new Error(`Row ${rowNumber}: Duplicate rollNo`);
+      if (phoneSet.has(phoneNo)) throw new Error(`Row ${rowNumber}: Duplicate phoneNo`);
 
-        // Validate department name (case-insensitive)
-        if (!validDepartmentNames.includes(row.departmentName.toString().toLowerCase())) {
-          throw new Error(`Row ${index + 1} has invalid department name: ${row.departmentName}`);
-        }
+      userEmailSet.add(email);
+      personalEmailSet.add(personalEmail);
+      rollNoSet.add(rollNo);
+      phoneSet.add(phoneNo);
 
-        // Look up the department record by name and collegeId
-        const departmentRecord = await prisma.department.findFirst({
-          where: {
-            name: { equals: row.departmentName.trim(), mode: "insensitive" },
-            collegeId: collegeId,
-          },
-        });
-        if (!departmentRecord) {
-          throw new Error(`Row ${index + 1}: No matching department found for department name: ${row.departmentName}`);
-        }
+      const departmentId = departmentMap[departmentName];
+      if (!departmentId) throw new Error(`Row ${rowNumber}: Invalid department name`);
 
-        // Update row.departmentName to match the true department name from the DB
-        row.departmentName = departmentRecord.name;
+      const hodId = hodMap[departmentId];
+      if (!hodId) throw new Error(`Row ${rowNumber}: No HOD assigned to department`);
 
-        // ----- Begin DOB Validation -----
-        const dob = new Date(row.DOB);
-        if (isNaN(dob.getTime())) {
-          throw new Error(`DOB format is wrong at row ${index + 1}`);
-        }
-        const isoDOB = dob.toISOString();
-        // ----- End DOB Validation -----
+      const hashedPassword = await bcrypt.hash(row.password.toString(), 10);
+      const dob = new Date(row.DOB);
+      if (isNaN(dob.getTime())) throw new Error(`Row ${rowNumber}: Invalid DOB`);
 
-        // Hash the password for the User record, ensuring it is a string
-        const hashedPassword = await bcrypt.hash(String(row.password), 10);
+      usersToInsert.push({ email, password: hashedPassword, role: UserRole.STUDENT });
 
-        // Return an object that contains both user and student data, including departmentId.
-        return {
-          // Fields for the User table
-          email: row.email,
-          password: hashedPassword,
-          // Fields for the Student table
-          firstName: row.firstName,
-          lastName: row.lastName,
-          personalEmailId: row.personalEmailId,
-          rollNo: row.rollNo,
-          departmentName: row.departmentName, // Updated to match DB
-          departmentId: departmentRecord.id,  // NEW: departmentId from lookup
-          DOB: isoDOB,
-          phoneNo: row.phoneNo,
-          secondaryPhoneNo: row.secondaryPhoneNo,
-          country: row.country,
-          district: row.district,
-          state: row.state,
-          collegeId,
-        };
+      studentRecords.push({
+        email,
+        firstName: row.firstName,
+        middleName: row.middleName || null,
+        lastName: row.lastName,
+        rollNo,
+        personalEmailId: personalEmail,
+        DOB: dob.toISOString(),
+        phoneNo,
+        secondaryPhoneNo: row.secondaryPhoneNo,
+        country: row.country,
+        district: row.district,
+        state: row.state,
+        departmentName: row.departmentName,
+        departmentId,
+        hodId,
+        collegeId
+      });
+    }
+
+    await prisma.user.createMany({ data: usersToInsert, skipDuplicates: true });
+
+    const createdUsers = await prisma.user.findMany({
+      where: { email: { in: usersToInsert.map((u) => u.email) } },
+      select: { id: true, email: true },
+    });
+    const emailToUserId = createdUsers.reduce((acc, curr) => {
+      acc[curr.email.toLowerCase()] = curr.id;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const values = studentRecords
+      .map((item) => {
+        const userId = emailToUserId[item.email];
+        if (!userId) return null;
+
+        return `(
+          ${userId},
+          '${item.firstName.replace(/'/g, "''")}',
+          ${item.middleName ? `'${item.middleName.replace(/'/g, "''")}'` : 'NULL'},
+          '${item.lastName.replace(/'/g, "''")}',
+          '${item.rollNo}',
+          '${item.personalEmailId}',
+          '${item.DOB}',
+          '${item.phoneNo}',
+          '${item.secondaryPhoneNo}',
+          '${item.country}',
+          '${item.district}',
+          '${item.state}',
+          '${item.departmentName}',
+          ${item.collegeId},
+          ${item.departmentId},
+          ${item.hodId}
+        )`;
       })
-    );
+      .filter(Boolean)
+      .join(",");
 
-    console.log("Processed student data example:", validData[0]);
+    if (!values) {
+      return NextResponse.json({ error: "No valid students to insert" }, { status: 400 });
+    }
 
-    const result = await insertStudents(validData);
-    return NextResponse.json(result, { status: result.success ? 200 : 500 });
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "Student" (
+        "userId", "firstName", "middleName", "lastName", "rollNo",
+        "personalEmailId", "DOB", "phoneNo", "secondaryPhoneNo",
+        "country", "district", "state", "departmentName", "collegeId",
+        "departmentId", "hodId"
+      )
+      VALUES ${values}
+      ON CONFLICT ("rollNo") DO UPDATE SET
+        "firstName" = EXCLUDED."firstName",
+        "middleName" = EXCLUDED."middleName",
+        "lastName" = EXCLUDED."lastName",
+        "personalEmailId" = EXCLUDED."personalEmailId",
+        "DOB" = EXCLUDED."DOB",
+        "phoneNo" = EXCLUDED."phoneNo",
+        "secondaryPhoneNo" = EXCLUDED."secondaryPhoneNo",
+        "country" = EXCLUDED."country",
+        "district" = EXCLUDED."district",
+        "state" = EXCLUDED."state",
+        "departmentName" = EXCLUDED."departmentName",
+        "collegeId" = EXCLUDED."collegeId",
+        "departmentId" = EXCLUDED."departmentId",
+        "hodId" = EXCLUDED."hodId";
+    `);
+
+    return NextResponse.json({ success: true, message: "Students inserted successfully" });
   } catch (error: any) {
-    console.error("❌ Error in POST /students:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("❌ Error uploading students:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
+
+
 
 export async function GET() {
   try {

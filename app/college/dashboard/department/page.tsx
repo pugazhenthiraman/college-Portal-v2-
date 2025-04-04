@@ -61,15 +61,16 @@ const DepartmentPage: React.FC = () => {
   if (!session) return <p>Please sign in.</p>;
 
   const user = session.user as {
-    collegeType: "ENGINEERING" | "ARTS" | "MEDICAL";
+    collegeType: "ENGINEERING" | "ARTS";
     collegeId: number;
     id: string;
     email: string;
     role: string;
+    departmentType: string;
   };
 
   // Dropdown options based on college type
-  const departmentsList = departmentList[user.collegeType];
+  const departmentsList = departmentList[user.departmentType];
 
   // Handlers for draft management
   const handleAdd = (deptName: string) => setDraftSelected((prev) => [...prev, deptName]);
