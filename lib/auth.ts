@@ -47,7 +47,8 @@ export const authOptions: AuthOptions = {
           id: user.id.toString(),
           email: user.email,
           role: user.role,
-          collegeType: user.college?.collegeType || null,// Add collegeType
+          collegeType: user.college?.collegeType || null,
+          departmentType:user.college?.departmentType || null,// Add collegeType
           collegeId: user.college?.id,  // add collegeId for later use
 
         };
@@ -59,8 +60,10 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
-        session.user.collegeType = token.collegeType; // Add collegeType to session
+        session.user.collegeType = token.collegeType;
+        session.user.departmentType=token.departmentType // Add collegeType to session
         session.user.collegeId = token.collegeId; // Add collegeId to session
+        // Add departmentId to session
       }
       return session;
     },
@@ -68,8 +71,10 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.collegeType = user.collegeType; // Add collegeType to JWT
+        token.collegeType = user.collegeType;
+        token.departmentType=user.departmentType // Add collegeType to JWT
         token.collegeId = user.collegeId; // Add collegeId
+        ; // Add departmentId to 
       }
       return token;
     },

@@ -56,6 +56,7 @@ model College {
   user   User @relation(fields: [userId], references: [id])
 
   collegeType           CollegeType
+  departmentType       String
 
   name                 String        @unique
   secondaryEmailId     String?       @unique

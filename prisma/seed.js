@@ -43,6 +43,7 @@ async function main() {
       instituteCode: "STS",
       councilIssuingCode: "INST",
       collegeType: "ENGINEERING",
+      departmentType: "COMPUTER_SCIENCE",
     },
   });
   console.log("✅ College Created:", college.name);

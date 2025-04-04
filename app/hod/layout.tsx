@@ -1,4 +1,4 @@
-// app/hod/layout.tsx
+"use client";
 import React from "react";
 import Navbar from "@/components/navbar";
 import LeftSidebar from "@/components/lefnavbar";
@@ -6,10 +6,10 @@ import LeftSidebar from "@/components/lefnavbar";
 const hodLinks = [
   { name: "Dashboard", path: "/hod/dashboard" },
   { name: "Students", path: "/hod/students" },
-  { name: "Faculty Advisor", path: "/hod/faculty-advisor" },
+  { name: "Faculty Advisor", path: "/hod/faculty" },
 ];
 
-const HodLayout = ({ children }: { children: React.ReactNode }) => {
+export default function HodLayout({ children }: { children: React.ReactNode }) {
   return (
     <div>
       <Navbar />
@@ -19,6 +19,4 @@ const HodLayout = ({ children }: { children: React.ReactNode }) => {
       </div>
     </div>
   );
-};
-
-export default HodLayout;
+}
