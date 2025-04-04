@@ -23,11 +23,12 @@ const DepartmentDropdown: React.FC<DepartmentDropdownProps> = ({
 }) => {
   // Combine already selected departments from draft and saved lists
   const alreadySelected = [...draftSelected, ...savedSelected];
+  // Filter available departments so that selected ones don't appear again
   const availableDepartments = departments.filter(
     (dept) => !alreadySelected.includes(dept)
   );
 
-  // Save button disabled if no department is selected in draft
+  // Disable save button if no department is selected in draft
   const isSaveDisabled = draftSelected.length === 0;
 
   return (

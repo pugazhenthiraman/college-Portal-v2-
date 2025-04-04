@@ -69,8 +69,13 @@ const DepartmentPage: React.FC = () => {
     departmentType: string;
   };
 
-  // Dropdown options based on college type
-  const departmentsList = departmentList[user.departmentType];
+  // Sample departmentType: "BE,ME"
+const departmentTypes = user.departmentType.split(","); // ['BE', 'ME']
+
+// Merge all department lists for those types
+const departmentsList = departmentTypes
+  .map(type => departmentList[type.trim()]) // trim to remove any spaces
+  .flat(); // flatten the array of arrays into one
 
   // Handlers for draft management
   const handleAdd = (deptName: string) => setDraftSelected((prev) => [...prev, deptName]);
