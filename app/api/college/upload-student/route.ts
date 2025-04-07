@@ -156,61 +156,68 @@ export async function POST(req: NextRequest) {
       return acc;
     }, {} as Record<string, number>);
 
-    const values = studentRecords
-      .map((item) => {
-        const userId = emailToUserId[item.email];
-        if (!userId) return null;
+   const values = studentRecords
+  .map((item) => {
+    const userId = emailToUserId[item.email];
+    if (!userId) return null;
 
-        return `(
-          ${userId},
-          '${item.firstName.replace(/'/g, "''")}',
-          ${item.middleName ? `'${item.middleName.replace(/'/g, "''")}'` : 'NULL'},
-          '${item.lastName.replace(/'/g, "''")}',
-          '${item.rollNo}',
-          '${item.personalEmailId}',
-          '${item.DOB}',
-          '${item.phoneNo}',
-          '${item.secondaryPhoneNo}',
-          '${item.country}',
-          '${item.district}',
-          '${item.state}',
-          '${item.departmentName}',
-          ${item.collegeId},
-          ${item.departmentId},
-          ${item.hodId}
-        )`;
-      })
-      .filter(Boolean)
-      .join(",");
+    const dobString = item.DOB ? `'${item.DOB}'` : 'NULL';
+    const middleName = item.middleName ? `'${item.middleName.replace(/'/g, "''")}'` : 'NULL';
 
-    if (!values) {
-      return NextResponse.json({ error: "No valid students to insert" }, { status: 400 });
-    }
+    return `(
+      ${userId},
+      '${item.firstName.replace(/'/g, "''")}',
+      ${middleName},
+      '${item.lastName.replace(/'/g, "''")}',
+      '${item.rollNo}',
+      '${item.personalEmailId}',
+      ${dobString},
+      '${item.phoneNo}',
+      '${item.secondaryPhoneNo}',
+      '${item.country.replace(/'/g, "''")}',
+      '${item.district.replace(/'/g, "''")}',
+      '${item.state.replace(/'/g, "''")}',
+      '${item.departmentName.replace(/'/g, "''")}',
+      ${item.collegeId},
+      ${item.departmentId},
+      ${item.hodId}
+    )`;
+  })
+  .filter(Boolean)
+  .join(",");
 
-    await prisma.$executeRawUnsafe(`
-      INSERT INTO "Student" (
-        "userId", "firstName", "middleName", "lastName", "rollNo",
-        "personalEmailId", "DOB", "phoneNo", "secondaryPhoneNo",
-        "country", "district", "state", "departmentName", "collegeId",
-        "departmentId", "hodId"
-      )
-      VALUES ${values}
-      ON CONFLICT ("rollNo") DO UPDATE SET
-        "firstName" = EXCLUDED."firstName",
-        "middleName" = EXCLUDED."middleName",
-        "lastName" = EXCLUDED."lastName",
-        "personalEmailId" = EXCLUDED."personalEmailId",
-        "DOB" = EXCLUDED."DOB",
-        "phoneNo" = EXCLUDED."phoneNo",
-        "secondaryPhoneNo" = EXCLUDED."secondaryPhoneNo",
-        "country" = EXCLUDED."country",
-        "district" = EXCLUDED."district",
-        "state" = EXCLUDED."state",
-        "departmentName" = EXCLUDED."departmentName",
-        "collegeId" = EXCLUDED."collegeId",
-        "departmentId" = EXCLUDED."departmentId",
-        "hodId" = EXCLUDED."hodId";
-    `);
+   if (!values) {
+  console.error("No valid student data to insert.");
+  return NextResponse.json({ error: "No valid students to insert" }, { status: 400 });
+}
+
+  
+
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO "Student" (
+      "userId", "firstName", "middleName", "lastName", "rollNo",
+      "personalEmailId", "DOB", "phoneNo", "secondaryPhoneNo",
+      "country", "district", "state", "departmentName", "collegeId",
+      "departmentId", "hodId"
+    )
+    VALUES ${values}
+    ON CONFLICT ("rollNo") DO UPDATE SET
+      "firstName" = EXCLUDED."firstName",
+      "middleName" = EXCLUDED."middleName",
+      "lastName" = EXCLUDED."lastName",
+      "personalEmailId" = EXCLUDED."personalEmailId",
+      "DOB" = EXCLUDED."DOB",
+      "phoneNo" = EXCLUDED."phoneNo",
+      "secondaryPhoneNo" = EXCLUDED."secondaryPhoneNo",
+      "country" = EXCLUDED."country",
+      "district" = EXCLUDED."district",
+      "state" = EXCLUDED."state",
+      "departmentName" = EXCLUDED."departmentName",
+      "collegeId" = EXCLUDED."collegeId",
+      "departmentId" = EXCLUDED."departmentId",
+      "hodId" = EXCLUDED."hodId";
+  `);
+
 
     return NextResponse.json({ success: true, message: "Students inserted successfully" });
   } catch (error: any) {

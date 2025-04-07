@@ -1,21 +1,41 @@
 import { z } from "zod";
 
-export const hodAssignmentSchema = z.object({
-  collegeId: z.number({
-    required_error: "College ID is required",
-  }),
-  departmentId: z.number({
-    required_error: "Department ID is required",
-  }),
-  hodName: z.string().nonempty("HOD name is required"),
-  hodEmail: z.string().email("Invalid email address"),
-  password: z.string().nonempty("Password is required"),
-  contactNo: z
-    .string()
-    .regex(/^\d+$/, "Contact number must contain only digits")
-    .nonempty("Contact number is required"),
-  aadhaarNo: z
-    .string()
-    .regex(/^\d{10,12}$/, "Aadhaar must be 10 to 12 digits")
-    .nonempty("Aadhaar number is required"),
-});
+export const assignmentSchema = z
+  .object({
+    collegeId: z.number({ required_error: "College ID is required" }),
+    departmentId: z.number({ required_error: "Department ID is required" }),
+    // Accept either hodName or facultyName:
+    hodName: z.string().optional(),
+    facultyName: z.string().optional(),
+    // Accept either hodEmail or facultyEmail:
+    hodEmail: z.string().email("Invalid email address").optional(),
+    facultyEmail: z.string().email("Invalid email address").optional(),
+    password: z.string().nonempty("Password is required"),
+    contactNo: z
+      .string()
+      .regex(/^\d+$/, "Contact number must contain only digits")
+      .nonempty("Contact number is required"),
+    aadhaarNo: z
+      .string()
+      .regex(/^\d{10,12}$/, "Aadhaar must be 10 to 12 digits")
+      .nonempty("Aadhaar number is required"),
+  })
+  .refine((data) => data.hodName || data.facultyName, {
+    message: "Either HOD name or Faculty name is required",
+    path: ["hodName"], // you can specify the path here if needed
+  })
+  .refine((data) => data.hodEmail || data.facultyEmail, {
+    message: "Either HOD email or Faculty email is required",
+    path: ["hodEmail"],
+  })
+  .transform((data) => ({
+    collegeId: data.collegeId,
+    departmentId: data.departmentId,
+    // Use hodName if provided; otherwise, use facultyName
+    name: data.hodName || data.facultyName || "",
+    // Similarly for email:
+    email: data.hodEmail || data.facultyEmail || "",
+    password: data.password,
+    contactNo: data.contactNo,
+    aadhaarNo: data.aadhaarNo,
+  }));

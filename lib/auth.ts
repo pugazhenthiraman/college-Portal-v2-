@@ -37,20 +37,36 @@ export const authOptions: AuthOptions = {
           },
         });
 
-        if (!user) throw new Error("No user found");
+        if (!user) {
+          throw new Error("No user found");
+        }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) throw new Error("Invalid password");
+        if (!isValid) {
+          throw new Error("Invalid password");
+        }
 
-        // Include collegeType in the returned user object if available
+        // Check college status if the user is a COLLEGE
+        if (user.role === "COLLEGE") {
+          if (!user.college) {
+            throw new Error("College details not found for this account.");
+          }
+          if (user.college.status === "PENDING") {
+            throw new Error("Please wait for admin approval.");
+          }
+          if (user.college.status === "REJECTED") {
+            throw new Error("Your account has been rejected by admin.");
+          }
+        }
+
+        // Ensure a valid object is returned
         return {
-          id: user.id.toString(),
-          email: user.email,
-          role: user.role,
-          collegeType: user.college?.collegeType || null,
-          departmentType:user.college?.departmentType || null,// Add collegeType
-          collegeId: user.college?.id,  // add collegeId for later use
-
+         id: user.id.toString(),
+  email: user.email,
+  role: user.role,
+  collegeType: user.college?.collegeType || null,
+  departmentType: user.college?.departmentType || null,
+  collegeId: user.college?.id || null,
         };
       },
     }),
@@ -61,9 +77,8 @@ export const authOptions: AuthOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.collegeType = token.collegeType;
-        session.user.departmentType=token.departmentType // Add collegeType to session
-        session.user.collegeId = token.collegeId; // Add collegeId to session
-        // Add departmentId to session
+        session.user.departmentType = token.departmentType;
+        session.user.collegeId = token.collegeId;
       }
       return session;
     },
@@ -72,9 +87,8 @@ export const authOptions: AuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.collegeType = user.collegeType;
-        token.departmentType=user.departmentType // Add collegeType to JWT
-        token.collegeId = user.collegeId; // Add collegeId
-        ; // Add departmentId to 
+        token.departmentType = user.departmentType;
+        token.collegeId = user.collegeId;
       }
       return token;
     },
@@ -83,3 +97,5 @@ export const authOptions: AuthOptions = {
     signIn: "/auth/login",
   },
 };
+
+export default authOptions;

@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Loader, Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentViewModal } from "@/components/studentViewModel";
+import SearchBar from "@/components/searchBar";
+import StudentTable from "@/components/studentTable";
 
 export default function UploadDetailsCandidatesPage() {
   const [data, setData] = useState<any[]>([]);
@@ -22,7 +23,6 @@ export default function UploadDetailsCandidatesPage() {
   const [sortColumn, setSortColumn] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
 
-  // Combined view/edit modal state
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
@@ -39,7 +39,6 @@ export default function UploadDetailsCandidatesPage() {
     try {
       const response = await fetch("/api/college/upload-student");
       const result = await response.json();
-      console.log("Fetched Data:", result.students);
       setData(result.students || []);
       setFilteredData(result.students || []);
     } catch (error) {
@@ -99,8 +98,6 @@ export default function UploadDetailsCandidatesPage() {
     }
   };
 
-  // Updated columns array including the flattened email field.
-  // Note: The "email" key now renders from row.user.email in the table below.
   const columns = [
     { key: "firstName", label: "First Name" },
     { key: "lastName", label: "Last Name" },
@@ -129,9 +126,8 @@ export default function UploadDetailsCandidatesPage() {
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
+  const currentRows = filteredData?.slice(indexOfFirstRow, indexOfLastRow) || [];
 
-  // Open the combined view/edit modal for a student:
   const handleViewClick = (student: any) => {
     setSelectedStudent(student);
     setIsViewModalOpen(true);
@@ -292,128 +288,27 @@ export default function UploadDetailsCandidatesPage() {
               </div>
             </div>
           </div>
-          {/* Search Input Section */}
+
+          {/* SearchBar Component */}
           <div className="max-w-xl mx-auto mb-6">
-            <div className="flex justify-end">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Input
-                  type="text"
-                  placeholder="🔍 Search students..."
-                  className="w-56 h-12 px-4 py-2 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition transform"
-                  value={search}
-                  onChange={(e: any) => handleSearch(e.target.value)}
-                />
-              </motion.div>
-            </div>
+            <SearchBar
+              value={search}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleSearch(e.target.value)
+              }
+            />
           </div>
-          {/* Table Section */}
+
+          {/* StudentTable Component */}
           <div className="max-w-6xl mx-auto">
-            <div className="bg-white shadow-lg rounded-lg border p-5 w-full">
-              <div className="overflow-auto max-h-[500px]">
-                <table className="w-full border-collapse table-auto text-sm">
-                  <thead className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-indigo-600 text-white uppercase">
-                    <tr>
-                      {columns.map(({ key, label }) => (
-                        <motion.th
-                          key={key}
-                          whileHover={{ scale: 1.05 }}
-                          transition={{ duration: 0.2 }}
-                          className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 cursor-pointer whitespace-nowrap"
-                          onClick={() => handleSort(key)}
-                        >
-                          {label}{" "}
-                          {sortColumn === key
-                            ? sortDirection === "asc"
-                              ? "▲"
-                              : "▼"
-                            : ""}
-                        </motion.th>
-                      ))}
-                      <motion.th
-                        whileHover={{ scale: 1.05 }}
-                        transition={{ duration: 0.2 }}
-                        className="px-2 py-2 text-center font-semibold tracking-wide border-b border-blue-300 whitespace-nowrap"
-                      >
-                        Actions
-                      </motion.th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-gray-800">
-                    {currentRows.map((row, index) => (
-                      <motion.tr
-                        key={row.userId}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="border-b hover:bg-indigo-50 transition duration-200"
-                      >
-                        {columns.map(({ key }) => (
-                          <td
-                            key={key}
-                            className="px-2 py-2 border text-gray-700 break-words whitespace-normal"
-                          >
-                            {key === "email"
-                              ? row.user?.email || "N/A"
-                              : key === "DOB"
-                              ? new Date(row[key]).toLocaleDateString("en-GB")
-                              : row[key] || "N/A"}
-                          </td>
-                        ))}
-                        <td className="px-2 py-2 border">
-                          <div className="flex gap-2 justify-center">
-                            <motion.div
-                              whileHover={{ scale: 1.05 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <Button
-                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-xs"
-                                onClick={() => handleViewClick(row)}
-                              >
-                                View
-                              </Button>
-                            </motion.div>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex justify-between items-center mt-4">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.2 }}
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
-                    currentPage === 1
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
-                  }`}
-                >
-                  Prev
-                </motion.button>
-                <span className="text-md font-semibold text-gray-700">
-                  Page {currentPage}
-                </span>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.2 }}
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={indexOfLastRow >= filteredData.length}
-                  className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
-                    indexOfLastRow >= filteredData.length
-                      ? "bg-gray-300 cursor-not-allowed"
-                      : "bg-indigo-500 hover:bg-indigo-600 text-white"
-                  }`}
-                >
-                  Next
-                </motion.button>
-              </div>
-            </div>
+            <StudentTable
+              students={currentRows} // Updated to match prop name
+              columns={columns}
+              onSort={handleSort}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onView={handleViewClick} // Updated to match prop name
+            />
           </div>
         </>
       )}

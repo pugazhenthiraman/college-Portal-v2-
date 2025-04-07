@@ -120,6 +120,10 @@ model Faculty {
   hod          HOD?        @relation(fields: [hodId], references: [id])
   createdAt    DateTime    @default(now())
   students     Student[]   @relation("FacultyStudents")
+
+    // New fields for storing additional data:
+  contactNo    String?
+  aadhaarNo    String?
 }
 
 model Student {

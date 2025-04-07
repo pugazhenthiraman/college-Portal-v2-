@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
@@ -97,6 +97,8 @@ async function main() {
       collegeId: college.id,
       departmentId: department.id,
       hodId: hod.id,
+      contactNo: "9876543210", // New field for contact number
+      aadhaarNo: "111122223333", // New field for Aadhaar number
     },
   });
   console.log("✅ Faculty Created:", faculty.name);
@@ -135,11 +137,11 @@ async function main() {
       secondaryPhoneNo: "+0987654321",
       lastLogin: null, // Set to a Date if needed
 
-      country: "Indian",
+      country:"Indian",
       state: "Tamil Nadu",
-      district: "Chennai",
+      district:"Chennai",
       
-    departmentName: "Computer Science",
+     departmentName:"Computer Science",
 
       passportNo: "P987654321",
       passportExpiryDate: new Date("2030-12-31"),

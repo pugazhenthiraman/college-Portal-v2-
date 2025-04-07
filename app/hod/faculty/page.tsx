@@ -1,96 +1,151 @@
+// File: app/hod/faculty/page.tsx
 "use client";
+
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { Toaster } from "react-hot-toast";
+import FacultyAdvisorForm, { FacultyAdvisorFormData } from "@/components/hod/facultyAdvaisorModel";
+import FacultyAdvisorTable, { FacultyAdvisor } from "@/components/hod/facultyAdvaisorTable";
+import FacultyRemoveConfirmationModal from "@/components/hod/removeconfiramationModel";
+import toast from "react-hot-toast";
 
-interface Faculty {
-  id: number;
-  name: string;
-  email: string;
-}
+export default function FacultyAdvisorPage() {
+  const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const [advisors, setAdvisors] = useState<FacultyAdvisor[]>([]);
+  const [selectedAdvisor, setSelectedAdvisor] = useState<FacultyAdvisor | null>(null);
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState<boolean>(false);
 
-export default function FacultyAssignmentPage() {
-  const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [assigning, setAssigning] = useState<number | null>(null);
-
+  // Fetch existing advisors from the backend on mount.
   useEffect(() => {
-    // Fetch faculty data for the HOD's department
-    const fetchFaculties = async () => {
+    async function fetchAdvisors() {
       try {
-        const { data } = await axios.get("/api/hod/faculty"); // Adjust endpoint as needed
-        setFaculties(data.faculties);
-      } catch (error) {
-        console.error("Error fetching faculties", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        const res = await fetch("/api/hod/faculty");
+        const data = await res.json();
+                console.log("Data from /api/hod/faculty:", data.faculty);
 
-    fetchFaculties();
+        if (res.ok && data.faculty) {
+          setAdvisors(data.faculty);
+        } else {
+          const errMsg = data.error || "Failed to fetch faculty advisors";
+          toast.error(errMsg);
+          console.error("Fetch advisors error:", errMsg);
+        }
+      } catch (error: any) {
+        console.error("Error fetching advisors:", error);
+        toast.error("Error fetching faculty advisors");
+      }
+    }
+    fetchAdvisors();
   }, []);
 
-  const handleAssign = async (facultyId: number) => {
-    setAssigning(facultyId);
+  // Handler for creating a new Faculty Advisor.
+  const handleAdvisorSubmit = async (advisorData: FacultyAdvisorFormData) => {
+    console.log("Submitting advisor data:", advisorData);
     try {
-      const { data } = await axios.post("/api/hod/assign-faculty", { facultyId });
-      if (data.success) {
-        alert("Faculty assigned successfully!");
-        // Optionally update local state to reflect the assignment
+      const res = await fetch("/api/hod/faculty", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(advisorData),
+      });
+      const data = await res.json();
+      if (res.ok && data.facultyAdvisor) {
+        setAdvisors((prev) => [...prev, data.facultyAdvisor]);
+        toast.success("Faculty advisor created successfully!");
+        setIsFormOpen(false);
       } else {
-        alert("Assignment failed. Please try again.");
+        const errMsg = data.error || "Failed to create faculty advisor";
+        toast.error(errMsg);
+        console.error("Error creating faculty advisor:", errMsg);
       }
-    } catch (error) {
-      console.error("Error assigning faculty", error);
-      alert("Failed to assign faculty.");
-    } finally {
-      setAssigning(null);
+    } catch (error: any) {
+      console.error("Error creating faculty advisor:", error);
+      toast.error("Error creating faculty advisor");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-6 mt-24 text-center">
-        <p>Loading faculties...</p>
-      </div>
-    );
-  }
+  // Open the removal confirmation modal.
+  const handleRemoveClick = (advisor: FacultyAdvisor) => {
+    setSelectedAdvisor(advisor);
+    setIsRemoveModalOpen(true);
+  };
+
+  // Handler for confirming advisor removal.
+  const handleConfirmRemove = async (password: string) => {
+    if (!selectedAdvisor) return;
+    try {
+      const res = await fetch(`/api/hod/faculty/${selectedAdvisor.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAdvisors((prev) => prev.filter((a) => a.id !== selectedAdvisor.id));
+        toast.success("Faculty advisor removed successfully!");
+      } else {
+        const errMsg = data.error || "Failed to remove faculty advisor";
+        toast.error(errMsg);
+        console.error("Error removing faculty advisor:", errMsg);
+      }
+    } catch (error: any) {
+      console.error("Error removing faculty advisor:", error);
+      toast.error("Error removing faculty advisor");
+    } finally {
+      setIsRemoveModalOpen(false);
+      setSelectedAdvisor(null);
+    }
+  };
+
+  // Handler for viewing advisor details (for future expansion).
+  const handleViewDetails = (advisor: FacultyAdvisor) => {
+    console.log("View details for:", advisor);
+    // Optionally, you can open a modal to display and edit advisor details.
+  };
 
   return (
-    <div className="p-6 mt-24">
-      <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
-        Faculty Assignment
-      </h2>
-      {faculties.length === 0 ? (
-        <p className="text-center">No faculty found for assignment.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border-b">Name</th>
-                <th className="py-2 px-4 border-b">Email</th>
-                <th className="py-2 px-4 border-b">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {faculties.map((faculty) => (
-                <tr key={faculty.id}>
-                  <td className="py-2 px-4 border-b">{faculty.name}</td>
-                  <td className="py-2 px-4 border-b">{faculty.email}</td>
-                  <td className="py-2 px-4 border-b">
-                    <button
-                      onClick={() => handleAssign(faculty.id)}
-                      disabled={assigning === faculty.id}
-                      className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-                    >
-                      {assigning === faculty.id ? "Assigning..." : "Assign as Advisor"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="container mx-auto px-6 pt-28">
+      <Toaster position="top-right" />
+
+      <div className="flex flex-row gap-6">
+        {/* Left Column: Create Advisor Button & Form */}
+        <div className="w-1/3">
+          <button
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md"
+            aria-label="Create Faculty Advisor"
+          >
+            Create Faculty Advisor
+          </button>
+
+          {isFormOpen && (
+            <div className="mt-4 border border-black bg-white rounded-lg p-6">
+              <FacultyAdvisorForm
+                onSubmit={handleAdvisorSubmit}
+                onCancel={() => setIsFormOpen(false)}
+              />
+            </div>
+          )}
         </div>
+
+        {/* Right Column: Faculty Advisor Table */}
+        <div className="w-2/3 flex justify-end">
+          <div className="w-full max-w-lg">
+            <FacultyAdvisorTable
+              advisors={advisors}
+              onRemove={handleRemoveClick}
+              onViewDetails={handleViewDetails}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Faculty Removal Confirmation Modal */}
+      {selectedAdvisor && (
+        <FacultyRemoveConfirmationModal
+          isOpen={isRemoveModalOpen}
+          advisor={selectedAdvisor}
+          onConfirm={handleConfirmRemove}
+          onCancel={() => setIsRemoveModalOpen(false)}
+        />
       )}
     </div>
   );
