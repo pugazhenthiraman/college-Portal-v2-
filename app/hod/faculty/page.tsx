@@ -1,11 +1,12 @@
-// File: app/hod/faculty/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
+import { AnimatePresence, motion } from "framer-motion";
 import FacultyAdvisorForm, { FacultyAdvisorFormData } from "@/components/hod/facultyAdvaisorModel";
 import FacultyAdvisorTable, { FacultyAdvisor } from "@/components/hod/facultyAdvaisorTable";
 import FacultyRemoveConfirmationModal from "@/components/hod/removeconfiramationModel";
+import FacultyViewModal, { FacultyViewData } from "@/components/hod/facultyViewModal";
 import toast from "react-hot-toast";
 
 export default function FacultyAdvisorPage() {
@@ -13,21 +14,40 @@ export default function FacultyAdvisorPage() {
   const [advisors, setAdvisors] = useState<FacultyAdvisor[]>([]);
   const [selectedAdvisor, setSelectedAdvisor] = useState<FacultyAdvisor | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState<boolean>(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState<boolean>(false);
+  const [collegeId, setCollegeId] = useState<number | null>(null);
+  const [departmentId, setDepartmentId] = useState<number | null>(null);
 
-  // Fetch existing advisors from the backend on mount.
+  // Fetch HOD context (collegeId, departmentId)
+  useEffect(() => {
+    async function fetchContext() {
+      try {
+        const res = await fetch("/api/hod/faculty");
+        const data = await res.json();
+        if (res.ok) {
+          setCollegeId(data.collegeId);
+          setDepartmentId(data.departmentId);
+        } else {
+          toast.error("Failed to fetch HOD context");
+        }
+      } catch (err) {
+        console.error("Error fetching HOD context", err);
+        toast.error("Error fetching context");
+      }
+    }
+    fetchContext();
+  }, []);
+
+  // Fetch existing faculty advisors
   useEffect(() => {
     async function fetchAdvisors() {
       try {
         const res = await fetch("/api/hod/faculty");
         const data = await res.json();
-                console.log("Data from /api/hod/faculty:", data.faculty);
-
         if (res.ok && data.faculty) {
           setAdvisors(data.faculty);
         } else {
-          const errMsg = data.error || "Failed to fetch faculty advisors";
-          toast.error(errMsg);
-          console.error("Fetch advisors error:", errMsg);
+          toast.error(data.error || "Failed to fetch faculty advisors");
         }
       } catch (error: any) {
         console.error("Error fetching advisors:", error);
@@ -37,7 +57,6 @@ export default function FacultyAdvisorPage() {
     fetchAdvisors();
   }, []);
 
-  // Handler for creating a new Faculty Advisor.
   const handleAdvisorSubmit = async (advisorData: FacultyAdvisorFormData) => {
     console.log("Submitting advisor data:", advisorData);
     try {
@@ -47,14 +66,12 @@ export default function FacultyAdvisorPage() {
         body: JSON.stringify(advisorData),
       });
       const data = await res.json();
-      if (res.ok && data.facultyAdvisor) {
-        setAdvisors((prev) => [...prev, data.facultyAdvisor]);
+      if (res.ok && data.faculty) {
+        setAdvisors((prev) => [...prev, data.faculty]);
         toast.success("Faculty advisor created successfully!");
         setIsFormOpen(false);
       } else {
-        const errMsg = data.error || "Failed to create faculty advisor";
-        toast.error(errMsg);
-        console.error("Error creating faculty advisor:", errMsg);
+        toast.error(data.error || "Failed to create faculty advisor");
       }
     } catch (error: any) {
       console.error("Error creating faculty advisor:", error);
@@ -62,13 +79,11 @@ export default function FacultyAdvisorPage() {
     }
   };
 
-  // Open the removal confirmation modal.
   const handleRemoveClick = (advisor: FacultyAdvisor) => {
     setSelectedAdvisor(advisor);
     setIsRemoveModalOpen(true);
   };
 
-  // Handler for confirming advisor removal.
   const handleConfirmRemove = async (password: string) => {
     if (!selectedAdvisor) return;
     try {
@@ -82,9 +97,7 @@ export default function FacultyAdvisorPage() {
         setAdvisors((prev) => prev.filter((a) => a.id !== selectedAdvisor.id));
         toast.success("Faculty advisor removed successfully!");
       } else {
-        const errMsg = data.error || "Failed to remove faculty advisor";
-        toast.error(errMsg);
-        console.error("Error removing faculty advisor:", errMsg);
+        toast.error(data.error || "Failed to remove faculty advisor");
       }
     } catch (error: any) {
       console.error("Error removing faculty advisor:", error);
@@ -95,10 +108,36 @@ export default function FacultyAdvisorPage() {
     }
   };
 
-  // Handler for viewing advisor details (for future expansion).
   const handleViewDetails = (advisor: FacultyAdvisor) => {
-    console.log("View details for:", advisor);
-    // Optionally, you can open a modal to display and edit advisor details.
+    setSelectedAdvisor(advisor);
+    setIsViewModalOpen(true);
+  };
+
+  const handleSaveFacultyChanges = async (updatedData: FacultyViewData) => {
+    if (!selectedAdvisor) return;
+    try {
+      const res = await fetch(`/api/hod/faculty/${selectedAdvisor.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedData),
+      });
+      const data = await res.json();
+      if (res.ok && data.updatedFaculty) {
+        setAdvisors((prev) =>
+          prev.map((advisor) =>
+            advisor.id === selectedAdvisor.id ? data.updatedFaculty : advisor
+          )
+        );
+        toast.success("Faculty advisor updated successfully!");
+        setIsViewModalOpen(false);
+        setSelectedAdvisor(null);
+      } else {
+        toast.error(data.error || "Failed to update faculty advisor");
+      }
+    } catch (error: any) {
+      console.error("Error updating faculty advisor:", error);
+      toast.error("Error updating faculty advisor");
+    }
   };
 
   return (
@@ -106,27 +145,41 @@ export default function FacultyAdvisorPage() {
       <Toaster position="top-right" />
 
       <div className="flex flex-row gap-6">
-        {/* Left Column: Create Advisor Button & Form */}
         <div className="w-1/3">
           <button
-            onClick={() => setIsFormOpen(!isFormOpen)}
+            onClick={() => setIsFormOpen(true)}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md"
             aria-label="Create Faculty Advisor"
           >
             Create Faculty Advisor
           </button>
 
-          {isFormOpen && (
-            <div className="mt-4 border border-black bg-white rounded-lg p-6">
-              <FacultyAdvisorForm
-                onSubmit={handleAdvisorSubmit}
-                onCancel={() => setIsFormOpen(false)}
-              />
-            </div>
-          )}
+          <AnimatePresence>
+            {isFormOpen && collegeId !== null && departmentId !== null && (
+              <motion.div
+                className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                >
+                  <FacultyAdvisorForm
+                    onSubmit={handleAdvisorSubmit}
+                    onCancel={() => setIsFormOpen(false)}
+                    collegeId={collegeId}
+                    departmentId={departmentId}
+                  />
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Right Column: Faculty Advisor Table */}
         <div className="w-2/3 flex justify-end">
           <div className="w-full max-w-lg">
             <FacultyAdvisorTable
@@ -138,13 +191,29 @@ export default function FacultyAdvisorPage() {
         </div>
       </div>
 
-      {/* Faculty Removal Confirmation Modal */}
       {selectedAdvisor && (
         <FacultyRemoveConfirmationModal
           isOpen={isRemoveModalOpen}
           advisor={selectedAdvisor}
           onConfirm={handleConfirmRemove}
           onCancel={() => setIsRemoveModalOpen(false)}
+        />
+      )}
+
+      {selectedAdvisor && isViewModalOpen && (
+        <FacultyViewModal
+          isOpen={isViewModalOpen}
+          faculty={{
+            name: selectedAdvisor.name,
+            email: selectedAdvisor.email,
+            contactNo: selectedAdvisor.contactNo,
+            aadhaarNo: selectedAdvisor.aadhaarNo,
+          }}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedAdvisor(null);
+          }}
+          onSave={handleSaveFacultyChanges}
         />
       )}
     </div>

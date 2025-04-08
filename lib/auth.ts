@@ -79,6 +79,7 @@ export const authOptions: AuthOptions = {
         session.user.collegeType = token.collegeType;
         session.user.departmentType = token.departmentType;
         session.user.collegeId = token.collegeId;
+        session.user.departmentId = token.departmentId; // Ensure this is included if available
       }
       return session;
     },
@@ -89,6 +90,7 @@ export const authOptions: AuthOptions = {
         token.collegeType = user.collegeType;
         token.departmentType = user.departmentType;
         token.collegeId = user.collegeId;
+        token.departmentId = user.departmentId; // Ensure this is set if needed
       }
       return token;
     },

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -9,27 +9,50 @@ import toast from "react-hot-toast";
 import { assignmentSchema as facultyAssignmentSchema } from "@/lib/validation";
 import { z } from "zod";
 
+// The transformed output type of our assignmentSchema.
 export type FacultyAdvisorFormData = z.infer<typeof facultyAssignmentSchema>;
 
 interface FacultyAdvisorFormProps {
+  // Pass the collegeId and departmentId from the parent.
+  collegeId: number;
+  departmentId: number;
   onSubmit: (advisorData: FacultyAdvisorFormData) => Promise<void> | void;
   onCancel: () => void;
 }
 
-const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({ onSubmit, onCancel }) => {
+const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({
+  collegeId,
+  departmentId,
+  onSubmit,
+  onCancel,
+}) => {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FacultyAdvisorFormData>({
-    resolver: zodResolver(facultyAssignmentSchema),
+    // We cast the resolver to any to work around type conflicts caused by Zod transform.
+    resolver: zodResolver(facultyAssignmentSchema) as any,
+    defaultValues: {
+      collegeId,
+      departmentId,
+      name: "",
+      email: "",
+      password: "",
+      contactNo: "",
+      aadhaarNo: "",
+    },
   });
 
-  const handleFormSubmit = async (data: FacultyAdvisorFormData) => {
+  const handleFormSubmit: SubmitHandler<FacultyAdvisorFormData> = async (data) => {
+    console.log("Submitting advisor data:", data);
     try {
       await onSubmit(data);
       toast.success("Faculty advisor created successfully!");
+      reset(); // Clear the form after successful submission.
     } catch (error: any) {
+      console.error("Error in FacultyAdvisorForm:", error);
       toast.error(error.message || "Failed to create faculty advisor.");
     }
   };
@@ -38,7 +61,7 @@ const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({ onSubmit, onCan
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="flex items-center mb-4">
         <h2 className="text-xl font-bold text-black flex-grow">
-          Assign <span className="text-indigo-600">Faculty Advisor</span>
+          Create <span className="text-indigo-600">Faculty Advisor</span>
         </h2>
         <button
           onClick={onCancel}
@@ -50,8 +73,12 @@ const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({ onSubmit, onCan
         </button>
       </div>
 
+      {/* Hidden fields for collegeId and departmentId */}
+      <input type="hidden" {...register("collegeId", { valueAsNumber: true })} />
+      <input type="hidden" {...register("departmentId", { valueAsNumber: true })} />
+
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="name" className="block text-sm font-medium text-black">
           Name
         </label>
         <input
@@ -62,11 +89,13 @@ const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({ onSubmit, onCan
           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white"
           required
         />
-        {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
+        {errors.name && (
+          <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>
+        )}
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="email" className="block text-sm font-medium text-black">
           Email
         </label>
         <input
@@ -77,11 +106,13 @@ const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({ onSubmit, onCan
           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white"
           required
         />
-        {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+        {errors.email && (
+          <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+        )}
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="password" className="block text-sm font-medium text-black">
           Password
         </label>
         <input
@@ -92,15 +123,17 @@ const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({ onSubmit, onCan
           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white"
           required
         />
-        {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+        {errors.password && (
+          <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+        )}
       </div>
 
       <div>
-        <label htmlFor="mobileNumber" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="contactNo" className="block text-sm font-medium text-black">
           Mobile Number
         </label>
         <input
-          id="mobileNumber"
+          id="contactNo"
           type="text"
           {...register("contactNo")}
           placeholder="Enter mobile number"
@@ -113,11 +146,11 @@ const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({ onSubmit, onCan
       </div>
 
       <div>
-        <label htmlFor="aadharNumber" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="aadhaarNo" className="block text-sm font-medium text-black">
           Aadhar Number
         </label>
         <input
-          id="aadharNumber"
+          id="aadhaarNo"
           type="text"
           {...register("aadhaarNo")}
           placeholder="Enter Aadhar number"

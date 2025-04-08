@@ -4,10 +4,16 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Info } from "lucide-react";
 
+// Type definition for a faculty advisor as expected by this table.
 export type FacultyAdvisor = {
+  aadhaarNo: string;
+  contactNo: string;
+  email: string;
   id: number;
   name: string;
   totalStudents: number;
+  // If you need additional fields (e.g., email, contactNo, aadhaarNo) for other views/editing,
+  // you can extend this type accordingly.
 };
 
 type FacultyAdvisorTableProps = {
@@ -47,7 +53,7 @@ const FacultyAdvisorTable: React.FC<FacultyAdvisorTableProps> = ({
                   title="View Faculty Info"
                   className="text-blue-500 hover:text-blue-700"
                 >
-                  <Info className="w-4 h-4" />
+                  <Info className="w-5 h-5" strokeWidth={2} />
                 </button>
               </td>
               <td className="py-2 px-4 border text-center">
