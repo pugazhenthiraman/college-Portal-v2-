@@ -46,10 +46,11 @@ const FacultyAdvisorForm: React.FC<FacultyAdvisorFormProps> = ({
   });
 
   const handleFormSubmit: SubmitHandler<FacultyAdvisorFormData> = async (data) => {
+
+    
     console.log("Submitting advisor data:", data);
     try {
       await onSubmit(data);
-      toast.success("Faculty advisor created successfully!");
       reset(); // Clear the form after successful submission.
     } catch (error: any) {
       console.error("Error in FacultyAdvisorForm:", error);

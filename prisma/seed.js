@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-import bcrypt from 'bcryptjs';
+const bcrypt = require('bcryptjs'); // Changed from import to require
 const prisma = new PrismaClient();
 
 async function main() {
@@ -48,7 +48,7 @@ async function main() {
   });
   console.log("✅ College Created:", college.name);
 
-  // DEPARTMENT (No login credentials for department)
+  // DEPARTMENT
   const department = await prisma.department.create({
     data: {
       name: "test_dept",
@@ -58,7 +58,6 @@ async function main() {
   console.log("✅ Department Created:", department.name);
 
   // HOD
-  // HOD
   const hodUser = await prisma.user.create({
     data: {
       email: "hod@hod.com",
@@ -67,19 +66,16 @@ async function main() {
     },
   });
 
-  // Create HOD with additional phoneNo field
   const hod = await prisma.hOD.create({
     data: {
       userId: hodUser.id,
       name: "test hod",
       collegeId: college.id,
       departmentId: department.id,
-      phoneNo: "1234567890", 
-      adhaarNo:"635417894757"// Add the phone number here
-    
+      phoneNo: "1234567890",
+      adhaarNo: "635417894757",
     },
   });
-
   console.log("✅ HOD Created:", hod.name);
 
   // FACULTY
@@ -97,8 +93,8 @@ async function main() {
       collegeId: college.id,
       departmentId: department.id,
       hodId: hod.id,
-      contactNo: "9876543210", // New field for contact number
-      aadhaarNo: "111122223333", // New field for Aadhaar number
+      contactNo: "9876543210",
+      aadhaarNo: "111122223333",
     },
   });
   console.log("✅ Faculty Created:", faculty.name);
@@ -114,35 +110,24 @@ async function main() {
   const student = await prisma.student.create({
     data: {
       userId: studentUser.id,
-      // Updated name fields
       firstName: "Test",
       middleName: null,
       lastName: "Student",
-
-      // Optional photo field (Base64 string if needed)
       photo: null,
-
-      // Updated personal email field (optional)
       personalEmailId: "test.student1@gmail.com",
-
       collegeId: college.id,
-      departmentId: department.id, // Optional, can be null if not assigned
+      departmentId: department.id,
       facultyId: faculty.id,
-      hodId: hod.id, // Optional, can be null if not assigned
-
+      hodId: hod.id,
       rollNo: "STS01",
-
       DOB: new Date("2000-01-01"),
       phoneNo: "+1234567890",
       secondaryPhoneNo: "+0987654321",
-      lastLogin: null, // Set to a Date if needed
-
-      country:"Indian",
+      lastLogin: null,
+      country: "Indian",
       state: "Tamil Nadu",
-      district:"Chennai",
-      
-     departmentName:"Computer Science",
-
+      district: "Chennai",
+      departmentName: "Computer Science",
       passportNo: "P987654321",
       passportExpiryDate: new Date("2030-12-31"),
     },
@@ -151,7 +136,7 @@ async function main() {
 }
 
 main()
-  .catch(e => {
+  .catch((e) => {
     console.error(e);
     process.exit(1);
   })

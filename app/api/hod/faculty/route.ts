@@ -19,74 +19,64 @@ const assignmentSchema = z.object({
   departmentId: z.number().int("Department ID is required"),
 });
 
-// GET: Fetch HOD context and all faculty records (with nested user email)
 export async function GET() {
   try {
-    // Log: Starting GET
-    console.log("GET /api/hod/faculty: Starting request");
+    console.log("GET /api/hod/details: Starting request");
 
     const session = await getServerSession(authOptions);
-    console.log("Session received:", session);
+    console.log("Session:", session);
 
-    if (!session) {
-      console.log("Unauthorized: No session found");
+    if (!session?.user?.id) {
+      console.log("Unauthorized: No valid session or user");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!session.user) {
-      console.log("Unauthorized: User information is missing in the session");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const userId = Number(session.user?.email?.split('@')[0]); // Example: Extracting userId from email prefix
-    console.log("Fetched userId from session:", userId);
+
+    const userId = Number(session.user.id);
+    console.log("Resolved userId:", userId);
 
     const hod = await prisma.hOD.findUnique({
       where: { userId },
-      select: {
-        collegeId: true,
-        departmentId: true,
+      include: {
+        user: { select: { email: true } },
+        college: {
+          select: {
+            id: true,
+            name: true,
+            collegeType: true,
+            affiliatedUniversity: true,
+            status: true,
+          },
+        },
+        department: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
-    console.log("HOD record:", hod);
 
     if (!hod) {
       console.log("HOD not found for userId:", userId);
       return NextResponse.json({ error: "HOD not found" }, { status: 404 });
     }
 
-    const faculty = await prisma.faculty.findMany({
-      where: {
-        collegeId: hod.collegeId,
-        departmentId: hod.departmentId,
-      },
-      select: {
-        id: true,
-        name: true,
-        contactNo: true,
-        aadhaarNo: true,
-        user: { select: { email: true } },
-      },
-    });
-    console.log("Fetched faculty records:", faculty);
+    console.log("Fetched HOD data:", hod);
 
-    const transformedFaculty = faculty.map(f => ({
-      id: f.id,
-      name: f.name,
-      email: f.user.email,
-      contactNo: f.contactNo || "Not Provided",
-      aadhaarNo: f.aadhaarNo || "Not Provided",
-    }));
-    console.log("Transformed faculty data:", transformedFaculty);
-
-    console.log("GET /api/hod/faculty: Successfully returning data");
     return NextResponse.json({
-      collegeId: hod.collegeId,
-      departmentId: hod.departmentId,
-      faculty: transformedFaculty,
+      id: hod.id,
+      name: hod.name,
+      email: hod.user.email,
+      phoneNo: hod.phoneNo,
+      adhaarNo: hod.adhaarNo,
+      college: hod.college,
+      department: hod.department,
+      createdAt: hod.createdAt,
     });
   } catch (error: any) {
-    console.error("Error in GET /api/hod/faculty:", error);
+    console.error("Error in GET /api/hod/details:", error);
     return NextResponse.json(
-      { error: `Failed to fetch data: ${error.message || "Unknown error"}` },
+      { error: `Failed to fetch HOD details: ${error.message || "Unknown error"}` },
       { status: 500 }
     );
   }

@@ -23,10 +23,12 @@ export default function FacultyAdvisorPage() {
     async function fetchContext() {
       try {
         const res = await fetch("/api/hod/faculty");
+        
         const data = await res.json();
-        if (res.ok) {
-          setCollegeId(data.collegeId);
-          setDepartmentId(data.departmentId);
+        console.log("res: ", data);
+        if (data) {
+          setCollegeId(data.college.id);
+          setDepartmentId(data.department.id);
         } else {
           toast.error("Failed to fetch HOD context");
         }
@@ -38,14 +40,18 @@ export default function FacultyAdvisorPage() {
     fetchContext();
   }, []);
 
+
+  
   // Fetch existing faculty advisors
   useEffect(() => {
     async function fetchAdvisors() {
+      if(!departmentId) return;
       try {
-        const res = await fetch("/api/hod/faculty");
+        const res = await fetch(`/api/hod/faculty/all?departmentId=${departmentId}`);
         const data = await res.json();
-        if (res.ok && data.faculty) {
-          setAdvisors(data.faculty);
+        console.log("data: ", data);
+        if ( data.facultyAdvisors) {
+          setAdvisors(data.facultyAdvisors);
         } else {
           toast.error(data.error || "Failed to fetch faculty advisors");
         }
@@ -55,9 +61,10 @@ export default function FacultyAdvisorPage() {
       }
     }
     fetchAdvisors();
-  }, []);
+  }, [departmentId]);
 
   const handleAdvisorSubmit = async (advisorData: FacultyAdvisorFormData) => {
+   
     console.log("Submitting advisor data:", advisorData);
     try {
       const res = await fetch("/api/hod/faculty", {
@@ -66,7 +73,8 @@ export default function FacultyAdvisorPage() {
         body: JSON.stringify(advisorData),
       });
       const data = await res.json();
-      if (res.ok && data.faculty) {
+      console.log("data: ", data);
+      if (data) {
         setAdvisors((prev) => [...prev, data.faculty]);
         toast.success("Faculty advisor created successfully!");
         setIsFormOpen(false);
@@ -77,9 +85,11 @@ export default function FacultyAdvisorPage() {
       console.error("Error creating faculty advisor:", error);
       toast.error("Error creating faculty advisor");
     }
+
   };
 
   const handleRemoveClick = (advisor: FacultyAdvisor) => {
+    console.log("Removing advisor:", advisor);
     setSelectedAdvisor(advisor);
     setIsRemoveModalOpen(true);
   };
@@ -87,12 +97,13 @@ export default function FacultyAdvisorPage() {
   const handleConfirmRemove = async (password: string) => {
     if (!selectedAdvisor) return;
     try {
-      const res = await fetch(`/api/hod/faculty/${selectedAdvisor.id}`, {
+      const res = await fetch(`/api/hod/faculty/delete?facultyAdvisor=${selectedAdvisor.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
+      console.log("removed: ", data)
       if (res.ok) {
         setAdvisors((prev) => prev.filter((a) => a.id !== selectedAdvisor.id));
         toast.success("Faculty advisor removed successfully!");
@@ -114,6 +125,7 @@ export default function FacultyAdvisorPage() {
   };
 
   const handleSaveFacultyChanges = async (updatedData: FacultyViewData) => {
+    console.log("Saving faculty changes:", updatedData);
     if (!selectedAdvisor) return;
     try {
       const res = await fetch(`/api/hod/faculty/${selectedAdvisor.id}`, {
@@ -122,10 +134,10 @@ export default function FacultyAdvisorPage() {
         body: JSON.stringify(updatedData),
       });
       const data = await res.json();
-      if (res.ok && data.updatedFaculty) {
+      if ( data.faculty) {
         setAdvisors((prev) =>
           prev.map((advisor) =>
-            advisor.id === selectedAdvisor.id ? data.updatedFaculty : advisor
+            advisor.id === selectedAdvisor.id ? data.faculty : advisor
           )
         );
         toast.success("Faculty advisor updated successfully!");
@@ -139,6 +151,12 @@ export default function FacultyAdvisorPage() {
       toast.error("Error updating faculty advisor");
     }
   };
+
+
+
+  useEffect(() => {
+    console.log("Advisors:", selectedAdvisor);
+  }, [selectedAdvisor])
 
   return (
     <div className="container mx-auto px-6 pt-28">
@@ -180,15 +198,15 @@ export default function FacultyAdvisorPage() {
           </AnimatePresence>
         </div>
 
-        <div className="w-2/3 flex justify-end">
-          <div className="w-full max-w-lg">
-            <FacultyAdvisorTable
-              advisors={advisors}
-              onRemove={handleRemoveClick}
-              onViewDetails={handleViewDetails}
-            />
-          </div>
+      { advisors.length > 0 && <div className="w-2/3 flex justify-end">
+        <div className="w-full max-w-lg">
+          <FacultyAdvisorTable
+            advisors={advisors}
+            onRemove={handleRemoveClick}
+            onViewDetails={handleViewDetails}
+          />
         </div>
+      </div>}
       </div>
 
       {selectedAdvisor && (
