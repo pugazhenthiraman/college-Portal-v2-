@@ -1,17 +1,21 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import ManageDepartmentButton from "../../../../components/department/manageDepartmentButton";
 import DepartmentDropdown from "../../../../components/department/departmnetDropdown";
 import DepartmentTable, { Department } from "../../../../components/department/departmentTabel";
 import { departmentList } from "@/utils/departmentList";
 import { useSession } from "next-auth/react";
 import HodAssignmentModal, { HodData } from "../../../../components/department/hod/hodAssignmodel";
-import HodDetailsModal from "../../../../components/department/hod/hodModel";
+import HodDetailsModal, { HodDetails } from "../../../../components/department/hod/hodModel";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 import RemoveConfirmationModal from "@/components/department/removeConfirmationModel";
 
+/**
+ * Adjust these types to your actual data shape if needed.
+ * Department["hod"] is presumably the shape returned by your Prisma query.
+ */
 const DepartmentPage: React.FC = () => {
   const { data: session, status } = useSession();
 
@@ -23,7 +27,7 @@ const DepartmentPage: React.FC = () => {
   const [currentDepartmentForHOD, setCurrentDepartmentForHOD] = useState<Department | null>(null);
   const [removalModalOpen, setRemovalModalOpen] = useState<boolean>(false);
   const [removalDepartment, setRemovalDepartment] = useState<Department | null>(null);
-  
+
   // State for viewing HOD details in a modal
   const [hodDetailsModalOpen, setHodDetailsModalOpen] = useState(false);
   const [currentHodDetails, setCurrentHodDetails] = useState<Department["hod"] | null>(null);
@@ -37,6 +41,7 @@ const DepartmentPage: React.FC = () => {
       id: string;
       email: string;
       role: string;
+      departmentType: string;
     };
 
     const fetchDepartments = async () => {
@@ -69,13 +74,12 @@ const DepartmentPage: React.FC = () => {
     departmentType: string;
   };
 
-  // Sample departmentType: "BE,ME"
-const departmentTypes = user.departmentType.split(","); // ['BE', 'ME']
-
-// Merge all department lists for those types
-const departmentsList = departmentTypes
-  .map(type => departmentList[type.trim()]) // trim to remove any spaces
-  .flat(); // flatten the array of arrays into one
+  // Example: "BE,ME" -> ["BE", "ME"]
+  const departmentTypes = user.departmentType.split(",");
+  // Merge all department lists for those types
+  const departmentsList = departmentTypes
+    .map((type) => departmentList[type.trim()])
+    .flat();
 
   // Handlers for draft management
   const handleAdd = (deptName: string) => setDraftSelected((prev) => [...prev, deptName]);
@@ -107,13 +111,12 @@ const departmentsList = departmentTypes
     }
   };
 
-  // Open removal modal (pass department; action will be provided later from the modal)
+  // Removal modal handler
   const handleOpenRemovalModal = (dept: Department) => {
     setRemovalDepartment(dept);
     setRemovalModalOpen(true);
   };
 
-  // Updated removal handler that uses the action parameter from the modal ("all" or "hod")
   const handleConfirmRemoval = async (password: string, action: "all" | "hod") => {
     if (!removalDepartment) return;
     try {
@@ -175,7 +178,7 @@ const departmentsList = departmentTypes
       const result = await response.json();
       if (response.ok) {
         toast.success(`HOD assigned for ${currentDepartmentForHOD?.name}`);
-        // Optimistically update department's HOD details in state
+        // Update department's HOD details in state
         setSelectedDepartments((prev) =>
           prev.map((dept) =>
             dept.id === currentDepartmentForHOD?.id ? { ...dept, hod: result.hod } : dept
@@ -191,12 +194,59 @@ const departmentsList = departmentTypes
     }
   };
 
-  // Handler for viewing HOD details in a modal
+  // Handler for viewing HOD details
   const handleViewHODDetails = (dept: Department) => {
     if (dept.hod) {
       console.log("Opening HOD details modal for:", dept.hod.name);
       setCurrentHodDetails(dept.hod);
       setHodDetailsModalOpen(true);
+    }
+  };
+
+  // Now we actually persist changes to the backend with a PUT request
+  const handleUpdateHodDetails = async (updatedData: HodDetails) => {
+    console.log("Updating HOD details (frontend) ->", updatedData);
+
+    // Make sure we have the required fields to match your PUT schema:
+    // { collegeId, departmentId, name, email, password?, contactNo?, aadhaarNo? }
+    // Adjust these fields as needed to match your actual schema.
+    try {
+      const response = await fetch("/api/college/dashboard/hod", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // Values required by your assignmentSchema
+          collegeId: user.collegeId, // from session
+          departmentId: currentHodDetails?.departmentId, // assuming dept ID is stored in HOD record
+          name: updatedData.name,
+          email: updatedData.user?.email,
+          // password: "optionally pass if needed", 
+          contactNo: updatedData.phoneNo, // your backend calls it contactNo
+          aadhaarNo: updatedData.adhaarNo,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("HOD updated from API:", result);
+
+        // Update local state with new data
+        setSelectedDepartments((prev) =>
+          prev.map((dept) => {
+            if (dept.hod?.id === result.hod.id) {
+              return { ...dept, hod: result.hod };
+            }
+            return dept;
+          })
+        );
+        toast.success("HOD details updated successfully (DB)!");
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to update HOD details");
+      }
+    } catch (error: any) {
+      console.error("Error updating HOD details:", error);
+      toast.error(error.message || "Failed to update HOD details");
     }
   };
 
@@ -259,6 +309,7 @@ const departmentsList = departmentTypes
         <HodDetailsModal
           hod={currentHodDetails}
           onClose={() => setHodDetailsModalOpen(false)}
+          onSave={handleUpdateHodDetails}
         />
       )}
     </div>

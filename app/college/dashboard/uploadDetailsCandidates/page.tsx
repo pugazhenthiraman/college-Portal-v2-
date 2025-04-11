@@ -126,7 +126,8 @@ export default function UploadDetailsCandidatesPage() {
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filteredData?.slice(indexOfFirstRow, indexOfLastRow) || [];
+  const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
   const handleViewClick = (student: any) => {
     setSelectedStudent(student);
@@ -299,16 +300,47 @@ export default function UploadDetailsCandidatesPage() {
             />
           </div>
 
-          {/* StudentTable Component */}
-          <div className="max-w-6xl mx-auto">
+          {/* StudentTable Component with Pagination */}
+          <div className="max-w-6xl mx-auto overflow-x-auto">
             <StudentTable
-              students={currentRows} // Updated to match prop name
+              students={currentRows}
               columns={columns}
               onSort={handleSort}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
-              onView={handleViewClick} // Updated to match prop name
+              onView={handleViewClick}
             />
+            <div className="flex justify-between items-center mt-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+                  currentPage === 1
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                }`}
+              >
+                Prev
+              </motion.button>
+              <span className="font-semibold text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={indexOfLastRow >= filteredData.length}
+                className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+                  indexOfLastRow >= filteredData.length
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-indigo-500 hover:bg-indigo-600 text-white"
+                }`}
+              >
+                Next
+              </motion.button>
+            </div>
           </div>
         </>
       )}

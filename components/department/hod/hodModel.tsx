@@ -63,6 +63,7 @@ const HodDetailsModal: React.FC<HodDetailsModalProps> = ({ hod, onClose, onSave 
       toast.error(error.message || "Failed to update HOD details");
     }
   };
+  console.log("onSave prop:", onSave);
 
   return (
     <AnimatePresence>

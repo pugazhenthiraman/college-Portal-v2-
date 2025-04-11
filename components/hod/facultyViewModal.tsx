@@ -85,7 +85,7 @@ const FacultyViewModal: React.FC<FacultyViewModalProps> = ({
             exit={{ scale: 0.8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-4 text-black">
               <h2 className="text-xl font-bold">Faculty Details</h2>
               <div className="flex items-center gap-2">
                 {/* Show Edit button only in view mode */}

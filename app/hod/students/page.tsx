@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Loader } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentViewModal } from "@/components/studentViewModel";
 import SearchBar from "@/components/searchBar"; // Reusable SearchBar Component
@@ -11,8 +10,9 @@ import StudentTable from "@/components/studentTable"; // Reusable StudentTable C
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [departmentName, setDepartmentName] = useState(""); // Department name state
 
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
@@ -24,9 +24,6 @@ export default function StudentsPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
-  // Department name (hardcoded for now, can be fetched dynamically)
-  const departmentName = "Computer Science Department";
-
   // Fetch student data from the backend
   const fetchStudents = async () => {
     setLoading(true);
@@ -34,10 +31,13 @@ export default function StudentsPage() {
       const response = await fetch("/api/hod/students");
       const data = await response.json();
       if (response.ok && data.students) {
-        // Add fallback for facultyName if it's null or undefined
+        // Update the department name from the API response
+        setDepartmentName(data.department || "N/A");
+
+        // Add fallback for facultyName if it's null/undefined
         const studentsWithFallback = data.students.map((student: any) => ({
           ...student,
-          facultyName: student.facultyName || "N/A", // Fallback to "N/A"
+          facultyName: student.facultyName || "N/A",
         }));
         setStudents(studentsWithFallback);
         setFilteredStudents(studentsWithFallback);
@@ -90,6 +90,7 @@ export default function StudentsPage() {
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows = filteredStudents.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(filteredStudents.length / rowsPerPage);
 
   // Open modal for a student (view/edit)
   const handleViewClick = (student: any) => {
@@ -97,7 +98,7 @@ export default function StudentsPage() {
     setIsViewModalOpen(true);
   };
 
-  // Save changes from the modal (you can extend this as needed)
+  // Save changes from the modal
   const handleSaveChanges = async (updatedStudent: any) => {
     try {
       const response = await fetch(
@@ -122,7 +123,6 @@ export default function StudentsPage() {
     }
   };
 
-  // Define columns for the table
   const columns = [
     { key: "rollNo", label: "Roll No" },
     { key: "firstName", label: "First Name" },
@@ -134,27 +134,19 @@ export default function StudentsPage() {
     { key: "phoneNo", label: "Phone No" },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader className="animate-spin h-16 w-16 text-indigo-600" />
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-6 pt-28 overflow-x-hidden">
+    <div className="flex flex-col w-full px-6 pt-28 scrollbar-hide">
       <Toaster position="top-right" />
 
-      {/* Header with Department Name on left */}
+      {/* Header with Department Name */}
       <div className="flex justify-between items-center mb-4">
-        <span className="text-lg font-medium text-gray-700">
+        <span className="text-lg font-medium text-black">
           {departmentName}
         </span>
       </div>
 
-      {/* Controls aligned to the right */}
-      <div className="flex justify-end items-center mb-6 space-x-4">
+      {/* Controls (Search and Buttons) */}
+      <div className="flex justify-end items-center space-x-4 mb-6">
         <div className="w-64">
           <SearchBar
             value={search}
@@ -179,27 +171,26 @@ export default function StudentsPage() {
         </motion.button>
       </div>
 
-      {/* StudentTable Component */}
-      <div className="w-full">
+      {/* Student Table Section */}
+      <div className="max-w-6xl mx-auto">
         <StudentTable
-          students={currentRows} // Pass the current rows
-          columns={columns} // Pass the column definitions
-          onSort={handleSort} // Pass the sort handler
-          sortColumn={sortColumn} // Pass the current sort column
-          sortDirection={sortDirection} // Pass the current sort direction
-          onView={handleViewClick} // Pass the view handler
-          showCheckbox={true} // Enable checkboxes for this page
+          students={currentRows}
+          columns={columns}
+          onSort={handleSort}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          onView={handleViewClick}
         />
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex justify-between items-center mt-4">
+      <div className="w-full flex items-center justify-between mt-4 px-6">
         <motion.button
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.2 }}
           onClick={() => setCurrentPage(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+          className={`ml-6 px-3 py-1 rounded-lg font-medium text-sm transition-all ${
             currentPage === 1
               ? "bg-gray-300 cursor-not-allowed"
               : "bg-indigo-500 hover:bg-indigo-600 text-white"
@@ -207,13 +198,15 @@ export default function StudentsPage() {
         >
           Prev
         </motion.button>
-        <span className="font-semibold text-gray-700">Page {currentPage}</span>
+        <span className="font-semibold text-gray-700">
+          Page {currentPage} of {totalPages}
+        </span>
         <motion.button
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.2 }}
           onClick={() => setCurrentPage(currentPage + 1)}
           disabled={indexOfLastRow >= filteredStudents.length}
-          className={`px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+          className={`mr-6 px-3 py-1 rounded-lg font-medium text-sm transition-all ${
             indexOfLastRow >= filteredStudents.length
               ? "bg-gray-300 cursor-not-allowed"
               : "bg-indigo-500 hover:bg-indigo-600 text-white"

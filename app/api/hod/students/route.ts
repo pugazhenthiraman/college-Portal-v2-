@@ -32,6 +32,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "HOD record not found" }, { status: 404 });
     }
 
+       // Fetch the department's name using the department ID
+    const department = await prisma.department.findUnique({
+      where: { id: hodRecord.departmentId },
+      select: { name: true },
+    });
+
     // Fetch students assigned to the HOD's department and college
     const students = await prisma.student.findMany({
       where: {
@@ -49,13 +55,16 @@ export async function GET(req: Request) {
         phoneNo: true,
         personalEmailId: true,
         user: { select: { email: true } }, // Include user email
+        departmentName: true, // Directly include the stored department name
       },
     });
 
-    console.log(`Students fetched for HOD (userId: ${session.user.id}):`, students.length);
-    console.log("Students data:", students); // Log the students data for debugging
 
-    return NextResponse.json({ students }, { status: 200 });
+    console.log(`Students fetched for HOD (userId: ${session.user.id}):`, students.length);
+    return NextResponse.json(
+      { students, department: department?.name || "N/A" },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Error fetching HOD's students:", error.message || error);
     return NextResponse.json({ error: "Failed to fetch students" }, { status: 500 });

@@ -1,16 +1,52 @@
+// File: app/api/college/dashboard/hod/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { assignmentSchema } from "@/lib/validation";
 
+// GET: Fetch HOD details (if needed)
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const collegeIdParam = searchParams.get("collegeId");
+    console.log("GET Request received with collegeId:", collegeIdParam);
+
+    if (!collegeIdParam) {
+      return NextResponse.json(
+        { error: "collegeId query parameter is required" },
+        { status: 400 }
+      );
+    }
+    const collegeId = Number(collegeIdParam);
+    if (isNaN(collegeId)) {
+      return NextResponse.json(
+        { error: "collegeId must be a valid number" },
+        { status: 400 }
+      );
+    }
+
+    // Example: fetch HOD records for the college
+    const hods = await prisma.hOD.findMany({
+      where: { collegeId },
+      include: { user: true },
+    });
+    console.log("HODs fetched:", hods);
+    return NextResponse.json({ success: true, hods }, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching HOD details:", error);
+    return NextResponse.json(
+      { error: "An error occurred while fetching HOD details" },
+      { status: 500 }
+    );
+  }
+}
+
 // POST: Create a new HOD record
 export async function POST(req: Request) {
   try {
-    // Parse and log the incoming request body
     const body = await req.json();
     console.log("Assignment request body:", body);
 
-    // Validate and parse the input data using the generic assignment schema
     const parsedData = assignmentSchema.parse(body);
     const { collegeId, departmentId, name, email, password, contactNo, aadhaarNo } = parsedData;
     console.log("Parsed Data:", { collegeId, departmentId, name, email, contactNo, aadhaarNo });
@@ -63,21 +99,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, hod }, { status: 200 });
   } catch (error: any) {
     console.error("Error assigning HOD:", error);
-
-    // Handle Zod validation errors
     if (error.errors) {
       const formattedErrors = error.errors.map((err: any) => err.message).join(", ");
       return NextResponse.json({ error: `Validation Error: ${formattedErrors}` }, { status: 400 });
     }
-
-    // Handle Prisma unique constraint errors (e.g., duplicate email)
     if (error.code === "P2002") {
       return NextResponse.json(
         { error: "A user with this email already exists. Please use a different email or update the existing record." },
         { status: 409 }
       );
     }
-
     return NextResponse.json(
       { error: `HOD creation failed: ${error.message || "Unknown error"}` },
       { status: 500 }
@@ -94,8 +125,12 @@ export async function PUT(req: Request) {
     const body = await req.json();
     console.log("Edit HOD request body:", body);
 
-    // Validate and parse the input data using the same assignment schema
-    const parsedData = assignmentSchema.parse(body);
+    // Create an update schema by extending assignmentSchema, making the password optional.
+    const updateSchema = assignmentSchema.extend({
+      password: assignmentSchema.shape.password.optional(),
+    });
+    // Validate and parse the input data using the update schema.
+    const parsedData = updateSchema.parse(body);
     const { collegeId, departmentId, name, email, password, contactNo, aadhaarNo } = parsedData;
     console.log("Parsed data for update:", { collegeId, departmentId, name, email, contactNo, aadhaarNo });
 
@@ -108,7 +143,7 @@ export async function PUT(req: Request) {
     }
 
     // Prepare the update data for the user; if password is provided, hash it.
-    let updatedUserData: { role: string; password?: string } = { role: "HOD" };
+    const updatedUserData: { role: string; password?: string } = { role: "HOD" };
     if (password) {
       updatedUserData.password = await bcrypt.hash(password, 10);
     }
@@ -118,10 +153,9 @@ export async function PUT(req: Request) {
     });
     console.log("User update successful:", updatedUser);
 
-    // Update the HOD record linked to the user.
-    // (Assuming departmentId is unique for a HOD record; if not, you may use userId)
+    // Update the HOD record using userId as the identifier
     const updatedHod = await prisma.hOD.update({
-      where: { departmentId },
+      where: { userId: existingUser.id },
       data: {
         name,
         phoneNo: contactNo,

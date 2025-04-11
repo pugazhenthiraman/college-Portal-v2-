@@ -83,8 +83,8 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
         { label: "Created At", value: student.createdAt ? new Date(student.createdAt).toLocaleString() : null },
       ].map((field, idx) => (
         <div key={idx} className="flex flex-col">
-          <span className="font-medium text-gray-700">{field.label}:</span>
-          <span className="text-gray-900">{field.value || "N/A"}</span>
+          <span className="font-bold text-black">{field.label}:</span>
+          <span className="text-black">{field.value || "N/A"}</span>
         </div>
       ))}
     </div>
@@ -95,7 +95,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
     <div className="grid grid-cols-2 gap-4">
       {/* First Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">First Name:</label>
+        <label className="block text-sm font-bold text-black">First Name:</label>
         <input
           type="text"
           name="firstName"
@@ -108,7 +108,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Middle Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Middle Name:</label>
+        <label className="block text-sm font-bold text-black">Middle Name:</label>
         <input
           type="text"
           name="middleName"
@@ -121,7 +121,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Last Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Last Name:</label>
+        <label className="block text-sm font-bold text-black">Last Name:</label>
         <input
           type="text"
           name="lastName"
@@ -134,7 +134,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Email */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Email:</label>
+        <label className="block text-sm font-bold text-black">Email:</label>
         <input
           type="email"
           name="email"
@@ -147,7 +147,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Personal Email */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Personal Email:</label>
+        <label className="block text-sm font-bold text-black">Personal Email:</label>
         <input
           type="email"
           name="personalEmailId"
@@ -160,7 +160,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Roll No */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Roll No:</label>
+        <label className="block text-sm font-bold text-black">Roll No:</label>
         <input
           type="text"
           name="rollNo"
@@ -173,7 +173,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Department */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Department:</label>
+        <label className="block text-sm font-bold text-black">Department:</label>
         <input
           type="text"
           name="departmentName"
@@ -186,7 +186,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* DOB */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">DOB:</label>
+        <label className="block text-sm font-bold text-black">DOB:</label>
         <input
           type="date"
           name="DOB"
@@ -198,7 +198,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Phone No */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Phone No:</label>
+        <label className="block text-sm font-bold text-black">Phone No:</label>
         <input
           type="text"
           name="phoneNo"
@@ -211,7 +211,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Secondary Phone */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Secondary Phone:</label>
+        <label className="block text-sm font-bold text-black">Secondary Phone:</label>
         <input
           type="text"
           name="secondaryPhoneNo"
@@ -224,7 +224,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Country */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Country:</label>
+        <label className="block text-sm font-bold text-black">Country:</label>
         <input
           type="text"
           name="country"
@@ -237,7 +237,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* District */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">District:</label>
+        <label className="block text-sm font-bold text-black">District:</label>
         <input
           type="text"
           name="district"
@@ -250,7 +250,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* State */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">State:</label>
+        <label className="block text-sm font-bold text-black">State:</label>
         <input
           type="text"
           name="state"
@@ -263,7 +263,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
       </div>
       {/* Additional fields for editing */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Adhaar No:</label>
+        <label className="block text-sm font-bold text-black">Adhaar No:</label>
         <input
           type="text"
           name="adhaarNo"
@@ -275,7 +275,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Passport No:</label>
+        <label className="block text-sm font-bold text-black">Passport No:</label>
         <input
           type="text"
           name="passportNo"
@@ -287,7 +287,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Passport Expiry:</label>
+        <label className="block text-sm font-bold text-black">Passport Expiry:</label>
         <input
           type="date"
           name="passportExpiryDate"
@@ -315,7 +315,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
             </h3>
             <Button
               onClick={toggleEditMode}
-              className="bg-blue-500 hover:bg-blue-800 text-white px-4 py-2 rounded-lg border border-blue-500"
+              className="bg-red-500 hover:bg-red-800 text-white px-4 py-2 rounded-lg border border-red-400"
             >
               {mode === "view" ? "Edit" : "Cancel"}
             </Button>
