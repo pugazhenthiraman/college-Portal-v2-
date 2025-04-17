@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Loader, Download } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentViewModal } from "@/components/studentViewModel";
 import SearchBar from "@/components/searchBar";
 import StudentTable from "@/components/studentTable";
+import FilterSidebar from "@/components/filterBar";
 
 export default function UploadDetailsCandidatesPage() {
   const [data, setData] = useState<any[]>([]);
@@ -26,39 +27,96 @@ export default function UploadDetailsCandidatesPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Advanced filter state
+  const [columnFilters, setColumnFilters] = useState<{ [key: string]: string }>({});
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    handleSearch(search);
-  }, [data]);
+  // Define the table columns displayed in the StudentTable.
+  const columns = [
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
+    { key: "email", label: "Email" },
+    { key: "personalEmailId", label: "Personal Email" },
+    { key: "rollNo", label: "Roll No" },
+    { key: "departmentName", label: "Department" },
+    { key: "DOB", label: "DOB" },
+    { key: "phoneNo", label: "Phone No" },
+  ];
 
-  const fetchData = async () => {
+  // Extend filterable fields to include extra properties from the StudentViewModal.
+  const filterableFields = [
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
+    { key: "email", label: "Email" },
+    { key: "personalEmailId", label: "Personal Email" },
+    { key: "rollNo", label: "Roll No" },
+    { key: "departmentName", label: "Department" },
+    { key: "DOB", label: "DOB" },
+  ];
+
+  // Fetch data from the API.
+const fetchData = async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/college/upload-student");
       const result = await response.json();
-      setData(result.students || []);
-      setFilteredData(result.students || []);
-    } catch (error) {
+      if (response.ok && result.students) {
+        // Normalize: flatten the email if stored as a nested property in student.user
+        const studentsNormalized = result.students.map((student: any) => ({
+          ...student,
+          facultyName: student.facultyName || "N/A",
+          email: student.user?.email || student.email || "",
+        }));
+        setData(studentsNormalized);
+        // Initially, filteredData is the complete dataset.
+        setFilteredData(studentsNormalized);
+      } else {
+        toast.error(result.error || "Failed to load students");
+      }
+    } catch (error: any) {
       console.error("Error fetching data:", error);
+      toast.error("Error fetching students");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = (searchTerm: string) => {
-    setSearch(searchTerm);
-    const filtered = data.filter((row) =>
-      Object.values(row).some(
-        (value) =>
-          value &&
-          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Combined filtering: apply global search and advanced column filters.
+  useEffect(() => {
+    let filtered = [...data];
+
+    // Global search filter.
+    if (search) {
+      const term = search.toLowerCase();
+      filtered = filtered.filter((row) =>
+        Object.values(row).some(
+          (value) =>
+            value && value.toString().toLowerCase().includes(term)
+        )
+      );
+    }
+
+    // Advanced column filters.
+    if (Object.values(columnFilters).some((val) => val)) {
+      filtered = filtered.filter((row) =>
+        Object.entries(columnFilters).every(([key, filterValue]) => {
+          if (!filterValue) return true;
+          const rowValue = row[key] ? row[key].toString().toLowerCase() : "";
+          return rowValue.includes(filterValue.toLowerCase());
+        })
+      );
+    }
+
     setFilteredData(filtered);
     setCurrentPage(1);
+  }, [data, search, columnFilters]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,17 +155,6 @@ export default function UploadDetailsCandidatesPage() {
       setLoading(false);
     }
   };
-
-  const columns = [
-    { key: "firstName", label: "First Name" },
-    { key: "lastName", label: "Last Name" },
-    { key: "email", label: "Email" },
-    { key: "personalEmailId", label: "Personal Email" },
-    { key: "rollNo", label: "Roll No" },
-    { key: "departmentName", label: "Department" },
-    { key: "DOB", label: "DOB" },
-    { key: "phoneNo", label: "Phone No" },
-  ];
 
   const handleSort = (column: string) => {
     const newDirection =
@@ -290,14 +337,20 @@ export default function UploadDetailsCandidatesPage() {
             </div>
           </div>
 
-          {/* SearchBar Component */}
-          <div className="max-w-xl mx-auto mb-6">
+          {/* SearchBar and Filter Button */}
+          <div className="max-w-xl mx-auto mb-6 flex items-center gap-2">
             <SearchBar
               value={search}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleSearch(e.target.value)
-              }
+              onChange={handleSearchChange}
             />
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsFilterSidebarOpen(true)}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md"
+            >
+              Filters
+            </motion.button>
           </div>
 
           {/* StudentTable Component with Pagination */}
@@ -344,12 +397,33 @@ export default function UploadDetailsCandidatesPage() {
           </div>
         </>
       )}
+      
+      {/* Student View Modal */}
       <StudentViewModal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         student={selectedStudent}
         onSave={handleSaveChanges}
       />
+
+      {/* Filter Sidebar (slides in from the right) */}
+      <AnimatePresence>
+        {isFilterSidebarOpen && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-50 p-4 overflow-y-auto"
+          >
+            <FilterSidebar
+              fields={filterableFields}
+              onFilterChange={(filters) => setColumnFilters(filters)}
+              onClose={() => setIsFilterSidebarOpen(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

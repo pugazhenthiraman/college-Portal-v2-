@@ -1,28 +1,62 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentViewModal } from "@/components/studentViewModel";
 import SearchBar from "@/components/searchBar"; // Reusable SearchBar Component
 import StudentTable from "@/components/studentTable"; // Reusable StudentTable Component
+import FilterSidebar from "@/components/filterBar"; // Filter sidebar component
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
   const [, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+
+  // Global search state (for quick search)
+  const [globalSearch, setGlobalSearch] = useState("");
   const [departmentName, setDepartmentName] = useState(""); // Department name state
 
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
-
+  
   const [sortColumn, setSortColumn] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
 
   // Modal state for view/editing a student
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+
+  // State for column filters (each field’s filter value)
+  const [columnFilters, setColumnFilters] = useState<{ [key: string]: string }>({});
+
+  // State to control the visibility of the filter sidebar (moved to right)
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+
+  // Define the table columns (displayed in the StudentTable)
+  const tableColumns = [
+    { key: "rollNo", label: "Roll No" },
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
+    { key: "email", label: "Email" },
+    { key: "personalEmailId", label: "Personal Email" },
+    { key: "facultyName", label: "Faculty Name" },
+    { key: "DOB", label: "DOB" },
+    { key: "phoneNo", label: "Phone No" },
+  ];
+
+  // Define extra filterable fields (including the additional fields from the view)
+  const filterableFields = [
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
+    { key: "email", label: "Email" },
+    { key: "personalEmailId", label: "Personal Email" },
+    { key: "rollNo", label: "Roll No" },
+    { key: "facultyName", label: "Faculty Name" },
+    { key: "departmentName", label: "Department" },
+    { key: "DOB", label: "DOB" },
+   
+  ];
 
   // Fetch student data from the backend
   const fetchStudents = async () => {
@@ -31,16 +65,14 @@ export default function StudentsPage() {
       const response = await fetch("/api/hod/students");
       const data = await response.json();
       if (response.ok && data.students) {
-        // Update the department name from the API response
         setDepartmentName(data.department || "N/A");
 
-        // Add fallback for facultyName if it's null/undefined
+        // Add fallback for facultyName if it's null/undefined.
         const studentsWithFallback = data.students.map((student: any) => ({
           ...student,
           facultyName: student.facultyName || "N/A",
         }));
         setStudents(studentsWithFallback);
-        setFilteredStudents(studentsWithFallback);
       } else {
         toast.error(data.error || "Failed to load students");
       }
@@ -56,24 +88,41 @@ export default function StudentsPage() {
     fetchStudents();
   }, []);
 
-  // Handle search filtering
-  const handleSearch = (term: string) => {
-    setSearch(term);
-    const filtered = students.filter((student) =>
-      Object.values(student).some(
-        (value) =>
-          value &&
-          value.toString().toLowerCase().includes(term.toLowerCase())
-      )
-    );
+  // Combine global search and column filters.
+  useEffect(() => {
+    let filtered = [...students];
+
+    // Apply global search filtering.
+    if (globalSearch) {
+      const term = globalSearch.toLowerCase();
+      filtered = filtered.filter((student) =>
+        Object.values(student).some(
+          (value) =>
+            value && value.toString().toLowerCase().includes(term)
+        )
+      );
+    }
+
+    // Apply column-specific filters.
+    if (Object.values(columnFilters).some(val => val)) {
+      filtered = filtered.filter((student) =>
+        Object.entries(columnFilters).every(([key, filterValue]) => {
+          if (!filterValue) return true;
+          const studentValue = student[key]
+            ? student[key].toString().toLowerCase()
+            : "";
+          return studentValue.includes(filterValue.toLowerCase());
+        })
+      );
+    }
+
     setFilteredStudents(filtered);
     setCurrentPage(1);
-  };
+  }, [globalSearch, columnFilters, students]);
 
-  // Sorting function
+  // Sorting function for table columns.
   const handleSort = (column: string) => {
-    const newDirection =
-      sortColumn === column && sortDirection === "asc" ? "desc" : "asc";
+    const newDirection = sortColumn === column && sortDirection === "asc" ? "desc" : "asc";
     setSortColumn(column);
     setSortDirection(newDirection);
     const sortedData = [...filteredStudents].sort((a, b) => {
@@ -86,29 +135,26 @@ export default function StudentsPage() {
     setFilteredStudents(sortedData);
   };
 
-  // Pagination calculations
+  // Pagination calculations.
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows = filteredStudents.slice(indexOfFirstRow, indexOfLastRow);
   const totalPages = Math.ceil(filteredStudents.length / rowsPerPage);
 
-  // Open modal for a student (view/edit)
+  // Open modal for a student (view/edit).
   const handleViewClick = (student: any) => {
     setSelectedStudent(student);
     setIsViewModalOpen(true);
   };
 
-  // Save changes from the modal
+  // Save changes from the modal.
   const handleSaveChanges = async (updatedStudent: any) => {
     try {
-      const response = await fetch(
-        `/api/college/upload-student/${updatedStudent.userId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedStudent),
-        }
-      );
+      const response = await fetch(`/api/college/upload-student/${updatedStudent.userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedStudent),
+      });
       if (response.ok) {
         toast.success("Student updated successfully!");
         fetchStudents();
@@ -123,44 +169,32 @@ export default function StudentsPage() {
     }
   };
 
-  const columns = [
-    { key: "rollNo", label: "Roll No" },
-    { key: "firstName", label: "First Name" },
-    { key: "lastName", label: "Last Name" },
-    { key: "email", label: "Email" },
-    { key: "personalEmailId", label: "Personal Email" },
-    { key: "facultyName", label: "Faculty Name" },
-    { key: "DOB", label: "DOB" },
-    { key: "phoneNo", label: "Phone No" },
-  ];
-
   return (
-    <div className="flex flex-col w-full px-6 pt-28 scrollbar-hide">
+    <div className="relative flex flex-col w-full px-6 pt-28 scrollbar-hide">
       <Toaster position="top-right" />
 
       {/* Header with Department Name */}
       <div className="flex justify-between items-center mb-4">
-        <span className="text-lg font-medium text-black">
-          {departmentName}
-        </span>
+        <span className="text-lg font-medium text-black">{departmentName}</span>
       </div>
 
-      {/* Controls (Search and Buttons) */}
+      {/* Controls (Global Search and Buttons) */}
       <div className="flex justify-end items-center space-x-4 mb-6">
         <div className="w-64">
           <SearchBar
-            value={search}
+            value={globalSearch}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleSearch(e.target.value)
+              setGlobalSearch(e.target.value)
             }
           />
         </div>
         <motion.button
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.2 }}
+          onClick={() => setIsFilterSidebarOpen(true)}
           className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md"
         >
-          Filter
+          Filters
         </motion.button>
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -175,7 +209,7 @@ export default function StudentsPage() {
       <div className="max-w-6xl mx-auto">
         <StudentTable
           students={currentRows}
-          columns={columns}
+          columns={tableColumns}
           onSort={handleSort}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
@@ -225,6 +259,25 @@ export default function StudentsPage() {
           onSave={handleSaveChanges}
         />
       )}
+
+      {/* Filter Sidebar (slides in from the right) */}
+      <AnimatePresence>
+        {isFilterSidebarOpen && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-50 p-4 overflow-y-auto"
+          >
+            <FilterSidebar
+              fields={filterableFields}
+              onFilterChange={(filters) => setColumnFilters(filters)}
+              onClose={() => setIsFilterSidebarOpen(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
