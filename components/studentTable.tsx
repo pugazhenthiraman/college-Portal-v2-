@@ -122,7 +122,7 @@ const StudentsTable: React.FC<StudentsTableProps> = ({
                   className="px-2 py-2 border text-center"
                   colSpan={columns.length + (showCheckbox ? 2 : 1)}
                 >
-                  No students found.
+                  No Record's Found Currently.
                 </td>
               </motion.tr>
             )}

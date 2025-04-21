@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { assignmentSchema } from "@/lib/validation";
+import { UserRole } from "@prisma/client";
 
 // GET: Fetch HOD details (if needed)
 export async function GET(req: Request) {
@@ -47,7 +48,14 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("Assignment request body:", body);
 
-    const parsedData = assignmentSchema.parse(body);
+    // Map incoming keys to expected schema keys
+    const mappedBody = {
+      ...body,
+      name: body.hodName ?? body.name,
+      email: body.hodEmail ?? body.email,
+    };
+
+    const parsedData = assignmentSchema.parse(mappedBody);
     const { collegeId, departmentId, name, email, password, contactNo, aadhaarNo } = parsedData;
     console.log("Parsed Data:", { collegeId, departmentId, name, email, contactNo, aadhaarNo });
 
@@ -143,7 +151,7 @@ export async function PUT(req: Request) {
     }
 
     // Prepare the update data for the user; if password is provided, hash it.
-    const updatedUserData: { role: string; password?: string } = { role: "HOD" };
+    const updatedUserData: { role: UserRole; password?: string } = { role: "HOD" as UserRole };
     if (password) {
       updatedUserData.password = await bcrypt.hash(password, 10);
     }
