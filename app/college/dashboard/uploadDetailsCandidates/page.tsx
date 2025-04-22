@@ -29,11 +29,9 @@ export default function UploadDetailsCandidatesPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
-  // Advanced filter state
   const [columnFilters, setColumnFilters] = useState<{ [key: string]: string }>({});
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
 
-  // Define the table columns displayed in the StudentTable.
   const columns = [
     { key: "firstName", label: "First Name" },
     { key: "lastName", label: "Last Name" },
@@ -45,32 +43,20 @@ export default function UploadDetailsCandidatesPage() {
     { key: "phoneNo", label: "Phone No" },
   ];
 
-  // Extend filterable fields to include extra properties from the StudentViewModal.
-  const filterableFields = [
-    { key: "firstName", label: "First Name" },
-    { key: "lastName", label: "Last Name" },
-    { key: "email", label: "Email" },
-    { key: "personalEmailId", label: "Personal Email" },
-    { key: "rollNo", label: "Roll No" },
-    { key: "departmentName", label: "Department" },
-    { key: "DOB", label: "DOB" },
-  ];
+  const filterableFields = [...columns];
 
-  // Fetch data from the API.
-const fetchData = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/college/upload-student");
       const result = await response.json();
       if (response.ok && result.students) {
-        // Normalize: flatten the email if stored as a nested property in student.user
         const studentsNormalized = result.students.map((student: any) => ({
           ...student,
           facultyName: student.facultyName || "N/A",
           email: student.user?.email || student.email || "",
         }));
         setData(studentsNormalized);
-        // Initially, filteredData is the complete dataset.
         setFilteredData(studentsNormalized);
       } else {
         toast.error(result.error || "Failed to load students");
@@ -87,22 +73,18 @@ const fetchData = async () => {
     fetchData();
   }, []);
 
-  // Combined filtering: apply global search and advanced column filters.
   useEffect(() => {
     let filtered = [...data];
 
-    // Global search filter.
     if (search) {
       const term = search.toLowerCase();
       filtered = filtered.filter((row) =>
         Object.values(row).some(
-          (value) =>
-            value && value.toString().toLowerCase().includes(term)
+          (value) => value && value.toString().toLowerCase().includes(term)
         )
       );
     }
 
-    // Advanced column filters.
     if (Object.values(columnFilters).some((val) => val)) {
       filtered = filtered.filter((row) =>
         Object.entries(columnFilters).every(([key, filterValue]) => {
@@ -143,12 +125,12 @@ const fetchData = async () => {
         method: "POST",
         body: formData,
       });
+      const result = await response.json();
       if (response.ok) {
-        toast.success("✅ File uploaded successfully!");
+        toast.success(result.message || "✅ File uploaded successfully!");
         fetchData();
       } else {
-        const errorData = await response.json();
-        toast.error(`❌ Upload failed: ${errorData.error}`);
+        toast.error(`❌ Upload failed: ${result.error}`);
       }
     } catch (error: any) {
       console.error("Error uploading file:", error);
@@ -159,8 +141,7 @@ const fetchData = async () => {
   };
 
   const handleSort = (column: string) => {
-    const newDirection =
-      sortColumn === column && sortDirection === "asc" ? "desc" : "asc";
+    const newDirection = sortColumn === column && sortDirection === "asc" ? "desc" : "asc";
     setSortColumn(column);
     setSortDirection(newDirection);
     const sortedData = [...filteredData].sort((a, b) => {
@@ -216,11 +197,15 @@ const fetchData = async () => {
         </div>
       ) : (
         <>
-        <h2 className="text-2xl font-bold"><span className="bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent animate-shine">Upload Students</span> Excel</h2>
-          {/* Upload & File Section */}
+          <h2 className="text-2xl font-bold">
+            <span className="bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent animate-shine">
+              Upload Students
+            </span>{" "}
+            Excel
+          </h2>
+
           <div className="max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-800"></h2>
               <div className="flex justify-end items-center">
                 <DownloadTemplateButton
                   endpoint="/api/college/download-template"
@@ -229,7 +214,6 @@ const fetchData = async () => {
                 />
               </div>
             </div>
-            {/* Modern Upload File Section */}
             <ModernFileUpload
               fileName={fileName}
               loading={loading}
@@ -242,12 +226,8 @@ const fetchData = async () => {
             />
           </div>
 
-          {/* SearchBar and Filter Button */}
           <div className="max-w-xl mx-auto mb-6 flex items-center gap-2">
-            <SearchBar
-              value={search}
-              onChange={handleSearchChange}
-            />
+            <SearchBar value={search} onChange={handleSearchChange} />
             <motion.button
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
@@ -258,7 +238,6 @@ const fetchData = async () => {
             </motion.button>
           </div>
 
-          {/* StudentTable Component with Pagination */}
           <div className="max-w-6xl mx-auto overflow-x-auto">
             <StudentTable
               students={currentRows}
@@ -302,8 +281,7 @@ const fetchData = async () => {
           </div>
         </>
       )}
-      
-      {/* Student View Modal */}
+
       <StudentViewModal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
@@ -311,7 +289,6 @@ const fetchData = async () => {
         onSave={handleSaveChanges}
       />
 
-      {/* Filter Sidebar (slides in from the right) */}
       <AnimatePresence>
         {isFilterSidebarOpen && (
           <motion.div

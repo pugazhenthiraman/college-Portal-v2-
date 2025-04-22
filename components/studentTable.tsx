@@ -89,6 +89,7 @@ const StudentsTable: React.FC<StudentsTableProps> = ({
                       <input
                         type="checkbox"
                         className="form-checkbox h-4 w-4 text-indigo-600"
+                        title="Select student"
                       />
                     </td>
                   )}
