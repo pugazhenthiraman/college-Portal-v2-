@@ -10,7 +10,7 @@ export type Student = {
   user?: { email: string };
   personalEmailId: string;
   rollNo: string;
-  facultyName?: string; // Added for HOD-specific customization
+  facultyName?: string;
   DOB: string;
   phoneNo: string;
 };
@@ -22,7 +22,7 @@ type StudentsTableProps = {
   sortColumn: string;
   sortDirection: string;
   onSort: (column: string) => void;
-  showCheckbox?: boolean; // Optional prop to show checkboxes
+  showCheckbox?: boolean;
 };
 
 const StudentsTable: React.FC<StudentsTableProps> = ({
@@ -32,7 +32,7 @@ const StudentsTable: React.FC<StudentsTableProps> = ({
   sortColumn,
   sortDirection,
   onSort,
-  showCheckbox = false, // Default to false
+  showCheckbox = false,
 }) => {
   return (
     <div className="bg-white shadow-lg rounded-lg border p-5 w-full">
@@ -93,18 +93,25 @@ const StudentsTable: React.FC<StudentsTableProps> = ({
                       />
                     </td>
                   )}
-                  {columns.map(({ key }) => (
-                    <td
-                      key={key}
-                      className="px-2 py-2 border text-center break-words whitespace-normal"
-                    >
-                      {key === "DOB"
-                        ? new Date(student[key]).toLocaleDateString("en-GB")
-                        : key === "email"
-                        ? student.user?.email || "N/A"
-                        : (student as any)[key] || "N/A"}
-                    </td>
-                  ))}
+                  {columns.map(({ key }) => {
+                    let value = (student as any)[key];
+                    if (key === "DOB" && value) {
+                      value = new Date(value).toLocaleDateString("en-GB");
+                    } else if (key === "email") {
+                      // support both nested user.email and flat email field
+                      value = (student as any).email ?? student.user?.email ?? "N/A";
+                    } else {
+                      value = value ?? "N/A";
+                    }
+                    return (
+                      <td
+                        key={key}
+                        className="px-2 py-2 border text-center break-words whitespace-normal"
+                      >
+                        {value}
+                      </td>
+                    );
+                  })}
                   <td className="px-2 py-2 border text-center">
                     <motion.button
                       whileHover={{ scale: 1.05 }}

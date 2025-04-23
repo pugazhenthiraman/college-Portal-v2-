@@ -21,139 +21,111 @@ export default function HodUploadFacultyPage() {
   const [loading, setLoading]           = useState(false);
   const [facultyData, setFacultyData]   = useState<any[]>([]);
 
-  // Fetch existing faculty on mount
-  useEffect(() => {
+  // 1) Fetch existing faculty on mount
+   useEffect(() => {
     fetch("/api/hod/upload-faculty")
       .then((res) => res.json())
-      .then((data) => setFacultyData(data.faculty))
+      .then((data) => {
+        console.log("📡 Received from API:", data.faculty);
+        setFacultyData(data.faculty);
+      })
       .catch((err) => alert(`Error fetching faculty: ${err.message}`));
   }, []);
 
-  /** 
-   * Client‑side validation:
-   * 1) Read & TRIM the header row 
-   * 2) Ensure mandatory headers 
-   * 3) Parse rows using trimmed headers
-   * 4) Check missing values & duplicates
-   */
+
+  // 2) Excel validation before upload
   const validateFile = async (file: File): Promise<string[]> => {
     const errs: string[] = [];
     try {
       const buf = await file.arrayBuffer();
       const wb  = XLSX.read(buf, { type: "array" });
-      if (!wb.SheetNames.length) return ["No sheets found in Excel file"];
-
+      if (!wb.SheetNames.length) return ["No sheets found"];
       const sheet = wb.Sheets[wb.SheetNames[0]];
 
-      // 1) Extract raw header row & trim whitespace
-      const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
-      if (!raw.length) return ["Excel file is empty"];
+      // a) Trim headers
+      const raw     = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
+      if (!raw.length) return ["Empty sheet"];
+      const headers = (raw[0] as string[]).map((h) => String(h).trim());
 
-      const trimmedHeaders = (raw[0] as string[]).map((h) => String(h).trim());
-
-      // 2) Check for missing/extra headers
-      const missing = MANDATORY_HEADERS.filter((h) => !trimmedHeaders.includes(h));
-      const extra   = trimmedHeaders.filter((h) => !MANDATORY_HEADERS.includes(h));
+      // b) Check mandatory vs extra
+      const missing = MANDATORY_HEADERS.filter((h) => !headers.includes(h));
+      const extra   = headers.filter((h) => !MANDATORY_HEADERS.includes(h));
       if (missing.length) errs.push(`Missing columns: ${missing.join(", ")}`);
       if (extra.length)   errs.push(`Unexpected columns: ${extra.join(", ")}`);
       if (errs.length) return errs;
 
-      // 3) Parse data rows *using* trimmedHeaders, skipping the header row
-      const rows: any[] = XLSX.utils.sheet_to_json(sheet, {
-        header: trimmedHeaders,
+      // c) Parse rows using trimmed headers
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        header: headers,
         defval: "",
         range: 1,
       });
 
-      // 4) Row‑level checks for missing fields & duplicates
-      const seenEmail = new Set<string>();
-      const seenPhone = new Set<string>();
-      const seenAad   = new Set<string>();
-
-      rows.forEach((r, idx) => {
-        const rowNum = idx + 2; // +2 because idx=0 is Excel row 2
-        const email = String(r["Email"] || "").trim();
-        const phone = String(r["Mobile No"] || "").trim();
-        const aad   = String(r["Aadhaar No"] || "").trim();
-
-        if (!email || !phone || !aad) {
-          errs.push(`Row ${rowNum}: missing Email, Mobile No or Aadhaar No`);
-        }
-        if (email) {
-          if (seenEmail.has(email)) errs.push(`Row ${rowNum}: duplicate Email ${email}`);
-          else seenEmail.add(email);
-        }
-        if (phone) {
-          if (seenPhone.has(phone)) errs.push(`Row ${rowNum}: duplicate Mobile No ${phone}`);
-          else seenPhone.add(phone);
-        }
-        if (aad) {
-          if (seenAad.has(aad)) errs.push(`Row ${rowNum}: duplicate Aadhaar No ${aad}`);
-          else seenAad.add(aad);
-        }
+      // d) Row-level missing/duplicate checks
+      const seen = { e: new Set(), p: new Set(), a: new Set() };
+      rows.forEach((r, i) => {
+        const rnum = i + 2;
+        const e = String(r["Email"]  || "").trim();
+        const p = String(r["Mobile No"] || "").trim();
+        const a = String(r["Aadhaar No"]|| "").trim();
+        if (!e||!p||!a) errs.push(`Row ${rnum}: missing Email/Phone/Aadhaar`);
+        if (seen.e.has(e)) errs.push(`Row ${rnum}: duplicate Email ${e}`); else seen.e.add(e);
+        if (seen.p.has(p)) errs.push(`Row ${rnum}: duplicate Mobile No ${p}`); else seen.p.add(p);
+        if (seen.a.has(a)) errs.push(`Row ${rnum}: duplicate Aadhaar No ${a}`); else seen.a.add(a);
       });
 
       return errs;
-    } catch (e: any) {
-      return [`Failed to parse Excel: ${e.message}`];
+    } catch (err: any) {
+      return [`Failed to parse Excel: ${err.message}`];
     }
   };
 
+  // 3) Handlers
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
-      setSelectedFile(file);
+    const f = e.target.files?.[0];
+    if (f) {
+      setFileName(f.name);
+      setSelectedFile(f);
     }
   };
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      alert("Please select a file before uploading.");
+      alert("Select a file first.");
       return;
     }
-
-    // 1) Validate on client
     const errs = await validateFile(selectedFile);
     if (errs.length) {
-      alert("Please fix the following errors before upload:\n\n" + errs.join("\n"));
+      alert("Fix errors before upload:\n" + errs.join("\n"));
       return;
     }
-
-    // 2) Confirm
-    if (!confirm(`Are you sure you want to upload ${fileName}?`)) return;
+    if (!confirm(`Upload ${fileName}?`)) return;
 
     setLoading(true);
     try {
-      // Clone to avoid Chrome quirk
-      const buf    = await selectedFile.arrayBuffer();
-      const cloned = new File([buf], selectedFile.name, { type: selectedFile.type });
+      const buf = await selectedFile.arrayBuffer();
+      const clone = new File([buf], selectedFile.name, { type: selectedFile.type });
+      const fm = new FormData();
+      fm.append("facultyExcelData", clone);
 
-      const formData = new FormData();
-      formData.append("facultyExcelData", cloned);
-
-      const response = await fetch("/api/hod/upload-faculty", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(`Upload failed: ${result.error}`);
+      const res  = await fetch("/api/hod/upload-faculty", { method: "POST", body: fm });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(`Upload failed: ${json.error}`);
       } else {
-        alert(`Success! Upserted ${result.faculty.length} records.`);
-        setFacultyData(result.faculty);
+        alert(`Upserted ${json.faculty.length} records`);
+        setFacultyData(json.faculty);
         setFileName("");
         setSelectedFile(null);
       }
-    } catch (err: any) {
-      alert(`Error uploading file: ${err.message}`);
+    } catch (e: any) {
+      alert(`Error uploading: ${e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const facultyColumns = [
+  const columns = [
     { key: "name",      label: "Name" },
     { key: "email",     label: "Email" },
     { key: "contactNo", label: "Mobile No" },
@@ -161,52 +133,39 @@ export default function HodUploadFacultyPage() {
   ];
 
   return (
-    <div className="pt-28 px-6 w-full h-full">
-      {/* Header & Download */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
-        <h2 className="text-2xl font-bold">
-          <span className="bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500 
-                            bg-clip-text text-transparent animate-shine">
-            Upload Faculty Excel
-          </span>
-        </h2>
+    <div className="pt-28 px-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-10">
+        <h2 className="text-2xl font-bold">Upload Faculty Excel</h2>
         <DownloadTemplateButton
           endpoint="/api/hod/download-faculty-template"
           filename="faculty-template.xlsx"
-          buttonText="Download Faculty Template"
+          buttonText="Download Template"
         />
       </div>
 
-      {/* File Upload */}
-      <div className="flex justify-center items-center min-h-[300px]">
-        <div className="w-full max-w-2xl">
-          <ModernFileUpload
-            fileName={fileName}
-            loading={loading}
-            onFileChange={handleFileChange}
-            onUpload={handleUpload}
-            onRemoveFile={() => {
-              setFileName("");
-              setSelectedFile(null);
-            }}
-          />
-        </div>
-      </div>
+      {/* Upload UI */}
+      <ModernFileUpload
+        fileName={fileName}
+        loading={loading}
+        onFileChange={handleFileChange}
+        onUpload={handleUpload}
+        onRemoveFile={() => {
+          setFileName("");
+          setSelectedFile(null);
+        }}
+      />
 
-      {/* Faculty Table */}
-      <div className="flex justify-center mt-8">
-        <div className="w-full max-w-3xl">
-          <FacultyTable
-            students={facultyData}
-            columns={facultyColumns}
-            onView={() => {}}
-            sortColumn=""
-            sortDirection=""
-            onSort={() => {}}
-            showCheckbox={false}
-          />
-        </div>
-      </div>
+      {/* Table */}
+      <FacultyTable
+        students={facultyData}
+        columns={columns}
+        onView={() => {}}
+        sortColumn=""
+        sortDirection=""
+        onSort={() => {}}
+        showCheckbox={false}
+      />
     </div>
   );
 }
