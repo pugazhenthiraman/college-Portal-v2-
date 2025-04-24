@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     range: 1,
   });
 
-  // 7) Server-side missing/duplicate checks
+  // 7) Server‐side missing/duplicate checks
   const seen = {
     email: new Set<string>(),
     phone: new Set<string>(),
@@ -131,11 +131,11 @@ export async function POST(req: NextRequest) {
         update: { password: hashed, role: "FACULTY" },
       });
 
-      // upsert Faculty
+      // upsert Faculty (fix: use user.id, not undefined userId)
       await tx.faculty.upsert({
         where: { userId: user.id },
         create: {
-          userId,
+          userId:       user.id,       // ← here
           name,
           collegeId,
           departmentId,
