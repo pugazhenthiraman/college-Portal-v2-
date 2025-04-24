@@ -87,6 +87,22 @@ export async function POST(req: Request) {
   try {
     console.log("POST /api/hod/faculty: Request received.");
 
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const hodUserId = Number(session.user.id);
+
+    // Fetch the HOD's database ID using the user ID
+    const hod = await prisma.hOD.findUnique({
+      where: { userId: hodUserId },
+      select: { id: true }
+    });
+    if (!hod) {
+      return NextResponse.json({ error: "HOD not found" }, { status: 404 });
+    }
+    const hodId = hod.id;
+
     const body = await req.json();
     console.log("Incoming request body:", body);
 
@@ -115,7 +131,7 @@ export async function POST(req: Request) {
     });
     console.log("User upsert successful:", user);
 
-    // Create the Faculty record with the related user.
+    // Create the Faculty record with the related user and hodId.
     const faculty = await prisma.faculty.create({
       data: {
         userId: user.id,
@@ -124,6 +140,7 @@ export async function POST(req: Request) {
         departmentId,
         contactNo,
         aadhaarNo,
+        hodId, // Store the HOD's id
       },
     });
     console.log("Faculty record created successfully:", faculty);
