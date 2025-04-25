@@ -58,12 +58,17 @@ export default function Navbar() {
             {/* Dropdown Menu */}
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg p-2">
-                <button 
-                  className="w-full px-4 py-2 text-gray-700 hover:bg-gray-100 text-left" 
-                  aria-label="View profile"
-                >
-                  Profile
-                </button>
+                <button
+  onClick={() => {
+    setShowDropdown(false);
+    router.push("/profile");
+  }}
+  className="w-full px-4 py-2 text-gray-700 hover:bg-gray-100 text-left"
+  aria-label="View profile"
+>
+  Profile
+</button>
+
                 <LogoutButton />
               </div>
             )}
