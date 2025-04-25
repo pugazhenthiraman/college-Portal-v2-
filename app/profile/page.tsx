@@ -76,6 +76,7 @@ export default function ProfilePage() {
               value={form.name || ""}
               onChange={handleChange}
               className="mt-1 w-full border rounded p-2"
+              placeholder="Enter name"
             />
           ) : (
             <p>{profile.name || profile.rollNo}</p>
@@ -104,6 +105,7 @@ export default function ProfilePage() {
                 value={form.phoneNo || ""}
                 onChange={handleChange}
                 className="mt-1 w-full border rounded p-2"
+                placeholder="Enter phone number"
               />
             ) : (
               <p>{profile.phoneNo}</p>
@@ -119,6 +121,7 @@ export default function ProfilePage() {
                 value={form.adhaarNo || ""}
                 onChange={handleChange}
                 className="mt-1 w-full border rounded p-2"
+                placeholder="Enter Aadhaar number"
               />
             ) : (
               <p>{profile.adhaarNo}</p>
@@ -134,6 +137,7 @@ export default function ProfilePage() {
                 value={form.personalEmailId || ""}
                 onChange={handleChange}
                 className="mt-1 w-full border rounded p-2"
+                placeholder="Enter personal email"
               />
             ) : (
               <p>{profile.personalEmailId}</p>

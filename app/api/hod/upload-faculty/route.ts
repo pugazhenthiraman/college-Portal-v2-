@@ -2,195 +2,108 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import * as XLSX from "xlsx";
 import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
-
-const REQUIRED_HEADERS = [
-  "Name",
-  "Email",
-  "Password",
-  "Mobile No",
-  "Aadhaar No",
-];
+import { UserRole } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
-  // 1) Auth & role check
-  const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== "HOD") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // 2) Lookup HOD’s IDs
-  const hod = await prisma.hOD.findUnique({
-    where:  { userId: Number(session.user.id) },
-    select: { collegeId: true, departmentId: true, id: true },
-  });
-  if (!hod) {
-    return NextResponse.json({ error: "HOD record not found" }, { status: 404 });
-  }
-  const { collegeId, departmentId, id: hodId } = hod;
-
-  // 3) Pull uploaded file
-  const formData = await req.formData();
-  const file = formData.get("facultyExcelData");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-  }
-
-  // 4) Read sheet
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const wb     = XLSX.read(buffer, { type: "buffer" });
-  const sheet  = wb.Sheets[wb.SheetNames[0]];
-
-  // 5) Trim & validate headers
-  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
-  if (!rawRows.length) {
-    return NextResponse.json({ error: "Excel file is empty" }, { status: 400 });
-  }
-  const headers = (rawRows[0] as string[]).map((h) => h.trim());
-
-  const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
-  const extra   = headers.filter((h) => !REQUIRED_HEADERS.includes(h));
-  if (missing.length || extra.length) {
-    let msg = "";
-    if (missing.length) msg += `Missing columns: ${missing.join(", ")}. `;
-    if (extra.length)   msg += `Unexpected columns: ${extra.join(", ")}.`;
-    return NextResponse.json({ error: msg.trim() }, { status: 400 });
-  }
-
-  // 6) Parse rows using trimmed headers
-  const dataRows: any[] = XLSX.utils.sheet_to_json(sheet, {
-    header: headers,
-    defval: "",
-    range: 1,
-  });
-
-  // 7) Server‐side missing/duplicate checks
-  const seen = {
-    email: new Set<string>(),
-    phone: new Set<string>(),
-    aad:   new Set<string>(),
-  };
-  for (let i = 0; i < dataRows.length; i++) {
-    const rowNum = i + 2;
-    const r      = dataRows[i];
-    const email  = String(r["Email"]  || "").trim();
-    const phone  = String(r["Mobile No"]  || "").trim();
-    const aad    = String(r["Aadhaar No"] || "").trim();
-
-    if (!email || !phone || !aad) {
-      return NextResponse.json(
-        { error: `Row ${rowNum}: missing Email, Mobile No or Aadhaar No` },
-        { status: 400 }
-      );
+  try {
+    const session: any = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "HOD") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (seen.email.has(email)) {
-      return NextResponse.json(
-        { error: `Row ${rowNum}: duplicate Email ${email}` },
-        { status: 400 }
-      );
-    }
-    if (seen.phone.has(phone)) {
-      return NextResponse.json(
-        { error: `Row ${rowNum}: duplicate Mobile No ${phone}` },
-        { status: 400 }
-      );
-    }
-    if (seen.aad.has(aad)) {
-      return NextResponse.json(
-        { error: `Row ${rowNum}: duplicate Aadhaar No ${aad}` },
-        { status: 400 }
-      );
-    }
-    seen.email.add(email);
-    seen.phone.add(phone);
-    seen.aad.add(aad);
-  }
 
-  // 8) Transactionally upsert
-  const upserted: { userId: number; name: string; email: string }[] = [];
-  await prisma.$transaction(async (tx) => {
-    for (const r of dataRows) {
-      const name      = String(r["Name"]).trim();
-      const email     = String(r["Email"]).trim();
-      const password  = String(r["Password"]);
-      const contactNo = String(r["Mobile No"]).trim();
-      const aadhaarNo = String(r["Aadhaar No"]).trim();
+    const hod = await prisma.hOD.findUnique({
+      where:  { userId: Number(session.user.id) },
+      select: { collegeId: true, departmentId: true, id: true },
+    });
+    if (!hod) {
+      return NextResponse.json({ error: "HOD record not found" }, { status: 404 });
+    }
+    const { collegeId, departmentId, id: hodId } = hod;
 
-      if (!name || !email || !password || !contactNo) {
-        throw new Error("Validation failed: missing required field");
+    // Expect JSON array of faculty entries
+    const payload = await req.json();
+    if (!Array.isArray(payload)) {
+      return NextResponse.json({ error: "Expected JSON array" }, { status: 400 });
+    }
+
+    const upserted: Array<{ userId: number; name: string; email: string }> = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (const row of payload) {
+        const { name, email, contactNo, aadhaarNo, password } = row;
+        if (!name || !email || !contactNo || !aadhaarNo || !password) {
+          throw new Error("Missing required field in payload");
+        }
+
+        // upsert User
+        const hashed = await bcrypt.hash(password, 10);
+        const user = await tx.user.upsert({
+          where:  { email },
+          create: { email, password: hashed, role: UserRole.FACULTY },
+          update: { password: hashed, role: UserRole.FACULTY },
+        });
+
+        // upsert Faculty
+        await tx.faculty.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, name, collegeId, departmentId, hodId, contactNo, aadhaarNo },
+          update: { name, contactNo, aadhaarNo },
+        });
+
+        upserted.push({ userId: user.id, name, email });
       }
+    });
 
-      // upsert User
-      const hashed = await bcrypt.hash(password, 10);
-      const user = await tx.user.upsert({
-        where:  { email },
-        create: { email, password: hashed, role: "FACULTY" },
-        update: { password: hashed, role: "FACULTY" },
-      });
-
-      // upsert Faculty (fix: use user.id, not undefined userId)
-      await tx.faculty.upsert({
-        where: { userId: user.id },
-        create: {
-          userId:       user.id,       // ← here
-          name,
-          collegeId,
-          departmentId,
-          hodId,
-          contactNo,
-          aadhaarNo,
-        },
-        update: {
-          name,
-          contactNo,
-          aadhaarNo,
-        },
-      });
-
-      upserted.push({ userId: user.id, name, email });
-    }
-  });
-
-  return NextResponse.json({ faculty: upserted });
+    return NextResponse.json({ faculty: upserted });
+  } catch (err: any) {
+    console.error("⚠️ /api/hod/upload-faculty error:", err);
+    return NextResponse.json(
+      { error: err.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
 }
 
-export async function GET(req: NextRequest) {
-  // 1) Auth & role
-  const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== "HOD") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET() {
+  try {
+    const session: any = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== "HOD") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const hod = await prisma.hOD.findUnique({
+      where:  { userId: Number(session.user.id) },
+      select: { collegeId: true, departmentId: true, id: true },
+    });
+    if (!hod) {
+      return NextResponse.json({ error: "HOD record not found" }, { status: 404 });
+    }
+    const { collegeId, departmentId, id: hodId } = hod;
+
+    const faculty = await prisma.faculty.findMany({
+      where:   { collegeId, departmentId, hodId },
+      include: { user: { select: { email: true } } },
+    });
+
+    const formatted = faculty.map((f) => ({
+      id:        f.id,
+      userId:    f.userId,
+      name:      f.name,
+      email:     f.user.email,
+      contactNo: f.contactNo,
+      aadhaarNo: f.aadhaarNo,
+      createdAt: f.createdAt,
+    }));
+
+    return NextResponse.json({ faculty: formatted });
+  } catch (err: any) {
+    console.error("⚠️ GET /api/hod/upload-faculty error:", err);
+    return NextResponse.json(
+      { error: err.message || "Internal Server Error" },
+      { status: 500 }
+    );
   }
-
-  // 2) Lookup HOD’s IDs
-  const hod = await prisma.hOD.findUnique({
-    where:  { userId: Number(session.user.id) },
-    select: { collegeId: true, departmentId: true, id: true },
-  });
-  if (!hod) {
-    return NextResponse.json({ error: "HOD record not found" }, { status: 404 });
-  }
-  const { collegeId, departmentId, id: hodId } = hod;
-
-  // 3) Fetch faculty filtered by college, department & hod
-  const faculty = await prisma.faculty.findMany({
-    where:   { collegeId, departmentId, hodId },
-    include: { user: { select: { email: true } } },
-  });
-
-  // 4) Map and return
-  const formatted = faculty.map((f) => ({
-    id:        f.id,
-    userId:    f.userId,
-    name:      f.name,
-    email:     f.user.email,
-    contactNo: f.contactNo,
-    aadhaarNo: f.aadhaarNo,
-    createdAt: f.createdAt,
-  }));
-  console.log("💾 Sending faculty JSON:", formatted);
-
-  return NextResponse.json({ faculty: formatted });
 }

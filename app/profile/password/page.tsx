@@ -91,6 +91,8 @@ export default function SecurityPage() {
             className="mt-1 block w-full border rounded px-3 py-2"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
+            placeholder="Enter your current password"
+            title="Current Password"
           />
           <button
             type="button"

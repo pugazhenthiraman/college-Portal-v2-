@@ -1,3 +1,5 @@
+// File: app/api/college/upload-student/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import bcrypt from "bcryptjs";
@@ -6,11 +8,14 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 
+// ← import your password generator
+import { generateInitialPassword } from "@/lib/generatePassword";
+
 const REQUIRED_COLUMNS = [
   "firstName",
   "lastName",
   "email",
-  "password",
+  // "password",  ← no longer required
   "personalEmailId",
   "rollNo",
   "departmentName",
@@ -19,7 +24,7 @@ const REQUIRED_COLUMNS = [
   "secondaryPhoneNo",
   "country",
   "district",
-  "state"
+  "state",
 ];
 
 export async function POST(req: NextRequest) {
@@ -29,204 +34,220 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    // 1) figure out which college this user belongs to
+    const currentUser = await prisma.user.findUnique({
       where: { id: Number(session.user.id) },
       include: { college: true },
     });
-
-    if (!user?.college) {
+    if (!currentUser?.college) {
       return NextResponse.json({ error: "College not found" }, { status: 401 });
     }
-    const collegeId = user.college.id;
+    const collegeId = currentUser.college.id;
 
+    // 2) pull the uploaded file
     const formData = await req.formData();
     const file = formData.get("studentsExcelData") as File;
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // 3) parse the sheet
     const workbook = XLSX.read(await file.arrayBuffer(), { type: "buffer" });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rawRows = XLSX.utils.sheet_to_json<any>(sheet);
 
-    if (!jsonData || jsonData.length === 0) {
-      return NextResponse.json({ error: "The Excel file is empty or invalid." }, { status: 400 });
+    if (!rawRows.length) {
+      return NextResponse.json({ error: "Excel is empty or invalid" }, { status: 400 });
     }
 
-    const fileColumns = Object.keys(jsonData[0] || {}).map((col) => col.trim());
-    const missingColumns = REQUIRED_COLUMNS.filter((col) => !fileColumns.includes(col));
-    if (missingColumns.length > 0) {
-      return NextResponse.json({ error: `Missing columns: ${missingColumns.join(", ")}` }, { status: 400 });
+    // 4) check required columns
+    const cols = Object.keys(rawRows[0]).map((c) => c.trim());
+    const missingCols = REQUIRED_COLUMNS.filter((c) => !cols.includes(c));
+    if (missingCols.length) {
+      return NextResponse.json(
+        { error: `Missing columns: ${missingCols.join(", ")}` },
+        { status: 400 }
+      );
     }
 
-    // Fetch all departments for this college
-    const departments = await prisma.department.findMany({
+    // 5) preload departments & HODs for lookups
+    const depts = await prisma.department.findMany({
       where: { collegeId },
       select: { id: true, name: true },
     });
-    const departmentMap: Record<string, number> = {};
-    for (const dept of departments) {
-      departmentMap[dept.name.toLowerCase()] = dept.id;
-    }
+    const deptMap = Object.fromEntries(
+      depts.map((d) => [d.name.toLowerCase(), d.id])
+    );
 
-    // Fetch all HODs for this college
     const hods = await prisma.hOD.findMany({
       where: { collegeId },
       select: { id: true, departmentId: true },
     });
-    const hodMap: Record<number, number> = {};
-    for (const hod of hods) {
-      hodMap[hod.departmentId] = hod.id;
-    }
+    const hodMap = Object.fromEntries(
+      hods.map((h) => [h.departmentId, h.id])
+    );
 
-    const userEmailSet = new Set<string>();
-    const rollNoSet = new Set<string>();
-    const personalEmailSet = new Set<string>();
-    const phoneSet = new Set<string>();
+    // 6) de-duplicate sets
+    const seenEmail = new Set<string>();
+    const seenPersonalEmail = new Set<string>();
+    const seenRoll = new Set<string>();
+    const seenPhone = new Set<string>();
 
-    const usersToInsert: any[] = [];
-    const studentRecords: any[] = [];
+    // 7) accumulate User + Student inserts
+    const users: { email: string; password: string; role: UserRole }[] = [];
+    const studentRows: Array<{
+      email: string;
+      firstName: string;
+      middleName?: string | null;
+      lastName: string;
+      rollNo: string;
+      personalEmailId: string;
+      DOB: Date;
+      phoneNo: string;
+      secondaryPhoneNo: string;
+      country: string;
+      district: string;
+      state: string;
+      departmentName: string;
+      departmentId: number;
+      hodId: number;
+      collegeId: number;
+    }> = [];
 
-    for (let index = 0; index < jsonData.length; index++) {
-      const row : any = jsonData[index];
-      const rowNumber = index + 2;
+    for (let i = 0; i < rawRows.length; i++) {
+      const row = rawRows[i];
+      const rnum = i + 2; // for error messages
 
-      const missingFields = REQUIRED_COLUMNS.filter((key) => !row[key]);
-      if (missingFields.length) {
-        throw new Error(`Row ${rowNumber}: Missing required fields - ${missingFields.join(", ")}`);
+      // a) basic presence
+      const missing = REQUIRED_COLUMNS.filter((key) => !row[key]);
+      if (missing.length) {
+        throw new Error(`Row ${rnum}: missing ${missing.join(", ")}`);
       }
 
-      const email = row.email.toString().toLowerCase();
-      const personalEmail = row.personalEmailId.toString().toLowerCase();
-      const rollNo = row.rollNo.toString();
-      const phoneNo = row.phoneNo.toString();
-      const departmentName = row.departmentName.toString().toLowerCase();
+      const email = String(row.email).trim().toLowerCase();
+      const personalEmail = String(row.personalEmailId).trim().toLowerCase();
+      const rollNo = String(row.rollNo).trim();
+      const phoneNo = String(row.phoneNo).trim();
+      const deptName = String(row.departmentName).trim().toLowerCase();
 
-      if (userEmailSet.has(email)) throw new Error(`Row ${rowNumber}: Duplicate email`);
-      if (personalEmailSet.has(personalEmail)) throw new Error(`Row ${rowNumber}: Duplicate personalEmailId`);
-      if (rollNoSet.has(rollNo)) throw new Error(`Row ${rowNumber}: Duplicate rollNo`);
-      if (phoneSet.has(phoneNo)) throw new Error(`Row ${rowNumber}: Duplicate phoneNo`);
+      // b) duplicates in this upload
+      if (seenEmail.has(email)) throw new Error(`Row ${rnum}: duplicate email`);
+      if (seenPersonalEmail.has(personalEmail))
+        throw new Error(`Row ${rnum}: duplicate personal email`);
+      if (seenRoll.has(rollNo)) throw new Error(`Row ${rnum}: duplicate rollNo`);
+      if (seenPhone.has(phoneNo)) throw new Error(`Row ${rnum}: duplicate phoneNo`);
 
-      userEmailSet.add(email);
-      personalEmailSet.add(personalEmail);
-      rollNoSet.add(rollNo);
-      phoneSet.add(phoneNo);
+      seenEmail.add(email);
+      seenPersonalEmail.add(personalEmail);
+      seenRoll.add(rollNo);
+      seenPhone.add(phoneNo);
 
-      const departmentId = departmentMap[departmentName];
-      if (!departmentId) throw new Error(`Row ${rowNumber}: Invalid department name`);
+      // c) department → id
+      const departmentId = deptMap[deptName];
+      if (!departmentId)
+        throw new Error(`Row ${rnum}: unknown department "${row.departmentName}"`);
 
+      // d) HOD for that department
       const hodId = hodMap[departmentId];
-      if (!hodId) throw new Error(`Row ${rowNumber}: No HOD assigned to department`);
+      if (!hodId)
+        throw new Error(`Row ${rnum}: no HOD for department "${row.departmentName}"`);
 
-      const hashedPassword = await bcrypt.hash(row.password.toString(), 10);
+      // e) parse date
       const dob = new Date(row.DOB);
-      if (isNaN(dob.getTime())) throw new Error(`Row ${rowNumber}: Invalid DOB`);
+      if (isNaN(dob.getTime())) throw new Error(`Row ${rnum}: invalid DOB`);
 
-      usersToInsert.push({ email, password: hashedPassword, role: UserRole.STUDENT });
+      // f) generate & hash the one-time password
+      const plain = generateInitialPassword({ role: UserRole.STUDENT, firstName: row.firstName, dob });
+      const hashed = await bcrypt.hash(plain, 10);
 
-      studentRecords.push({
+      users.push({ email, password: hashed, role: UserRole.STUDENT });
+
+      studentRows.push({
         email,
-        firstName: row.firstName,
-        middleName: row.middleName || null,
-        lastName: row.lastName,
+        firstName: String(row.firstName).trim(),
+        middleName: row.middleName ? String(row.middleName).trim() : null,
+        lastName: String(row.lastName).trim(),
         rollNo,
         personalEmailId: personalEmail,
-        DOB: dob.toISOString(),
+        DOB: dob,
         phoneNo,
-        secondaryPhoneNo: row.secondaryPhoneNo,
-        country: row.country,
-        district: row.district,
-        state: row.state,
+        secondaryPhoneNo: String(row.secondaryPhoneNo).trim(),
+        country: String(row.country).trim(),
+        district: String(row.district).trim(),
+        state: String(row.state).trim(),
         departmentName: row.departmentName,
         departmentId,
         hodId,
-        collegeId
+        collegeId,
       });
     }
 
-    await prisma.user.createMany({ data: usersToInsert, skipDuplicates: true });
+    // 8) bulk insert Users (skip existing)
+    await prisma.user.createMany({
+      data: users,
+      skipDuplicates: true,
+    });
 
-    const createdUsers = await prisma.user.findMany({
-      where: { email: { in: usersToInsert.map((u) => u.email) } },
+    // 9) fetch their new IDs
+    const created = await prisma.user.findMany({
+      where: { email: { in: users.map((u) => u.email) } },
       select: { id: true, email: true },
     });
-    const emailToUserId = createdUsers.reduce((acc, curr) => {
-      acc[curr.email.toLowerCase()] = curr.id;
-      return acc;
-    }, {} as Record<string, number>);
+    const emailToId = Object.fromEntries(
+      created.map((u) => [u.email.toLowerCase(), u.id])
+    );
 
-   const values = studentRecords
-  .map((item) => {
-    const userId = emailToUserId[item.email];
-    if (!userId) return null;
+    // 10) upsert each Student
+    for (const s of studentRows) {
+      const uid = emailToId[s.email.toLowerCase()];
+      await prisma.student.upsert({
+        where: { rollNo: s.rollNo },
+        create: {
+          userId: uid,
+          firstName: s.firstName,
+          middleName: s.middleName,
+          lastName: s.lastName,
+          rollNo: s.rollNo,
+          personalEmailId: s.personalEmailId,
+          DOB: s.DOB,
+          phoneNo: s.phoneNo,
+          secondaryPhoneNo: s.secondaryPhoneNo,
+          country: s.country,
+          district: s.district,
+          state: s.state,
+          departmentName: s.departmentName,
+          collegeId: s.collegeId,
+          departmentId: s.departmentId,
+          hodId: s.hodId,
+        },
+        update: {
+          firstName: s.firstName,
+          middleName: s.middleName,
+          lastName: s.lastName,
+          personalEmailId: s.personalEmailId,
+          DOB: s.DOB,
+          phoneNo: s.phoneNo,
+          secondaryPhoneNo: s.secondaryPhoneNo,
+          country: s.country,
+          district: s.district,
+          state: s.state,
+          departmentName: s.departmentName,
+          collegeId: s.collegeId,
+          departmentId: s.departmentId,
+          hodId: s.hodId,
+        },
+      });
+    }
 
-    const dobString = item.DOB ? `'${item.DOB}'` : 'NULL';
-    const middleName = item.middleName ? `'${item.middleName.replace(/'/g, "''")}'` : 'NULL';
-
-    return `(
-      ${userId},
-      '${item.firstName.replace(/'/g, "''")}',
-      ${middleName},
-      '${item.lastName.replace(/'/g, "''")}',
-      '${item.rollNo}',
-      '${item.personalEmailId}',
-      ${dobString},
-      '${item.phoneNo}',
-      '${item.secondaryPhoneNo}',
-      '${item.country.replace(/'/g, "''")}',
-      '${item.district.replace(/'/g, "''")}',
-      '${item.state.replace(/'/g, "''")}',
-      '${item.departmentName.replace(/'/g, "''")}',
-      ${item.collegeId},
-      ${item.departmentId},
-      ${item.hodId}
-    )`;
-  })
-  .filter(Boolean)
-  .join(",");
-
-   if (!values) {
-  console.error("No valid student data to insert.");
-  return NextResponse.json({ error: "No valid students to insert" }, { status: 400 });
-}
-
-  
-
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO "Student" (
-      "userId", "firstName", "middleName", "lastName", "rollNo",
-      "personalEmailId", "DOB", "phoneNo", "secondaryPhoneNo",
-      "country", "district", "state", "departmentName", "collegeId",
-      "departmentId", "hodId"
-    )
-    VALUES ${values}
-    ON CONFLICT ("rollNo") DO UPDATE SET
-      "firstName" = EXCLUDED."firstName",
-      "middleName" = EXCLUDED."middleName",
-      "lastName" = EXCLUDED."lastName",
-      "personalEmailId" = EXCLUDED."personalEmailId",
-      "DOB" = EXCLUDED."DOB",
-      "phoneNo" = EXCLUDED."phoneNo",
-      "secondaryPhoneNo" = EXCLUDED."secondaryPhoneNo",
-      "country" = EXCLUDED."country",
-      "district" = EXCLUDED."district",
-      "state" = EXCLUDED."state",
-      "departmentName" = EXCLUDED."departmentName",
-      "collegeId" = EXCLUDED."collegeId",
-      "departmentId" = EXCLUDED."departmentId",
-      "hodId" = EXCLUDED."hodId";
-  `);
-
-
-    return NextResponse.json({ success: true, message: "Students inserted successfully" });
-  } catch (error: any) {
-    console.error("❌ Error uploading students:", error);
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ success: true, message: "Students upserted" });
+  } catch (err: any) {
+    console.error("Upload error:", err);
+    return NextResponse.json(
+      { error: err.message || "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
-
-
 
 export async function GET() {
   try {
@@ -235,33 +256,24 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    // only show students for this college
+    const u = await prisma.user.findUnique({
       where: { id: Number(session.user.id) },
       include: { college: true },
     });
-
-    if (!user?.college) {
-      return NextResponse.json({ error: "College ID not found" }, { status: 401 });
+    if (!u?.college) {
+      return NextResponse.json({ error: "No college" }, { status: 401 });
     }
 
     const students = await prisma.student.findMany({
-      where: { collegeId: user.college.id },
-      include: {
-        user: {
-          select: { email: true },
-        },
-      },
+      where: { collegeId: u.college.id },
+      include: { user: { select: { email: true } } },
     });
-
-    return NextResponse.json({ students }, { status: 200 });
-  } catch (error) {
-    console.error("❌ Error fetching students:", error);
+    return NextResponse.json({ students });
+  } catch (err) {
+    console.error("Fetch error:", err);
     return NextResponse.json({ error: "Failed to fetch students" }, { status: 500 });
   }
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const config = { api: { bodyParser: false } };

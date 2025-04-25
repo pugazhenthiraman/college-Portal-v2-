@@ -38,7 +38,7 @@ export default function ProfileLayout({ children }: { children: ReactNode }) {
       case "FACULTY":
         return "/faculty/dashboard";
       case "STUDENT":
-        return "/student/dashboard";
+        return "/students/dashboard";
       default:
         return "/";
     }
