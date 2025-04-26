@@ -41,6 +41,9 @@ export default function UploadDetailsCandidatesPage() {
     { key: "departmentName", label: "Department" },
     { key: "DOB", label: "DOB" },
     { key: "phoneNo", label: "Phone No" },
+    // Add new fields for section and academic year
+    { key: "section", label: "Section" },
+    { key: "academicYear", label: "Academic Year" },
   ];
 
   const filterableFields = [...columns];
@@ -50,12 +53,16 @@ export default function UploadDetailsCandidatesPage() {
     try {
       const response = await fetch("/api/college/upload-student");
       const result = await response.json();
+      // Log the raw data received from backend
+      console.log("Frontend received students from backend:", result.students);
       if (response.ok && result.students) {
         const studentsNormalized = result.students.map((student: any) => ({
           ...student,
           facultyName: student.facultyName || "N/A",
           email: student.user?.email || student.email || "",
         }));
+        // Log the data passed to the table
+        console.log("Frontend normalized students for table:", studentsNormalized);
         setData(studentsNormalized);
         setFilteredData(studentsNormalized);
       } else {
@@ -130,7 +137,8 @@ export default function UploadDetailsCandidatesPage() {
         toast.success(result.message || "✅ File uploaded successfully!");
         fetchData();
       } else {
-        toast.error(`❌ Upload failed: ${result.error}`);
+        // Show backend error (including header mismatch) to user
+        toast.error(`❌ Upload failed: ${result.error || "Unknown error"}`);
       }
     } catch (error: any) {
       console.error("Error uploading file:", error);

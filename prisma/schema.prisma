@@ -165,6 +165,10 @@ model Student {
   state           String
   departmentName     String
 
+  // Add new fields for section and academic year
+  section            String?
+  academicYear       String?
+
   adhaarNo           String?
   passportNo         String?
   passportExpiryDate DateTime?

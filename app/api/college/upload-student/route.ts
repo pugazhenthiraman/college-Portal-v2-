@@ -25,6 +25,9 @@ const REQUIRED_COLUMNS = [
   "country",
   "district",
   "state",
+  // Now required:
+  "section",
+  "academicYear",
 ];
 
 export async function POST(req: NextRequest) {
@@ -56,16 +59,43 @@ export async function POST(req: NextRequest) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rawRows = XLSX.utils.sheet_to_json<any>(sheet);
 
+    // Log the raw Excel data received
+    console.log("Received Excel rows:", rawRows);
+
+    // Log the keys of the first row for debugging header mapping
+    if (rawRows.length > 0) {
+      console.log("Excel first row keys:", Object.keys(rawRows[0]));
+    }
+
+    // Map possible Excel headers to camelCase keys for section and academicYear
+    const normalizeRow = (row: any) => {
+      // Accept both camelCase and common Excel header variants
+      return {
+        ...row,
+        section: row.section ?? row.Section ?? null,
+        academicYear:
+          row.academicYear ??
+          row["Academic Year"] ??
+          row.academicyear ??
+          row["academic year"] ??
+          null,
+      };
+    };
+
     if (!rawRows.length) {
       return NextResponse.json({ error: "Excel is empty or invalid" }, { status: 400 });
     }
 
-    // 4) check required columns
+    // 4) check required columns and unexpected columns
     const cols = Object.keys(rawRows[0]).map((c) => c.trim());
     const missingCols = REQUIRED_COLUMNS.filter((c) => !cols.includes(c));
-    if (missingCols.length) {
+    const unexpectedCols = cols.filter((c) => !REQUIRED_COLUMNS.includes(c));
+    if (missingCols.length || unexpectedCols.length) {
+      let msg = "";
+      if (missingCols.length) msg += `Missing columns: ${missingCols.join(", ")}. `;
+      if (unexpectedCols.length) msg += `Unexpected columns: ${unexpectedCols.join(", ")}.`;
       return NextResponse.json(
-        { error: `Missing columns: ${missingCols.join(", ")}` },
+        { error: msg.trim() },
         { status: 400 }
       );
     }
@@ -112,10 +142,14 @@ export async function POST(req: NextRequest) {
       departmentId: number;
       hodId: number;
       collegeId: number;
+      // Add new fields
+      section?: string | null;
+      academicYear?: string | null;
     }> = [];
 
     for (let i = 0; i < rawRows.length; i++) {
-      const row = rawRows[i];
+      // Use normalized row
+      const row = normalizeRow(rawRows[i]);
       const rnum = i + 2; // for error messages
 
       // a) basic presence
@@ -179,6 +213,9 @@ export async function POST(req: NextRequest) {
         departmentId,
         hodId,
         collegeId,
+        // Add new fields (optional, fallback to null if not present)
+        section: row.section ? String(row.section).trim() : null,
+        academicYear: row.academicYear ? String(row.academicYear).trim() : null,
       });
     }
 
@@ -219,6 +256,9 @@ export async function POST(req: NextRequest) {
           collegeId: s.collegeId,
           departmentId: s.departmentId,
           hodId: s.hodId,
+          // Add new fields
+          section: s.section,
+          academicYear: s.academicYear,
         },
         update: {
           firstName: s.firstName,
@@ -235,6 +275,9 @@ export async function POST(req: NextRequest) {
           collegeId: s.collegeId,
           departmentId: s.departmentId,
           hodId: s.hodId,
+          // Add new fields
+          section: s.section,
+          academicYear: s.academicYear,
         },
       });
     }
@@ -269,6 +312,10 @@ export async function GET() {
       where: { collegeId: u.college.id },
       include: { user: { select: { email: true } } },
     });
+
+    // Log the data being sent to the frontend
+    console.log("Sending students to frontend:", students);
+
     return NextResponse.json({ students });
   } catch (err) {
     console.error("Fetch error:", err);

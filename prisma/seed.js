@@ -44,6 +44,7 @@ async function main() {
       councilIssuingCode: "INST",
       collegeType: "ENGINEERING",
       departmentType: "BE",
+      
     },
   });
   console.log("✅ College Created:", college.name);
@@ -128,6 +129,9 @@ async function main() {
       state: "Tamil Nadu",
       district: "Chennai",
       departmentName: "Computer Science",
+      // Add section and academicYear fields
+      section: "A",
+      academicYear: "IV",
       passportNo: "P987654321",
       passportExpiryDate: new Date("2030-12-31"),
     },
