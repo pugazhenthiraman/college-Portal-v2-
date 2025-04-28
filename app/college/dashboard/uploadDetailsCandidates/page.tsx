@@ -53,8 +53,7 @@ export default function UploadDetailsCandidatesPage() {
     try {
       const response = await fetch("/api/college/upload-student");
       const result = await response.json();
-      // Log the raw data received from backend
-      console.log("Frontend received students from backend:", result.students);
+    
       if (response.ok && result.students) {
         const studentsNormalized = result.students.map((student: any) => ({
           ...student,
@@ -62,7 +61,7 @@ export default function UploadDetailsCandidatesPage() {
           email: student.user?.email || student.email || "",
         }));
         // Log the data passed to the table
-        console.log("Frontend normalized students for table:", studentsNormalized);
+
         setData(studentsNormalized);
         setFilteredData(studentsNormalized);
       } else {

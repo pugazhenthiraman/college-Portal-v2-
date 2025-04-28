@@ -313,8 +313,7 @@ export async function GET() {
       include: { user: { select: { email: true } } },
     });
 
-    // Log the data being sent to the frontend
-    console.log("Sending students to frontend:", students);
+   
 
     return NextResponse.json({ students });
   } catch (err) {

@@ -306,8 +306,23 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
 
   return createPortal(
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={handleOverlayClick}>
-      <div className="m-4 max-h-[70vh] overflow-y-auto scrollbar-hide rounded-xl" onClick={handleContentClick}>
-        <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-4xl border border-black">
+      <div
+        className="m-4 max-h-[70vh] overflow-y-auto rounded-xl"
+        style={{
+          scrollbarWidth: "none",        // Firefox
+          msOverflowStyle: "none",       // IE 10+
+        }}
+        onClick={handleContentClick}
+      >
+        <style>
+          {`
+            /* Hide scrollbar for Chrome, Safari and Opera */
+            .hide-scrollbar::-webkit-scrollbar {
+              display: none;
+            }
+          `}
+        </style>
+        <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-4xl border border-black hide-scrollbar">
           {/* Modal Header */}
           <div className="flex justify-between items-center border-b border-gray-300 pb-3">
             <h3 className="text-3xl font-bold">
