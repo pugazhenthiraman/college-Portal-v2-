@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
-import { Loader } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentViewModal } from "@/components/studentViewModel";
 import SearchBar from "@/components/searchBar";
@@ -11,24 +9,20 @@ import StudentTable from "@/components/studentTable";
 import FilterSidebar from "@/components/filterBar";
 import ModernFileUpload from "@/components/ModernFileUpload";
 import DownloadTemplateButton from "@/components/DownloadTemplateButton";
+import LoadingSpinner from "@/components/ui/loadingSpinner";
 
 export default function UploadDetailsCandidatesPage() {
   const [data, setData] = useState<any[]>([]);
-  const [filteredData, setFilteredData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
-
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
-
   const [sortColumn, setSortColumn] = useState("");
-  const [sortDirection, setSortDirection] = useState("asc");
-
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-
   const [columnFilters, setColumnFilters] = useState<{ [key: string]: string }>({});
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
 
@@ -41,7 +35,6 @@ export default function UploadDetailsCandidatesPage() {
     { key: "departmentName", label: "Department" },
     { key: "DOB", label: "DOB" },
     { key: "phoneNo", label: "Phone No" },
-    // Add new fields for section and academic year
     { key: "section", label: "Section" },
     { key: "academicYear", label: "Academic Year" },
   ];
@@ -53,17 +46,13 @@ export default function UploadDetailsCandidatesPage() {
     try {
       const response = await fetch("/api/college/upload-student");
       const result = await response.json();
-    
       if (response.ok && result.students) {
         const studentsNormalized = result.students.map((student: any) => ({
           ...student,
           facultyName: student.facultyName || "N/A",
           email: student.user?.email || student.email || "",
         }));
-        // Log the data passed to the table
-
         setData(studentsNormalized);
-        setFilteredData(studentsNormalized);
       } else {
         toast.error(result.error || "Failed to load students");
       }
@@ -79,7 +68,18 @@ export default function UploadDetailsCandidatesPage() {
     fetchData();
   }, []);
 
-  useEffect(() => {
+  // Debounce search input
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setSearch(value);
+    }, 300);
+  };
+
+  // Memoize filtered and sorted data
+  const filteredData = useMemo(() => {
     let filtered = [...data];
 
     if (search) {
@@ -101,13 +101,23 @@ export default function UploadDetailsCandidatesPage() {
       );
     }
 
-    setFilteredData(filtered);
-    setCurrentPage(1);
-  }, [data, search, columnFilters]);
+    if (sortColumn) {
+      filtered.sort((a, b) => {
+        const valueA = a[sortColumn] || "";
+        const valueB = b[sortColumn] || "";
+        return sortDirection === "asc"
+          ? valueA.toString().localeCompare(valueB.toString())
+          : valueB.toString().localeCompare(valueA.toString());
+      });
+    }
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  };
+    return filtered;
+  }, [data, search, columnFilters, sortColumn, sortDirection]);
+
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,7 +146,6 @@ export default function UploadDetailsCandidatesPage() {
         toast.success(result.message || "✅ File uploaded successfully!");
         fetchData();
       } else {
-        // Show backend error (including header mismatch) to user
         toast.error(`❌ Upload failed: ${result.error || "Unknown error"}`);
       }
     } catch (error: any) {
@@ -151,20 +160,7 @@ export default function UploadDetailsCandidatesPage() {
     const newDirection = sortColumn === column && sortDirection === "asc" ? "desc" : "asc";
     setSortColumn(column);
     setSortDirection(newDirection);
-    const sortedData = [...filteredData].sort((a, b) => {
-      const valueA = a[column] || "";
-      const valueB = b[column] || "";
-      return newDirection === "asc"
-        ? valueA.toString().localeCompare(valueB.toString())
-        : valueB.toString().localeCompare(valueA.toString());
-    });
-    setFilteredData(sortedData);
   };
-
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filteredData.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
   const handleViewClick = (student: any) => {
     setSelectedStudent(student);
@@ -200,7 +196,7 @@ export default function UploadDetailsCandidatesPage() {
       <Toaster position="top-right" />
       {loading ? (
         <div className="flex items-center justify-center h-screen">
-          <Loader className="animate-spin h-16 w-16 text-indigo-600" />
+          <LoadingSpinner />
         </div>
       ) : (
         <>

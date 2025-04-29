@@ -25,8 +25,7 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
 
   // Overlay click will close the modal.
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    onClose();
+    if (e.target === e.currentTarget) onClose();
   };
 
   // Prevent clicks inside modal content from closing the modal.
@@ -38,7 +37,13 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
     const { name, value } = e.target;
     if (name === "email") {
       setEditedStudent((prev: any) =>
-        prev ? { ...prev, user: { ...prev.user, email: value } } : null
+        prev
+          ? {
+              ...prev,
+              email: value,
+              user: { ...prev.user, email: value },
+            }
+          : null
       );
     } else {
       setEditedStudent((prev: any) =>
@@ -49,7 +54,12 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
 
   const handleSave = () => {
     if (editedStudent) {
-      onSave(editedStudent);
+      // Ensure email is at the top level for backend compatibility
+      const payload = {
+        ...editedStudent,
+        email: editedStudent.email || editedStudent.user?.email,
+      };
+      onSave(payload);
       onClose();
       setMode("view");
     }

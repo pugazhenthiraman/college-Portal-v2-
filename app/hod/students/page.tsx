@@ -4,14 +4,15 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentViewModal } from "@/components/studentViewModel";
-import SearchBar from "@/components/searchBar"; // Reusable SearchBar Component
-import StudentTable from "@/components/studentTable"; // Reusable StudentTable Component
-import FilterSidebar from "@/components/filterBar"; // Filter sidebar component
+import SearchBar from "@/components/searchBar";
+import StudentTable from "@/components/studentTable";
+import FilterSidebar from "@/components/filterBar";
+import LoadingSpinner from "@/components/ui/loadingSpinner";
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   // Global search state (for quick search)
   const [globalSearch, setGlobalSearch] = useState("");
@@ -19,7 +20,7 @@ export default function StudentsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
-  
+
   const [sortColumn, setSortColumn] = useState("");
   const [sortDirection, setSortDirection] = useState("asc");
 
@@ -43,6 +44,8 @@ export default function StudentsPage() {
     { key: "facultyName", label: "Faculty Name" },
     { key: "DOB", label: "DOB" },
     { key: "phoneNo", label: "Phone No" },
+    { key: "academicYear", label: "Academic Year" }, // <-- Add this
+    { key: "section", label: "Section" },    
   ];
 
   // Define extra filterable fields (including the additional fields from the view)
@@ -55,7 +58,8 @@ export default function StudentsPage() {
     { key: "facultyName", label: "Faculty Name" },
     { key: "departmentName", label: "Department" },
     { key: "DOB", label: "DOB" },
-   
+     { key: "academicYear", label: "Academic Year" }, // <-- Add this
+    { key: "section", label: "Section" },     
   ];
 
   // Fetch student data from the backend
@@ -173,82 +177,90 @@ export default function StudentsPage() {
     <div className="relative flex flex-col w-full px-6 pt-28 scrollbar-hide">
       <Toaster position="top-right" />
 
-      {/* Header with Department Name */}
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-lg font-medium text-black">{departmentName}</span>
-      </div>
-
-      {/* Controls (Global Search and Buttons) */}
-      <div className="flex justify-end items-center space-x-4 mb-6">
-        <div className="w-64">
-          <SearchBar
-            value={globalSearch}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setGlobalSearch(e.target.value)
-            }
-          />
+      {loading ? (
+        <div className="flex items-center justify-center h-96">
+          <LoadingSpinner />
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.2 }}
-          onClick={() => setIsFilterSidebarOpen(true)}
-          className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md"
-        >
-          Filters
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.2 }}
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md"
-        >
-          Assign Faculty
-        </motion.button>
-      </div>
+      ) : (
+        <>
+          {/* Header with Department Name */}
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-lg font-medium text-black">{departmentName}</span>
+          </div>
 
-      {/* Student Table Section */}
-      <div className="max-w-6xl mx-auto">
-        <StudentTable
-          students={currentRows}
-          columns={tableColumns}
-          onSort={handleSort}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-          onView={handleViewClick}
-        />
-      </div>
+          {/* Controls (Global Search and Buttons) */}
+          <div className="flex justify-end items-center space-x-4 mb-6">
+            <div className="w-64">
+              <SearchBar
+                value={globalSearch}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setGlobalSearch(e.target.value)
+                }
+              />
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsFilterSidebarOpen(true)}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-md"
+            >
+              Filters
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md"
+            >
+              Assign Faculty
+            </motion.button>
+          </div>
 
-      {/* Pagination Controls */}
-      <div className="w-full flex items-center justify-between mt-4 px-6">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.2 }}
-          onClick={() => setCurrentPage(currentPage - 1)}
-          disabled={currentPage === 1}
-          className={`ml-6 px-3 py-1 rounded-lg font-medium text-sm transition-all ${
-            currentPage === 1
-              ? "bg-gray-300 cursor-not-allowed"
-              : "bg-indigo-500 hover:bg-indigo-600 text-white"
-          }`}
-        >
-          Prev
-        </motion.button>
-        <span className="font-semibold text-gray-700">
-          Page {currentPage} of {totalPages}
-        </span>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.2 }}
-          onClick={() => setCurrentPage(currentPage + 1)}
-          disabled={indexOfLastRow >= filteredStudents.length}
-          className={`mr-6 px-3 py-1 rounded-lg font-medium text-sm transition-all ${
-            indexOfLastRow >= filteredStudents.length
-              ? "bg-gray-300 cursor-not-allowed"
-              : "bg-indigo-500 hover:bg-indigo-600 text-white"
-          }`}
-        >
-          Next
-        </motion.button>
-      </div>
+          {/* Student Table Section */}
+          <div className="max-w-6xl mx-auto">
+            <StudentTable
+              students={currentRows}
+              columns={tableColumns}
+              onSort={handleSort}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onView={handleViewClick}
+            />
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="w-full flex items-center justify-between mt-4 px-6">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`ml-6 px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+                currentPage === 1
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-indigo-500 hover:bg-indigo-600 text-white"
+              }`}
+            >
+              Prev
+            </motion.button>
+            <span className="font-semibold text-gray-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={indexOfLastRow >= filteredStudents.length}
+              className={`mr-6 px-3 py-1 rounded-lg font-medium text-sm transition-all ${
+                indexOfLastRow >= filteredStudents.length
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-indigo-500 hover:bg-indigo-600 text-white"
+              }`}
+            >
+              Next
+            </motion.button>
+          </div>
+        </>
+      )}
 
       {/* Student View Modal */}
       {isViewModalOpen && selectedStudent && (

@@ -56,6 +56,8 @@ export async function GET(req: Request) {
         personalEmailId: true,
         user: { select: { email: true } }, // Include user email
         departmentName: true, // Directly include the stored department name
+         academicYear: true, // <-- Add this
+        section: true,    
       },
     });
 

@@ -77,7 +77,7 @@ export default function AdminLoginPage() {
           router.push("/faculty/dashboard");
           break;
         case "STUDENT":
-          router.push("/student/dashboard");
+          router.push("/students/dashboard");
           break;
         default:
           router.push("/auth/login");
