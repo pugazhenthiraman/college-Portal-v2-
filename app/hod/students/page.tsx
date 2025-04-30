@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 import { StudentViewModal } from "@/components/studentViewModel";
@@ -34,6 +35,32 @@ export default function StudentsPage() {
   // State to control the visibility of the filter sidebar (moved to right)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
 
+  // Dropdown state for Assign Faculty
+  const [isAssignDropdownOpen, setIsAssignDropdownOpen] = useState(false);
+  const assignDropdownRef = useRef<HTMLDivElement>(null);
+
+  const router = useRouter();
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        assignDropdownRef.current &&
+        !assignDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsAssignDropdownOpen(false);
+      }
+    }
+    if (isAssignDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAssignDropdownOpen]);
+
   // Define the table columns (displayed in the StudentTable)
   const tableColumns = [
     { key: "rollNo", label: "Roll No" },
@@ -44,8 +71,8 @@ export default function StudentsPage() {
     { key: "facultyName", label: "Faculty Name" },
     { key: "DOB", label: "DOB" },
     { key: "phoneNo", label: "Phone No" },
-    { key: "academicYear", label: "Academic Year" }, // <-- Add this
-    { key: "section", label: "Section" },    
+    { key: "academicYear", label: "Academic Year" },
+    { key: "section", label: "Section" },
   ];
 
   // Define extra filterable fields (including the additional fields from the view)
@@ -58,8 +85,8 @@ export default function StudentsPage() {
     { key: "facultyName", label: "Faculty Name" },
     { key: "departmentName", label: "Department" },
     { key: "DOB", label: "DOB" },
-     { key: "academicYear", label: "Academic Year" }, // <-- Add this
-    { key: "section", label: "Section" },     
+    { key: "academicYear", label: "Academic Year" },
+    { key: "section", label: "Section" },
   ];
 
   // Fetch student data from the backend
@@ -68,15 +95,10 @@ export default function StudentsPage() {
     try {
       const response = await fetch("/api/hod/students");
       const data = await response.json();
+      console.log("API Response:", data); // Debug log
       if (response.ok && data.students) {
         setDepartmentName(data.department || "N/A");
-
-        // Add fallback for facultyName if it's null/undefined.
-        const studentsWithFallback = data.students.map((student: any) => ({
-          ...student,
-          facultyName: student.facultyName || "N/A",
-        }));
-        setStudents(studentsWithFallback);
+        setStudents(data.students); // Use students as-is, they already have facultyName
       } else {
         toast.error(data.error || "Failed to load students");
       }
@@ -145,6 +167,9 @@ export default function StudentsPage() {
   const currentRows = filteredStudents.slice(indexOfFirstRow, indexOfLastRow);
   const totalPages = Math.ceil(filteredStudents.length / rowsPerPage);
 
+  // Debug log for table data
+  console.log("Current rows for table:", currentRows);
+
   // Open modal for a student (view/edit).
   const handleViewClick = (student: any) => {
     setSelectedStudent(student);
@@ -173,6 +198,17 @@ export default function StudentsPage() {
     }
   };
 
+  // Handlers for dropdown options
+  const handleAutoAssign = () => {
+    setIsAssignDropdownOpen(false);
+    router.push("/hod/assignFaculty/autoAssign");
+  };
+
+  const handleManualAssign = () => {
+    setIsAssignDropdownOpen(false);
+    router.push("/hod/assignFaculty/mannualAssign");
+  };
+
   return (
     <div className="relative flex flex-col w-full px-6 pt-28 scrollbar-hide">
       <Toaster position="top-right" />
@@ -189,7 +225,7 @@ export default function StudentsPage() {
           </div>
 
           {/* Controls (Global Search and Buttons) */}
-          <div className="flex justify-end items-center space-x-4 mb-6">
+          <div className="flex justify-end items-center space-x-4 mb-6 relative">
             <div className="w-64">
               <SearchBar
                 value={globalSearch}
@@ -206,13 +242,40 @@ export default function StudentsPage() {
             >
               Filters
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.2 }}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md"
-            >
-              Assign Faculty
-            </motion.button>
+            <div className="relative" ref={assignDropdownRef}>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setIsAssignDropdownOpen((prev) => !prev)}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md"
+              >
+                Assign Faculty
+              </motion.button>
+              <AnimatePresence>
+                {isAssignDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-20"
+                  >
+                    <button
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                      onClick={handleAutoAssign}
+                    >
+                      Auto Assign Faculty
+                    </button>
+                    <button
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                      onClick={handleManualAssign}
+                    >
+                      Manual Assign Faculty
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Student Table Section */}

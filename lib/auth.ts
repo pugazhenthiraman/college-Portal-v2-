@@ -31,9 +31,9 @@ export const authOptions: AuthOptions = {
           include: {
             superAdmin: true,
             college: true,
-            hod: true,
-            faculty: true,
-            student: true,
+            hod: { include: { college: true, department: true } },
+            faculty: { include: { college: true, department: true } },
+            student: { include: { college: true, department: true } },
           },
         });
 
@@ -59,14 +59,34 @@ export const authOptions: AuthOptions = {
           }
         }
 
-        // Ensure a valid object is returned
+        // Map fields based on user role and relations
         return {
-         id: user.id.toString(),
-  email: user.email,
-  role: user.role,
-  collegeType: user.college?.collegeType || null,
-  departmentType: user.college?.departmentType || null,
-  collegeId: user.college?.id || null,
+          id: user.id.toString(),
+          email: user.email,
+          role: user.role,
+          collegeType:
+            user.college?.collegeType ||
+            user.hod?.college?.collegeType ||
+            user.faculty?.college?.collegeType ||
+            user.student?.college?.collegeType ||
+            null,
+          departmentType:
+            user.college?.departmentType ||
+            user.hod?.department?.departmentType ||
+            user.faculty?.department?.departmentType ||
+            user.student?.department?.departmentType ||
+            null,
+          collegeId:
+            user.college?.id ||
+            user.hod?.collegeId ||
+            user.faculty?.collegeId ||
+            user.student?.collegeId ||
+            null,
+          departmentId:
+            user.hod?.departmentId ||
+            user.faculty?.departmentId ||
+            user.student?.departmentId ||
+            null,
         };
       },
     }),
@@ -79,7 +99,7 @@ export const authOptions: AuthOptions = {
         session.user.collegeType = token.collegeType;
         session.user.departmentType = token.departmentType;
         session.user.collegeId = token.collegeId;
-        session.user.departmentId = token.departmentId; // Ensure this is included if available
+        session.user.departmentId = token.departmentId;
       }
       return session;
     },
@@ -90,7 +110,7 @@ export const authOptions: AuthOptions = {
         token.collegeType = user.collegeType;
         token.departmentType = user.departmentType;
         token.collegeId = user.collegeId;
-        token.departmentId = user.departmentId; // Ensure this is set if needed
+        token.departmentId = user.departmentId;
       }
       return token;
     },

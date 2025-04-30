@@ -124,6 +124,7 @@ model Faculty {
     // New fields for storing additional data:
   contactNo    String?
   aadhaarNo    String?
+   sections  String[]  @default([])  // ← store the section this faculty is responsible for
 }
 
 model Student {
