@@ -1,21 +1,28 @@
+// File: app/hod/assignFaculty/autoAssign/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { Dialog } from "@headlessui/react";
+import { ChevronRightIcon, XIcon } from "lucide-react";
+import SearchBar from "@/components/searchBar"; // Import the SearchBar
 
-type Faculty   = { userId: number; name: string };
+type Faculty = { userId: number; name: string };
+type Student = { userId: number; section: string };
 type AssignmentMap = Record<number, string[]>;
 
 export default function AutoAssignPage() {
-  const [faculty,    setFaculty]    = useState<Faculty[]>([]);
-  const [sections,   setSections]   = useState<string[]>([]);
-  const [assignMap,  setAssignMap]  = useState<AssignmentMap>({});
-  const [editing,    setEditing]    = useState<Faculty | null>(null);
-  const [selSecs,    setSelSecs]    = useState<string[]>([]);
-  const [loading,    setLoading]    = useState(false);
+  const [faculty, setFaculty] = useState<Faculty[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [sections, setSections] = useState<string[]>([]);
+  const [assignMap, setAssignMap] = useState<AssignmentMap>({});
+  const [editing, setEditing] = useState<Faculty | null>(null);
+  const [selSecs, setSelSecs] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Load initial data
+  const [search, setSearch] = useState("");
+
+  // Load all data
   useEffect(() => {
     async function load() {
       try {
@@ -24,149 +31,183 @@ export default function AutoAssignPage() {
           fetch("/api/hod/students").then(r => r.json()),
           fetch("/api/hod/assignFaculty/autoAssign").then(r => r.json()),
         ]);
-
-        if (!fRes.faculty || !sRes.students || !aRes.assignments) {
-          throw new Error("Incomplete data from server");
-        }
-
-        setFaculty(
-          fRes.faculty.map((f: any) => ({ userId: f.userId, name: f.name }))
-        );
-
-        setSections(
-          Array.from(new Set(sRes.students.map((s: any) => s.section).filter(Boolean)))
-        );
-
-        setAssignMap(aRes.assignments as AssignmentMap);
-      } catch (err: any) {
-        toast.error("Load error: " + err.message);
+        if (!fRes.faculty || !sRes.students || !aRes.assignments)
+          throw new Error("Incomplete data");
+        setFaculty(fRes.faculty.map((f: any) => ({ userId: f.userId, name: f.name })));
+        setStudents(sRes.students.map((s: any) => ({ userId: s.userId, section: s.section })));
+        setSections(Array.from(new Set(sRes.students.map((s: any) => s.section as string)).values()).filter(Boolean) as string[]);
+        setAssignMap(aRes.assignments);
+      } catch (e: any) {
+        toast.error(e.message);
       }
     }
     load();
   }, []);
 
-  // Sections already assigned to *other* faculty
-  const usedSections = useMemo(
-    () => Object.entries(assignMap).flatMap(([uid, secs]) =>
+  const usedSections = useMemo(() =>
+    Object.entries(assignMap).flatMap(([uid, secs]) =>
       editing && Number(uid) === editing.userId ? [] : secs
-    ),
-    [assignMap, editing]
+    ), [assignMap, editing]
   );
 
-  // Start editing one faculty
+  function countStudents(sec: string) {
+    return students.filter(s => s.section === sec).length;
+  }
+
   function openEdit(f: Faculty) {
     setEditing(f);
     setSelSecs(assignMap[f.userId] || []);
   }
-
-  // Toggle one section checkbox
   function toggleSec(sec: string) {
     setSelSecs(curr =>
       curr.includes(sec) ? curr.filter(s => s !== sec) : [...curr, sec]
     );
   }
 
-  // Persist for this one faculty (without redirect)
   async function save() {
     if (!editing) return;
     setLoading(true);
     try {
-      // Build payload array
       const payload = faculty.map(f => ({
-        userId:   f.userId,
+        userId: f.userId,
         sections: f.userId === editing.userId ? selSecs : assignMap[f.userId] || []
       }));
-
-      const res  = await fetch("/api/hod/assignFaculty/autoAssign", {
-        method:  "POST",
+      const res = await fetch("/api/hod/assignFaculty/autoAssign", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-
-      // Update local map
-      setAssignMap(prev => ({ ...prev, [editing.userId]: selSecs }));
-      toast.success("Saved!");
+      setAssignMap(m => ({ ...m, [editing.userId]: selSecs }));
+      toast.success("✔️ Saved!");
       setEditing(null);
-    } catch (err: any) {
-      toast.error("Save failed: " + err.message);
+    } catch (e: any) {
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }
   }
 
-  return (
-    <div className="min-h-screen p-8 bg-gray-50 flex flex-col items-center mt-16">
-      <Toaster position="top-right" />
+    const filteredFaculty = useMemo(
+    () =>
+      faculty.filter(f =>
+        f.name.toLowerCase().includes(search.toLowerCase())
+      ),
+    [faculty, search]
+  );
 
-      <h1 className="text-3xl font-bold mb-6">Auto-Assign by Section</h1>
-      <div className="grid gap-6 w-full max-w-4xl sm:grid-cols-2 lg:grid-cols-3">
-        {faculty.map(f => (
-          <div key={f.userId} className="bg-white p-5 rounded-lg shadow">
-            <h2 className="font-semibold mb-2">{f.name}</h2>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {(assignMap[f.userId] || []).length
-                ? assignMap[f.userId].map(sec => (
-                    <span
-                      key={sec}
-                      className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm"
-                    >
-                      {sec}
-                    </span>
-                  ))
-                : <span className="text-gray-400 text-sm">— none —</span>
-              }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white py-12 px-4 sm:px-6 lg:px-8 mt-10">
+      {/* Search bar at the very top */}
+      <div className="flex justify-end mb-6">
+        <SearchBar value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <Toaster position="top-right"/>
+      <h1 className="text-4xl font-extrabold text-indigo-900 text-center mb-10">
+        🎓 Auto-Assign by Section
+      </h1>
+      
+
+
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+  {filteredFaculty.map(f => {
+    const secs = assignMap[f.userId] || [];
+    return (
+      <div
+        key={f.userId}
+        className="relative bg-white rounded-2xl shadow-lg p-6 hover:shadow-2xl transform hover:-translate-y-1 transition "
+      >
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{f.name}</h2>
+              <div className="space-y-2 mb-6">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Sections</span>
+                  <span>{secs.length || "—"}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {secs.length
+                    ? secs.map(sec => (
+                        <span
+                          key={sec}
+                          className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-medium"
+                        >
+                          {sec}
+                        </span>
+                      ))
+                    : (
+                      <span className="text-gray-400 italic">no sections</span>
+                    )}
+                </div>
+
+                <div className="flex justify-between text-sm text-gray-600 mt-3">
+                  <span>Total Students</span>
+                  <span>
+                    {secs.length
+                      ? secs.reduce((sum, sec) => sum + countStudents(sec), 0)
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => openEdit(f)}
+                className="absolute top-4 right-4 text-indigo-600 hover:text-indigo-800"
+                aria-label="Edit"
+              >
+                <ChevronRightIcon size={20} />
+              </button>
             </div>
-            <button
-              onClick={() => openEdit(f)}
-              className="text-indigo-600 hover:underline text-sm"
-            >
-              Edit…
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <Dialog
-        open={!!editing}
-        onClose={() => setEditing(null)}
-        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30"
-      >
-        <Dialog.Panel className="bg-white rounded-lg p-6 w-full max-w-md">
-          <Dialog.Title className="text-xl font-bold mb-4">
-            Assign Sections to {editing?.name}
-          </Dialog.Title>
-          <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+      <Dialog open={!!editing} onClose={() => setEditing(null)} className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
+        <Dialog.Panel className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full">
+          <div className="flex justify-between items-center mb-6">
+            <Dialog.Title className="text-2xl font-bold text-gray-800">
+              Assign Sections to {editing?.name}
+            </Dialog.Title>
+            <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600" title="Close">
+              <XIcon size={20} />
+            </button>
+          </div>
+
+          <div className="grid gap-3 max-h-64 overflow-y-auto mb-6">
             {sections.map(sec => {
               const disabled = usedSections.includes(sec) && !selSecs.includes(sec);
               return (
-                <label key={sec} className={`flex items-center space-x-2 ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
+                <label
+                  key={sec}
+                  className={`flex items-center space-x-2 p-2 rounded-lg cursor-pointer
+                    ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-50"}`}
+                >
                   <input
                     type="checkbox"
+                    className="h-5 w-5 text-indigo-600"
                     disabled={disabled}
                     checked={selSecs.includes(sec)}
                     onChange={() => toggleSec(sec)}
-                    className="h-4 w-4 text-indigo-600"
                   />
                   <span className="text-gray-800">{sec}</span>
                 </label>
               );
             })}
           </div>
-          <div className="flex justify-end space-x-3">
+
+          <div className="flex justify-end space-x-4">
             <button
               onClick={() => setEditing(null)}
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
             >
               Cancel
             </button>
             <button
               onClick={save}
               disabled={loading}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-300"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
             >
-              {loading ? "Saving…" : "Save"}
+              {loading ? "Saving…" : "Save Changes"}
             </button>
           </div>
         </Dialog.Panel>
