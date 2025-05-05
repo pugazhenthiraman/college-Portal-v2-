@@ -1,4 +1,3 @@
-// File: app/api/hod/assignFaculty/autoAssign/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -23,14 +22,13 @@ export async function GET() {
   // load each faculty’s saved sections
   const facultyList = await prisma.faculty.findMany({
     where: { hodId: hod.id, departmentId: hod.departmentId },
-    select: { userId: true, section: true },
+    select: { userId: true, sections: true },
   });
 
   const assignments: Record<number, string[]> = {};
   for (const f of facultyList) {
-    assignments[f.userId] = f.section;
+    assignments[f.userId] = f.sections;
   }
-
   return NextResponse.json({ assignments });
 }
 
@@ -60,39 +58,52 @@ export async function POST(req: NextRequest) {
     await prisma.$transaction(async (tx) => {
       for (const { userId, sections } of payload) {
         const fac = await tx.faculty.findUnique({
-          where:  { userId },
-          select: { id: true, hodId: true },
+          where: { userId },
+          select: { id: true, hodId: true, sections: true },
         });
         if (!fac || fac.hodId !== hod.id) {
           throw new Error(`Faculty (user #${userId}) isn’t under your supervision`);
         }
 
-        // 1) clear any existing student links
-        await tx.student.updateMany({
-          where: {
-            facultyId:    fac.id,
-            hodId:        hod.id,
-            departmentId: hod.departmentId,
-          },
-          data: { facultyId: null },
-        });
+        // 1) Remove students from sections that are no longer assigned to this faculty
+        const previousSections: string[] = fac.sections ?? [];
+        const sectionsToRemove = previousSections.filter(s => !sections.includes(s));
+        if (sectionsToRemove.length > 0) {
+          await tx.student.updateMany({
+            where: {
+              facultyId: fac.id,
+              section: { in: sectionsToRemove },
+              hodId: hod.id,
+              departmentId: hod.departmentId,
+            },
+            data: { facultyId: null },
+          });
+        }
 
-        // 2) assign each selected section
+        // 2) Assign students in the new sections to this faculty (only those not already assigned)
         for (const sec of sections) {
           await tx.student.updateMany({
             where: {
-              section:      sec,
-              hodId:        hod.id,
+              section: sec,
+              hodId: hod.id,
               departmentId: hod.departmentId,
+              facultyId: null, // Only assign unassigned students
             },
             data: { facultyId: fac.id },
           });
         }
 
-        // 3) persist the **array** back to faculty
+        // 3) Recalculate and persist the sections array for this faculty
+        const students = await tx.student.findMany({
+          where: { facultyId: fac.id, hodId: hod.id, departmentId: hod.departmentId },
+          select: { section: true },
+        });
+        const uniqueSections = Array.from(
+          new Set(students.map(s => s.section).filter((section): section is string => !!section))
+        );
         await tx.faculty.update({
           where: { userId },
-          data: { section: sections },
+          data: { sections: uniqueSections },
         });
       }
     });

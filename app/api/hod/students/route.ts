@@ -1,4 +1,3 @@
-// File: app/api/hod/students/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
@@ -58,6 +57,7 @@ export async function GET(req: Request) {
           academicYear:     true,
           section:          true,
           departmentName:   true,
+          facultyId:        true, // <-- make sure this is selected
           user: { 
             select: { email: true } 
           },
@@ -81,6 +81,7 @@ export async function GET(req: Request) {
       section:        s.section,
       departmentName: s.departmentName,
       facultyName:    s.faculty?.name ?? "N/A",
+      facultyId:      s.facultyId, // <-- optional, for debugging
     }));
 
     return NextResponse.json({

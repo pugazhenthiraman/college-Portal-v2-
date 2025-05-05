@@ -206,7 +206,7 @@ export default function StudentsPage() {
 
   const handleManualAssign = () => {
     setIsAssignDropdownOpen(false);
-    router.push("/hod/assignFaculty/mannualAssign");
+     router.push("/hod/assignFaculty/mannualAssign");
   };
 
   return (
