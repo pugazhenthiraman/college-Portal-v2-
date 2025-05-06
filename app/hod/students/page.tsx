@@ -10,6 +10,7 @@ import StudentTable from "@/components/studentTable";
 import FilterSidebar from "@/components/filterBar";
 import LoadingSpinner from "@/components/ui/loadingSpinner";
 
+
 export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
@@ -225,7 +226,7 @@ export default function StudentsPage() {
           </div>
 
           {/* Controls (Global Search and Buttons) */}
-          <div className="flex justify-end items-center space-x-4 mb-6 relative">
+          <div className="flex justify-end items-center space-x-4  relative mb-20">
             <div className="w-64">
               <SearchBar
                 value={globalSearch}
@@ -279,7 +280,7 @@ export default function StudentsPage() {
           </div>
 
           {/* Student Table Section */}
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto mt-6">
             <StudentTable
               students={currentRows}
               columns={tableColumns}

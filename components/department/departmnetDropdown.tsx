@@ -65,7 +65,7 @@ const DepartmentDropdown: React.FC<DepartmentDropdownProps> = ({
   return (
     <div className="bg-white border rounded shadow-md p-4 w-full md:w-96 min-h-[300px] transition-all duration-300">
       {finalAvailableOptions.length > 0 ? (
-        <ul className="max-h-60 overflow-y-auto scrollbar-hide">
+        <ul className="max-h-80 overflow-y-auto">
           {finalAvailableOptions.map((dept) => (
             <li
               key={dept}

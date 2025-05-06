@@ -1,11 +1,10 @@
-// File: app/api/hod/download-unassigned/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import ExcelJS from 'exceljs';
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     // 1) Auth & HOD context
     const session: any = await getServerSession(authOptions);
@@ -18,11 +17,18 @@ export async function GET(_req: NextRequest) {
     });
     if (!hod) return NextResponse.json({ error: 'HOD not found' }, { status: 404 });
 
-    // 2) Fetch all students in this HOD’s department
+    // --- Get filters from query ---
+    const { searchParams } = new URL(req.url);
+    const section = searchParams.get("section");
+    const year = searchParams.get("year");
+
+    // 2) Fetch all students in this HOD’s department, with filters
     const students = await prisma.student.findMany({
       where: {
         hodId:        hod.id,
         departmentId: hod.departmentId,
+        ...(section ? { section } : {}),
+        ...(year ? { academicYear: year } : {}),
       },
       select: {
         firstName:       true,
