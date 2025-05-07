@@ -21,36 +21,43 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const section = searchParams.get("section");
     const year = searchParams.get("year");
+    const faculty = searchParams.get("faculty"); // NEW
 
     // 2) Fetch all students in this HOD’s department, with filters
-    const students = await prisma.student.findMany({
-      where: {
-        hodId:        hod.id,
-        departmentId: hod.departmentId,
-        ...(section ? { section } : {}),
-        ...(year ? { academicYear: year } : {}),
-      },
-      select: {
-        firstName:       true,
-        lastName:        true,
-        user: { select: { email: true } },
-        personalEmailId: true,
-        rollNo:          true,
-        departmentName:  true,
-        DOB:             true,
-        phoneNo:         true,
-        secondaryPhoneNo:true,
-        country:         true,
-        district:        true,
-        state:           true,
-        academicYear:    true,
-        section:         true,
-        faculty: { select: { name: true } },  // existing assignment, if any
-      },
-    });
+   const students = await prisma.student.findMany({
+  where: {
+    hodId:        hod.id,
+    departmentId: hod.departmentId,
+    ...(section ? { section } : {}),
+    ...(year ? { academicYear: year } : {}),
+    ...(faculty
+      ? faculty === "N/A"
+        ? { facultyId: null }
+        : { faculty: { name: faculty } }
+      : {}),
+  },
+  select: {
+    firstName:       true,
+    lastName:        true,
+    user: { select: { email: true } },
+    personalEmailId: true,
+    rollNo:          true,
+    departmentName:  true,
+    DOB:             true,
+    phoneNo:         true,
+    secondaryPhoneNo:true,
+    country:         true,
+    district:        true,
+    state:           true,
+    academicYear:    true,
+    section:         true,
+    faculty: { select: { name: true } },
+    // facultyName:     true, // REMOVE THIS LINE
+  },
+});
 
     // 3) Fetch this HOD’s faculty list for dropdown
-    const faculty = await prisma.faculty.findMany({
+    const facultyList = await prisma.faculty.findMany({
       where: {
         hodId:        hod.id,
         departmentId: hod.departmentId,
@@ -58,7 +65,7 @@ export async function GET(req: NextRequest) {
       },
       select: { name: true },
     });
-    const facultyNames = faculty.map(f => f.name);
+    const facultyNames = facultyList.map(f => f.name);
 
     // 4) Build the Excel workbook
     const wb = new ExcelJS.Workbook();

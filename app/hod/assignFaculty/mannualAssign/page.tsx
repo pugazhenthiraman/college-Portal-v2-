@@ -32,8 +32,10 @@ export default function ManualAssignPage() {
 
   const [sectionFilter, setSectionFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
+  const [facultyFilter, setFacultyFilter] = useState(""); // NEW
   const [sections, setSections] = useState<string[]>([]);
   const [years, setYears] = useState<string[]>([]);
+  const [facultyList, setFacultyList] = useState<string[]>([]); // NEW
 
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
@@ -53,6 +55,13 @@ export default function ManualAssignPage() {
         setStudents(data.students);
         setSections([...new Set(data.students.map((s: any) => s.section).filter(Boolean))]);
         setYears([...new Set(data.students.map((s: any) => s.academicYear).filter(Boolean))]);
+        // Faculty list (with N/A)
+        const faculties = [
+          ...new Set(
+            data.students.map((s: any) => s.facultyName || "N/A")
+          ),
+        ];
+        setFacultyList(faculties);
       })
       .catch(err => toast.error(err.message))
       .finally(() => setLoading(false));
@@ -71,6 +80,12 @@ export default function ManualAssignPage() {
     }
     if (sectionFilter) out = out.filter(s => s.section === sectionFilter);
     if (yearFilter) out = out.filter(s => s.academicYear === yearFilter);
+    if (facultyFilter) {
+      out = out.filter(s =>
+        (facultyFilter === "N/A" && (!s.facultyName || s.facultyName === "N/A")) ||
+        s.facultyName === facultyFilter
+      );
+    }
     if (sortCol) {
       out = [...out].sort((a, b) => {
         const A = a[sortCol] || "", B = b[sortCol] || "";
@@ -80,7 +95,7 @@ export default function ManualAssignPage() {
       });
     }
     return out;
-  }, [students, debouncedSearch, sectionFilter, yearFilter, sortCol, sortDir]);
+  }, [students, debouncedSearch, sectionFilter, yearFilter, facultyFilter, sortCol, sortDir]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
@@ -126,6 +141,7 @@ export default function ManualAssignPage() {
       const params = new URLSearchParams();
       if (sectionFilter) params.append("section", sectionFilter);
       if (yearFilter) params.append("year", yearFilter);
+      if (facultyFilter) params.append("faculty", facultyFilter); // NEW
       const url = `/api/hod/downloadXL${params.toString() ? "?" + params.toString() : ""}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to download Excel");
@@ -215,7 +231,7 @@ export default function ManualAssignPage() {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-                <select
+        <select
           className="border px-3 py-2 rounded-md"
           value={yearFilter}
           onChange={e => setYearFilter(e.target.value)}
@@ -237,7 +253,17 @@ export default function ManualAssignPage() {
             <option key={sec} value={sec}>{sec}</option>
           ))}
         </select>
-
+        <select
+          className="border px-3 py-2 rounded-md"
+          value={facultyFilter}
+          onChange={e => setFacultyFilter(e.target.value)}
+          aria-label="Filter by Faculty"
+        >
+          <option value="">All Faculty</option>
+          {facultyList.map(fac => (
+            <option key={fac} value={fac}>{fac}</option>
+          ))}
+        </select>
         <button
           onClick={downloadExcel}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition flex items-center"

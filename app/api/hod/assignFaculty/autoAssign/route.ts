@@ -54,6 +54,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "HOD record not found" }, { status: 404 });
   }
 
+const removedSections: { faculty: number; section: string }[] = [];
+const assignedSections: { faculty: number; section: string }[] = [];
+
   try {
     await prisma.$transaction(async (tx) => {
       for (const { userId, sections } of payload) {
@@ -78,18 +81,25 @@ export async function POST(req: NextRequest) {
             },
             data: { facultyId: null },
           });
+          sectionsToRemove.forEach(sec => {
+            removedSections.push({ faculty: userId, section: sec }); // <-- use userId
+          });
         }
 
-        // 2) Assign students in the new sections to this faculty (only those not already assigned)
-        for (const sec of sections) {
+        // 2) Assign students in the sections that are newly added to this faculty (only unassigned)
+        const sectionsToAdd = sections.filter(s => !previousSections.includes(s));
+        if (sectionsToAdd.length > 0) {
           await tx.student.updateMany({
             where: {
-              section: sec,
+              section: { in: sectionsToAdd },
               hodId: hod.id,
               departmentId: hod.departmentId,
               facultyId: null, // Only assign unassigned students
             },
             data: { facultyId: fac.id },
+          });
+          sectionsToAdd.forEach(sec => {
+            assignedSections.push({ faculty: userId, section: sec }); // <-- use userId
           });
         }
 
@@ -108,7 +118,11 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return NextResponse.json({ message: "Assignments saved successfully." });
+    return NextResponse.json({
+      message: "Assignments saved successfully.",
+      removedSections,
+      assignedSections,
+    });
   } catch (err: any) {
     console.error("Auto‐assign error:", err);
     if (err.code === "P2003") {

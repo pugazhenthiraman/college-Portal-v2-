@@ -57,7 +57,7 @@ export async function GET(req: Request) {
           academicYear:     true,
           section:          true,
           departmentName:   true,
-          facultyId:        true, // <-- make sure this is selected
+          facultyId:        true,
           user: { 
             select: { email: true } 
           },
@@ -68,22 +68,21 @@ export async function GET(req: Request) {
       }),
     ]);
 
-    const studentsWithFacultyName = students.map(s => ({
-      userId:         s.userId,
-      firstName:      s.firstName,
-      lastName:       s.lastName,
-      rollNo:         s.rollNo,
-      DOB:            s.DOB,
-      phoneNo:        s.phoneNo,
-      personalEmailId:s.personalEmailId,
-      email:          s.user.email,
-      academicYear:   s.academicYear,
-      section:        s.section,
-      departmentName: s.departmentName,
-      facultyName:    s.faculty?.name ?? "N/A",
-      facultyId:      s.facultyId, // <-- optional, for debugging
-    }));
-
+const studentsWithFacultyName = students.map(s => ({
+  userId:         s.userId,
+  firstName:      s.firstName,
+  lastName:       s.lastName,
+  rollNo:         s.rollNo,
+  DOB:            s.DOB,
+  phoneNo:        s.phoneNo,
+  personalEmailId:s.personalEmailId,
+  email:          s.user.email,
+  academicYear:   s.academicYear, // <-- use this key!
+  section:        s.section,
+  departmentName: s.departmentName,
+  facultyName:    s.faculty?.name ?? "N/A",
+  facultyId:      s.facultyId,
+}));
     return NextResponse.json({
       students:   studentsWithFacultyName,
       faculty:    facultyList,
