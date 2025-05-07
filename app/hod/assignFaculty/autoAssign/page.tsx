@@ -6,8 +6,8 @@ import { Dialog } from "@headlessui/react";
 import { ChevronRightIcon, XIcon } from "lucide-react";
 import SearchBar from "@/components/searchBar";
 
-type Faculty = { userId: number; name: string };
-type Student = { userId: number; section: string; year?: string };
+type Faculty = { userId: number; name: string; id?: number };
+type Student = { userId: number; section: string; year?: string; facultyId?: number };
 type AssignmentMap = Record<number, string[]>;
 
 export default function AutoAssignPage() {
@@ -37,12 +37,19 @@ export default function AutoAssignPage() {
         ]);
         if (!fRes.faculty || !sRes.students || !aRes.assignments)
           throw new Error("Incomplete data");
-        setFaculty(fRes.faculty.map((f: any) => ({ userId: f.userId, name: f.name })));
+        setFaculty(
+          fRes.faculty.map((f: any) => ({
+            userId: f.userId,
+            name: f.name,
+            id: f.id, // Make sure id is included for correct matching
+          }))
+        );
         setStudents(
           sRes.students.map((s: any) => ({
             userId: s.userId,
             section: s.section,
             year: s.academicYear,
+            facultyId: s.facultyId, // <-- needed for correct count
           }))
         );
         setAssignMap(aRes.assignments);
@@ -196,6 +203,8 @@ export default function AutoAssignPage() {
             if (!yearSectionMap[year]) yearSectionMap[year] = [];
             yearSectionMap[year].push(sec);
           });
+          // Find faculty DB id for this userId
+          const facObj = faculty.find(facItem => facItem.userId === f.userId);
           return (
             <div
               key={f.userId}
@@ -251,9 +260,9 @@ export default function AutoAssignPage() {
                 <div className="flex justify-between text-sm text-gray-600 mt-3">
                   <span>Total Students</span>
                   <span>
-                    {secs.length
-                      ? secs.reduce((sum, sec) => sum + countStudents(sec), 0)
-                      : "—"}
+                    {
+                      students.filter(s => s.facultyId === facObj?.id).length
+                    }
                   </span>
                 </div>
               </div>
