@@ -26,39 +26,47 @@ export default function AutoAssignPage() {
     { section: string; academicYear: string; total: number; assigned: number; unassigned: number }[]
   >([]);
 
+  // Assign Faculty Modal states
+  const [showAssignFaculty, setShowAssignFaculty] = useState(false);
+  const [assignYear, setAssignYear] = useState("");
+  const [assignSection, setAssignSection] = useState("");
+  const [assignFacultyId, setAssignFacultyId] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+
   // Load all data
   useEffect(() => {
-    async function load() {
-      try {
-        const [fRes, sRes, aRes] = await Promise.all([
-          fetch("/api/hod/upload-faculty").then(r => r.json()),
-          fetch("/api/hod/students").then(r => r.json()),
-          fetch("/api/hod/assignFaculty/autoAssign").then(r => r.json()),
-        ]);
-        if (!fRes.faculty || !sRes.students || !aRes.assignments)
-          throw new Error("Incomplete data");
-        setFaculty(
-          fRes.faculty.map((f: any) => ({
-            userId: f.userId,
-            name: f.name,
-            id: f.id, // Make sure id is included for correct matching
-          }))
-        );
-        setStudents(
-          sRes.students.map((s: any) => ({
-            userId: s.userId,
-            section: s.section,
-            year: s.academicYear,
-            facultyId: s.facultyId, // <-- needed for correct count
-          }))
-        );
-        setAssignMap(aRes.assignments);
-      } catch (e: any) {
-        toast.error(e.message);
-      }
-    }
-    load();
+    loadAll();
   }, []);
+
+  async function loadAll() {
+    try {
+      const [fRes, sRes, aRes] = await Promise.all([
+        fetch("/api/hod/upload-faculty").then(r => r.json()),
+        fetch("/api/hod/students").then(r => r.json()),
+        fetch("/api/hod/assignFaculty/autoAssign").then(r => r.json()),
+      ]);
+      if (!fRes.faculty || !sRes.students || !aRes.assignments)
+        throw new Error("Incomplete data");
+      setFaculty(
+        fRes.faculty.map((f: any) => ({
+          userId: f.userId,
+          name: f.name,
+          id: f.id,
+        }))
+      );
+      setStudents(
+        sRes.students.map((s: any) => ({
+          userId: s.userId,
+          section: s.section,
+          year: s.academicYear,
+          facultyId: s.facultyId,
+        }))
+      );
+      setAssignMap(aRes.assignments);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
 
   // Group sections by year
   const sectionsByYear = useMemo(() => {
@@ -102,9 +110,18 @@ export default function AutoAssignPage() {
     return map;
   }, [unassignedSections]);
 
-  function countStudents(sec: string) {
-    return students.filter(s => s.section === sec).length;
-  }
+  // For Assign Faculty Modal: get all year/section pairs with unassigned students
+  const unassignedOptions = useMemo(() => {
+    return Object.entries(unassignedByYear)
+      .flatMap(([year, secs]) =>
+        secs.filter(s => s.unassigned > 0).map(s => ({
+          year,
+          section: s.section,
+        }))
+      );
+  }, [unassignedByYear]);
+
+  const facultyOptions = faculty.filter(f => f.id);
 
   function openEdit(f: Faculty) {
     setEditing(f);
@@ -113,6 +130,20 @@ export default function AutoAssignPage() {
   function toggleSec(sec: string) {
     setSelSecs(curr =>
       curr.includes(sec) ? curr.filter(s => s !== sec) : [...curr, sec]
+    );
+  }
+
+  // Fetch students only (for live update after save)
+  async function fetchStudentsOnly() {
+    const res = await fetch("/api/hod/students");
+    const data = await res.json();
+    setStudents(
+      data.students.map((s: any) => ({
+        userId: s.userId,
+        section: s.section,
+        year: s.academicYear,
+        facultyId: s.facultyId,
+      }))
     );
   }
 
@@ -156,6 +187,9 @@ export default function AutoAssignPage() {
         });
       }
 
+      // Live update students after save!
+      await fetchStudentsOnly();
+
       toast.success("✔️ Saved!");
       setEditing(null);
       // Refresh unassigned sections if dialog is open
@@ -167,6 +201,39 @@ export default function AutoAssignPage() {
     }
   }
 
+  // Assign Faculty to Unassigned Students Handler
+  async function handleAssignFaculty() {
+  if (!assignYear || !assignSection || !assignFacultyId) {
+    toast.error("Please select all fields.");
+    return;
+  }
+  setAssignLoading(true);
+  try {
+    const res = await fetch("/api/hod/assignFaculty/assignUnassigned", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        year: assignYear,
+        section: assignSection,
+        facultyId: Number(assignFacultyId),
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || "Failed");
+    toast.success("Assigned successfully!");
+    setShowAssignFaculty(false);
+    setAssignYear("");
+    setAssignSection("");
+    setAssignFacultyId("");
+    // Refresh students and grid data
+    await fetchStudentsOnly();
+    await fetchUnassignedSections();
+    await loadAll(); // <-- This will update the grid cards
+  } catch (e: any) {
+    toast.error(e.message);
+  } finally {
+    setAssignLoading(false);
+  }
+}
   const filteredFaculty = useMemo(
     () =>
       faculty.filter(f =>
@@ -312,8 +379,146 @@ export default function AutoAssignPage() {
               </div>
             ))}
           </div>
+          {/* Assign Faculty Button */}
+          {unassignedOptions.length > 0 && (
+            <div className="mt-6 flex justify-end">
+              <button
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                onClick={() => setShowAssignFaculty(true)}
+              >
+                Assign Faculty to Unassigned
+              </button>
+            </div>
+          )}
         </Dialog.Panel>
       </Dialog>
+
+ {/* Modern Assign Faculty Modal */}
+<Dialog
+  open={showAssignFaculty}
+  onClose={() => setShowAssignFaculty(false)}
+  className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50"
+>
+  <Dialog.Panel className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full">
+    <div className="flex items-center justify-between mb-6">
+      <Dialog.Title className="text-xl font-bold text-indigo-900 flex items-center gap-2">
+        <ChevronRightIcon size={20} className="text-indigo-600" />
+        Assign Faculty to Unassigned Students
+      </Dialog.Title>
+      <button
+        onClick={() => setShowAssignFaculty(false)}
+        className="text-gray-400 hover:text-gray-600"
+        title="Close"
+        type="button"
+      >
+        <XIcon size={22} />
+      </button>
+    </div>
+    <form
+      onSubmit={e => {
+        e.preventDefault();
+        handleAssignFaculty();
+      }}
+      className="space-y-5"
+    >
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Academic Year
+        </label>
+        <select
+          className="w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 px-3 py-2 rounded-lg transition"
+          value={assignYear}
+          onChange={e => {
+            setAssignYear(e.target.value);
+            setAssignSection("");
+          }}
+          required
+        >
+          <option value="">Select Year</option>
+          {[...new Set(unassignedOptions.map(o => o.year))].map(year => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Section
+        </label>
+        <select
+          className="w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 px-3 py-2 rounded-lg transition"
+          value={assignSection}
+          onChange={e => setAssignSection(e.target.value)}
+          disabled={!assignYear}
+          required
+        >
+          <option value="">Select Section</option>
+          {unassignedOptions
+            .filter(o => o.year === assignYear)
+            .map(o => (
+              <option key={o.section} value={o.section}>
+                {o.section}
+              </option>
+            ))}
+        </select>
+      </div>
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Faculty
+        </label>
+        <select
+          className="w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 px-3 py-2 rounded-lg transition"
+          value={assignFacultyId}
+          onChange={e => setAssignFacultyId(e.target.value)}
+          required
+        >
+          <option value="">Select Faculty</option>
+          {facultyOptions.map(f => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex justify-end space-x-2 pt-2">
+        <button
+          type="button"
+          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          onClick={() => setShowAssignFaculty(false)}
+          disabled={assignLoading}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 disabled:opacity-60"
+          disabled={assignLoading}
+        >
+          {assignLoading && (
+            <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+          )}
+          {assignLoading ? "Assigning..." : "Assign"}
+        </button>
+      </div>
+    </form>
+  </Dialog.Panel>
+</Dialog>
 
       <Dialog open={!!editing} onClose={() => setEditing(null)} className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
         <Dialog.Panel className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full">
