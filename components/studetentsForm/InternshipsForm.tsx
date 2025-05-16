@@ -1,0 +1,297 @@
+// components/studetentsForm/InternshipsForm.tsx
+"use client";
+
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+export type Internship = {
+  company: string;
+  role: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  responsibilities: string;
+  certificate?: string;       // Base64 or URL, for potential preview
+  certificateName?: string;   // Original file name
+};
+
+interface Props {
+  data: Internship[];
+  onChange: (data: Internship[]) => void;
+}
+
+const emptyInternship: Internship = {
+  company: "",
+  role: "",
+  startDate: "",
+  endDate: "",
+  location: "",
+  responsibilities: "",
+  certificate: undefined,
+  certificateName: undefined,
+};
+
+export default function InternshipsForm({ data, onChange }: Props) {
+  // editingIndex: which item, -1=new, null=none
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [draft, setDraft] = useState<Internship>(emptyInternship);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // populate draft on edit/add
+  useEffect(() => {
+    if (editingIndex === null) return;
+    setDraft(editingIndex >= 0 ? data[editingIndex] : emptyInternship);
+  }, [editingIndex, data]);
+
+  const startAdd = useCallback(() => setEditingIndex(-1), []);
+  const startEdit = useCallback((i: number) => setEditingIndex(i), []);
+  const cancel = useCallback(() => setEditingIndex(null), []);
+
+  // diff only changed fields
+  const diffFields = (orig: Internship, updated: Internship) => {
+    const diffs: string[] = [];
+    (Object.keys(orig) as (keyof Internship)[]).forEach((k) => {
+      if (k === "certificate") return; // skip raw data
+      if (orig[k] !== updated[k]) {
+        const label = k === "certificateName" ? "certificate" : k;
+        diffs.push(
+          `${label}: "${orig[k] ?? ""}" → "${updated[k] ?? ""}"`
+        );
+      }
+    });
+    return diffs;
+  };
+
+  // confirm & save
+  const handleSave = useCallback(() => {
+    if (editingIndex === null) return;
+    const isNew = editingIndex < 0;
+    let confirmMsg: string;
+
+    if (isNew) {
+      confirmMsg =
+        "Add this internship?\n\n" +
+        (Object.entries(draft) as [keyof Internship, any][])
+          .filter(([k]) => k !== "certificate") // skip base64
+          .map(([k, v]) => `${k}: "${v ?? ""}"`)
+          .join("\n");
+    } else {
+      const original = data[editingIndex];
+      const changes = diffFields(original, draft);
+      if (changes.length === 0) {
+        alert("No changes detected.");
+        return;
+      }
+      confirmMsg = "Confirm update:\n\n" + changes.join("\n");
+    }
+
+    if (!window.confirm(confirmMsg)) return;
+
+    const next = isNew
+      ? [...data, draft]
+      : data.map((it, idx) => (idx === editingIndex ? draft : it));
+
+    onChange(next);
+    setEditingIndex(null);
+  }, [editingIndex, draft, data, onChange]);
+
+  // handle certificate file upload
+  const handleCertificateUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const allowed = ["image/jpeg", "image/png", "application/pdf"];
+      if (!allowed.includes(file.type)) {
+        alert("Only JPEG, PNG, or PDF allowed");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setDraft((d) => ({
+          ...d,
+          certificate: reader.result as string,
+          certificateName: file.name,
+        }));
+      };
+      reader.readAsDataURL(file);
+    },
+    []
+  );
+
+  return (
+    <div className="space-y-8">
+      <h2 className="text-2xl font-semibold">Internships</h2>
+
+      {/* Existing cards */}
+      {data.map((item, i) => (
+        <div key={i} className="p-6 border rounded-lg bg-white shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-medium">{item.company}</h3>
+              <p className="text-sm text-gray-600">{item.role}</p>
+            </div>
+            <button
+              onClick={() => startEdit(i)}
+              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Edit
+            </button>
+          </div>
+          <dl className="grid grid-cols-2 gap-y-2 text-sm">
+            <dt className="font-medium">Duration:</dt>
+            <dd>{item.startDate} – {item.endDate}</dd>
+            <dt className="font-medium">Location:</dt>
+            <dd>{item.location}</dd>
+            <dt className="font-medium col-span-2">Responsibilities:</dt>
+            <dd className="col-span-2">{item.responsibilities}</dd>
+            {item.certificateName && (
+              <>
+                <dt className="font-medium">Certificate:</dt>
+                <dd>{item.certificateName}</dd>
+              </>
+            )}
+          </dl>
+        </div>
+      ))}
+
+      {/* Add/Edit overlay */}
+      {editingIndex !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-6">
+            <h3 className="text-xl font-semibold">
+              {editingIndex < 0
+                ? "Add Internship"
+                : `Edit Internship #${editingIndex + 1}`}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Company */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Company Name
+                </label>
+                <Input
+                  value={draft.company}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, company: e.target.value }))
+                  }
+                />
+              </div>
+              {/* Role */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Role / Position
+                </label>
+                <Input
+                  value={draft.role}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, role: e.target.value }))
+                  }
+                />
+              </div>
+              {/* Start */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  value={draft.startDate}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, startDate: e.target.value }))
+                  }
+                />
+              </div>
+              {/* End */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  value={draft.endDate}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, endDate: e.target.value }))
+                  }
+                />
+              </div>
+              {/* Location */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">
+                  Location
+                </label>
+                <Input
+                  placeholder="City, State, Country"
+                  value={draft.location}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, location: e.target.value }))
+                  }
+                />
+              </div>
+              {/* Responsibilities */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">
+                  Responsibilities / Details
+                </label>
+                <Textarea
+                  rows={4}
+                  value={draft.responsibilities}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      responsibilities: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              {/* Certificate */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">
+                  Certificate (JPEG, PNG, PDF)
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".jpeg,.jpg,.png,.pdf"
+                  className="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+                  onChange={handleCertificateUpload}
+                />
+                {draft.certificateName && (
+                  <div className="mt-2 text-sm text-green-700">
+                    {draft.certificateName}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={cancel}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add new button */}
+      {editingIndex === null && (
+        <button
+          onClick={startAdd}
+          className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+        >
+          + Add Internship
+        </button>
+      )}
+    </div>
+  );
+}

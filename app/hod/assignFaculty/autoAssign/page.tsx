@@ -422,10 +422,12 @@ export default function AutoAssignPage() {
       className="space-y-5"
     >
       <div>
-        <label className="block mb-1 text-sm font-medium text-gray-700">
+        <label htmlFor="assignYear" className="block mb-1 text-sm font-medium text-gray-700">
           Academic Year
         </label>
         <select
+          id="assignYear"
+          title="Select Academic Year"
           className="w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 px-3 py-2 rounded-lg transition"
           value={assignYear}
           onChange={e => {
@@ -447,6 +449,7 @@ export default function AutoAssignPage() {
           Section
         </label>
         <select
+          title="Select Section"
           className="w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 px-3 py-2 rounded-lg transition"
           value={assignSection}
           onChange={e => setAssignSection(e.target.value)}
@@ -468,6 +471,7 @@ export default function AutoAssignPage() {
           Faculty
         </label>
         <select
+          title="Select Faculty"
           className="w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 px-3 py-2 rounded-lg transition"
           value={assignFacultyId}
           onChange={e => setAssignFacultyId(e.target.value)}

@@ -1,4 +1,5 @@
 // app/hod/dashboard/page.tsx
+"use client";
 import React from "react";
 import DashboardCard from "@/components/ui/departmentCard";
 
@@ -9,9 +10,9 @@ export default function HodHome() {
   const pendingTasks = 0;
 
   return (
-    <div className="p-6 mt-24">
+    <div className="p-6 ">
       <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
-        Welcome to <span className="text-indigo-600">HOD Dashboard</span>
+        Welcome to <span className="text-indigo-600">Faculty Dashboard</span>
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
