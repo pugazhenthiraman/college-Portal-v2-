@@ -37,6 +37,8 @@ const emptyProfile: ProfileData = {
 interface GeneralinfoProps {
   data?: Partial<ProfileData>;
   onChange: (data: ProfileData) => void;
+  onSaveDraft?: () => void;
+  onNext?: () => void;
 }
 
 const frozenFields = [
@@ -52,8 +54,10 @@ const frozenFields = [
 export default function Generalinfo({
   data = {},
   onChange,
+  onSaveDraft,
+  onNext,
 }: GeneralinfoProps) {
-  const merged = { ...emptyProfile, ...data };
+  const merged = React.useMemo(() => ({ ...emptyProfile, ...data }), [data]);
 
   const update = useCallback(
     <K extends keyof ProfileData>(field: K, val: ProfileData[K]) =>
@@ -64,6 +68,19 @@ export default function Generalinfo({
   // Handler for frozen fields
   const handleFrozenField = () => {
     toast.error("Please contact the faculty for changes.");
+  };
+
+  // Only validate on "Next", not on "Save Draft"
+  const handleNext = () => {
+    if (
+      !merged.batch ||
+      !merged.sslc_percentage ||
+      !merged.hsc_percentage
+    ) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    onNext && onNext();
   };
 
   return (
@@ -305,6 +322,28 @@ export default function Generalinfo({
             value={merged.hsc_percentage}
             onChange={(e) => update("hsc_percentage", e.target.value)}
           />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-4 mt-8 justify-end">
+          {onSaveDraft && (
+            <button
+              type="button"
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg shadow hover:bg-gray-300"
+              onClick={onSaveDraft}
+            >
+              Save Draft
+            </button>
+          )}
+          {onNext && (
+            <button
+              type="button"
+              className="bg-indigo-600 text-white px-6 py-2 rounded-lg shadow hover:bg-indigo-700"
+              onClick={handleNext}
+            >
+              Next
+            </button>
+          )}
         </div>
       </div>
     </div>

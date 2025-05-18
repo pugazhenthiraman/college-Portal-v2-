@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Strict levels for technical skills
+enum TechnicalSkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
 enum CollegeStatus {
   PENDING
   REJECTED
@@ -50,13 +58,12 @@ model SuperAdmin {
 }
 
 model College {
-  id     Int  @id @default(autoincrement())
+  id             Int         @id @default(autoincrement())
   // One-to-one relation with User
-  userId Int  @unique
-  user   User @relation(fields: [userId], references: [id])
-
-  collegeType           CollegeType
-  departmentType       String
+  userId         Int         @unique
+  user           User        @relation(fields: [userId], references: [id])
+  collegeType    CollegeType
+  departmentType String
 
   name                 String        @unique
   secondaryEmailId     String?       @unique
@@ -78,101 +85,202 @@ model College {
 }
 
 model Department {
-  id        Int    @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   name      String
   collegeId Int
   college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
-  
-  hod       HOD?
-
-  faculty   Faculty[]
-  students  Student[]
+  hod      HOD?
+  faculty  Faculty[]
+  students Student[]
 }
 
 model HOD {
-  id           Int         @id @default(autoincrement())
-  userId       Int         @unique
-  user         User        @relation(fields: [userId], references: [id])
+  id           Int        @id @default(autoincrement())
+  userId       Int        @unique
+  user         User       @relation(fields: [userId], references: [id])
   name         String
   phoneNo      String
   collegeId    Int
-  college      College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  departmentId Int         @unique
-  department   Department  @relation(fields: [departmentId], references: [id])
-  createdAt    DateTime    @default(now())
+  college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  departmentId Int        @unique
+  department   Department @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime   @default(now())
   adhaarNo     String
 
-  faculty      Faculty[]
-  students     Student[]
+  faculty  Faculty[]
+  students Student[]
 }
 
 model Faculty {
-  id           Int         @id @default(autoincrement())
-  userId       Int         @unique
-  user         User        @relation(fields: [userId], references: [id])
+  id           Int        @id @default(autoincrement())
+  userId       Int        @unique
+  user         User       @relation(fields: [userId], references: [id])
   name         String
   collegeId    Int
-  college      College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college      College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   departmentId Int
-  department   Department  @relation(fields: [departmentId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
   hodId        Int?
-  hod          HOD?        @relation(fields: [hodId], references: [id])
-  createdAt    DateTime    @default(now())
-  students     Student[]   @relation("FacultyStudents")
+  hod          HOD?       @relation(fields: [hodId], references: [id])
+  createdAt    DateTime   @default(now())
+  students     Student[]  @relation("FacultyStudents")
+  // New fields for storing additional data:
 
-    // New fields for storing additional data:
-  contactNo    String?
-  aadhaarNo    String?
-   sections  String[]  @default([])  // ← store the section this faculty is responsible for
+  contactNo String?
+  aadhaarNo String?
+  sections  String[] @default([])
 }
 
 model Student {
   id                 Int         @id @default(autoincrement())
-  // One-to-one relation with User
   userId             Int         @unique
   user               User        @relation(fields: [userId], references: [id])
-  
-  // Name fields
   firstName          String
   middleName         String?
-  lastName           String  
-
-  photo              String?  
-
-  personalEmailId    String  
-
+  lastName           String
+  photo              String? // file path or URL
+  personalEmailId    String
   collegeId          Int
   college            College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  
   departmentId       Int?
   department         Department? @relation(fields: [departmentId], references: [id])
-  
   facultyId          Int?
   faculty            Faculty?    @relation("FacultyStudents", fields: [facultyId], references: [id])
-  
   hodId              Int?
   hod                HOD?        @relation(fields: [hodId], references: [id])
-  
   rollNo             String      @unique
-  
   DOB                DateTime
   phoneNo            String
   secondaryPhoneNo   String
-  lastLogin          DateTime? 
-  
-  country        String
-  district        String
-  state           String
+  lastLogin          DateTime?
+  country            String
+  district           String
+  state              String
   departmentName     String
-
-  // Add new fields for section and academic year
   section            String?
   academicYear       String?
-
+  batch              String? // <-- use this for batch
+  sslcPercentage     String? // <-- add this for sslc_percentage
+  hscPercentage      String? // <-- add this for hsc_percentage
   adhaarNo           String?
   passportNo         String?
   passportExpiryDate DateTime?
-
   createdAt          DateTime    @default(now())
+
+  // relations to form sections
+  ugDetails       UGDetails? // <--- ONE-TO-ONE, not array!
+  technicalSkills TechnicalSkill[]
+  internships     Internship[]
+  events          EnhancementProgram[]
+  socialProfiles  SocialProfile[]
+  placements      Placement[]
+  workExperiences WorkExperience[]
+  publications    Publication[]
+
+  @@index([academicYear, section])
+}
+
+model UGDetails {
+  id                  Int      @id @default(autoincrement())
+  studentId           Int      @unique
+  student             Student  @relation(fields: [studentId], references: [id])
+  semesterNo          String?
+  semesterMarksheet   String?
+  overallCGPA         String?
+  overallPercentage   String?
+  isPG                Boolean?
+  pgSemesterNo        String?
+  pgSemesterMarksheet String?
+  pgOverallCGPA       String?
+  pgOverallPercentage String?
+}
+
+model TechnicalSkill {
+  id              Int                   @id @default(autoincrement())
+  studentId       Int
+  courseName      String?               // was String
+  details         String?               // was String
+  level           TechnicalSkillLevel?  // was TechnicalSkillLevel
+  certificateFile String?
+  certificateName String?
+  startDate       DateTime?             // was DateTime
+  endDate         DateTime?             // was DateTime
+  student         Student               @relation(fields: [studentId], references: [id])
+}
+
+model Internship {
+  id               Int      @id @default(autoincrement())
+  studentId        Int
+  student          Student  @relation(fields: [studentId], references: [id])
+  company          String
+  role             String
+  startDate        DateTime
+  endDate          DateTime
+  location         String
+  responsibilities String
+  certificate      String? // file path or URL
+  certificateName  String?
+  createdAt        DateTime @default(now())
+}
+
+model EnhancementProgram {
+  id           Int      @id @default(autoincrement())
+  studentId    Int
+  student      Student  @relation(fields: [studentId], references: [id])
+  name         String
+  location     String
+  details      String
+  contribution String
+  createdAt    DateTime @default(now())
+}
+
+model SocialProfile {
+  id        Int      @id @default(autoincrement())
+  studentId Int      @unique
+  student   Student  @relation(fields: [studentId], references: [id])
+  github    String?
+  gitlab    String?
+  bitbucket String?
+  linkedin  String?
+  twitter   String?
+  portfolio String?
+  createdAt DateTime @default(now())
+}
+
+model Placement {
+  id          Int      @id @default(autoincrement())
+  studentId   Int
+  student     Student  @relation(fields: [studentId], references: [id])
+  employer    String
+  designation String
+  onCampus    Boolean
+  ctc         String
+  createdAt   DateTime @default(now())
+}
+
+model WorkExperience {
+  id               Int      @id @default(autoincrement())
+  studentId        Int
+  student          Student  @relation(fields: [studentId], references: [id])
+  employer         String
+  startDate        DateTime
+  endDate          DateTime
+  role             String
+  responsibilities String
+  ctc              String
+  createdAt        DateTime @default(now())
+}
+
+model Publication {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id])
+  title     String
+  abstract  String
+  publisher String
+  link      String
+  createdAt DateTime @default(now())
+
+  @@index([publisher])
 }

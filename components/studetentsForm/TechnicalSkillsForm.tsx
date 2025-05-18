@@ -1,13 +1,9 @@
-// components/studetentsForm/TechnicalSkillsForm.tsx
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import toast from "react-hot-toast";
 
 export type Skill = {
   courseName: string;
@@ -15,7 +11,7 @@ export type Skill = {
   endDate: string;
   details: string;
   level: "Beginner" | "Intermediate" | "Advanced" | "Expert";
-  certificateFile?: string;      // base64 or URL
+  certificateFile?: string;
   certificateName?: string;
 };
 
@@ -35,25 +31,18 @@ const emptySkill: Skill = {
 };
 
 export default function TechnicalSkillsForm({ data, onChange }: Props) {
-  // -1 = new, null = no form open, >=0 = editing that index
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<Skill>(emptySkill);
 
-  // when we open the form, populate draft
   useEffect(() => {
     if (editingIndex == null) return;
-    setDraft(
-      editingIndex >= 0
-        ? data[editingIndex]
-        : emptySkill
-    );
+    setDraft(editingIndex >= 0 ? data[editingIndex] : emptySkill);
   }, [editingIndex, data]);
 
   const startAdd = useCallback(() => setEditingIndex(-1), []);
   const startEdit = useCallback((i: number) => setEditingIndex(i), []);
   const cancel = useCallback(() => setEditingIndex(null), []);
 
-  // diff helper
   const diffFields = (orig: Skill, upd: Skill) => {
     const diffs: string[] = [];
     (Object.keys(orig) as (keyof Skill)[]).forEach((k) => {
@@ -64,12 +53,13 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
     return diffs;
   };
 
-  // confirm & save
   const handleSave = useCallback(() => {
     if (editingIndex == null) return;
     const isNew = editingIndex < 0;
-    let message = "";
 
+    // No required fields check: allow partial/incomplete save
+
+    let message = "";
     if (isNew) {
       message = `Add this course?\n\n` +
         `Name: "${draft.courseName}"\n` +
@@ -81,7 +71,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
       const orig = data[editingIndex];
       const changes = diffFields(orig, draft);
       if (changes.length === 0) {
-        alert("No changes detected.");
+        toast("No changes detected.", { icon: "ℹ️" });
         return;
       }
       message = "Confirm update:\n\n" + changes.join("\n");
@@ -91,22 +81,20 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
 
     const next = isNew
       ? [...data, draft]
-      : data.map((s, i) =>
-          i === editingIndex ? draft : s
-        );
+      : data.map((s, i) => (i === editingIndex ? draft : s));
 
     onChange(next);
     setEditingIndex(null);
+    toast.success("Technical skill saved!");
   }, [editingIndex, draft, data, onChange]);
 
-  // read file input
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       const allowed = ["image/jpeg", "image/png", "application/pdf"];
       if (!allowed.includes(file.type)) {
-        alert("Only JPEG, PNG or PDF allowed.");
+        toast.error("Only JPEG, PNG or PDF allowed.");
         return;
       }
       const reader = new FileReader();
@@ -170,7 +158,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Course Name</label>
                 <Input
                   value={draft.courseName}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, courseName: e.target.value }))
                   }
                   placeholder="e.g. React Advanced"
@@ -183,7 +171,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <Input
                   type="date"
                   value={draft.startDate}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, startDate: e.target.value }))
                   }
                 />
@@ -193,7 +181,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <Input
                   type="date"
                   value={draft.endDate}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, endDate: e.target.value }))
                   }
                 />

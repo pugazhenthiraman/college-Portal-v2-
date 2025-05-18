@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import toast, { Toaster } from "react-hot-toast";
 
 export type Internship = {
   company: string;
@@ -64,36 +65,59 @@ export default function InternshipsForm({ data, onChange }: Props) {
   };
 
   // confirm & save
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (editingIndex === null) return;
     const isNew = editingIndex < 0;
+  
+    // Validation
+    if (!draft.company || !draft.role || !draft.startDate || !draft.endDate) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+  
     let confirmMsg: string;
-
     if (isNew) {
       confirmMsg =
         "Add this internship?\n\n" +
         (Object.entries(draft) as [keyof Internship, any][])
-          .filter(([k]) => k !== "certificate") // skip base64
+          .filter(([k]) => k !== "certificate")
           .map(([k, v]) => `${k}: "${v ?? ""}"`)
           .join("\n");
     } else {
       const original = data[editingIndex];
       const changes = diffFields(original, draft);
       if (changes.length === 0) {
-        alert("No changes detected.");
+        toast("No changes detected.", { icon: "ℹ️" });
         return;
       }
       confirmMsg = "Confirm update:\n\n" + changes.join("\n");
     }
-
+  
     if (!window.confirm(confirmMsg)) return;
-
+  
     const next = isNew
       ? [...data, draft]
       : data.map((it, idx) => (idx === editingIndex ? draft : it));
-
-    onChange(next);
-    setEditingIndex(null);
+  
+    // Save to backend
+    try {
+      const res = await fetch("/api/students/studetnsMultiSetForm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: "internships", data: next }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        toast.error(result.error || "Failed to save internships. Please try again.");
+      } else {
+        toast.success("Internship saved successfully!");
+        onChange(next);
+        setEditingIndex(null);
+      }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      toast.error("Network error: Could not save internship.");
+    }
   }, [editingIndex, draft, data, onChange]);
 
   // handle certificate file upload
@@ -126,6 +150,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
       {/* Existing cards */}
       {data.map((item, i) => (
         <div key={i} className="p-6 border rounded-lg bg-white shadow-sm">
+           <Toaster position="top-right" />
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-lg font-medium">{item.company}</h3>

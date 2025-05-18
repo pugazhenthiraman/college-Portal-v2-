@@ -2,6 +2,7 @@
 
 import React, { useRef, useCallback } from "react";
 import { TestInput } from "@/components/ui/TestInput";
+import toast, { Toaster } from "react-hot-toast";
 
 export type UGDetailsData = {
   semesterNo?: string;
@@ -27,8 +28,9 @@ export default function UGDetailsForm({
   const ugInputRef = useRef<HTMLInputElement>(null);
   const pgInputRef = useRef<HTMLInputElement>(null);
 
+  // Upload handler: uploads file to /api/upload and stores the returned path
   const handleUpload = useCallback(
-    (
+    async (
       e: React.ChangeEvent<HTMLInputElement>,
       field: "semesterMarksheet" | "pgSemesterMarksheet"
     ) => {
@@ -36,26 +38,52 @@ export default function UGDetailsForm({
       if (!file) return;
       const allowed = ["image/jpeg", "image/png", "application/pdf"];
       if (!allowed.includes(file.type)) {
-        alert("Only JPEG, PNG or PDF allowed");
+        toast.error("Only JPG, PNG, or PDF files are allowed for marksheets.");
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        onChange({ ...data, [field]: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("field", "marksheet");
+  
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await res.json();
+        if (result.path) {
+          onChange({ ...data, [field]: result.path });
+          if (field === "semesterMarksheet") {
+            toast.success("UG marksheet uploaded successfully!");
+          } else if (field === "pgSemesterMarksheet") {
+            toast.success("PG marksheet uploaded successfully!");
+          }
+        } else {
+          toast.error(result.error || "Upload failed. Please try again.");
+        }
+      } catch {
+        toast.error("Upload failed. Please try again.");
+      }
     },
     [data, onChange]
   );
 
   const update = useCallback(
-    <K extends keyof UGDetailsData>(field: K, val: UGDetailsData[K]) =>
-      onChange({ ...data, [field]: val }),
+    <K extends keyof UGDetailsData>(field: K, val: UGDetailsData[K]) => {
+      onChange({ ...data, [field]: val });
+      if (
+        (field === "semesterMarksheet" || field === "pgSemesterMarksheet") &&
+        val === undefined
+      ) {
+        toast.success("File removed.");
+      }
+    },
     [data, onChange]
   );
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-100 via-indigo-50 to-white">
+      <Toaster position="top-right" />
       <div className="w-full max-w-3xl bg-white/90 backdrop-blur-sm border border-indigo-200 shadow-2xl rounded-3xl p-8">
         {/* Section Header */}
         <div className="text-center mb-6">
@@ -83,17 +111,36 @@ export default function UGDetailsForm({
           {/* UG Marksheet Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              UG Marksheet (JPEG, PNG, PDF)
+              UG Marksheet (JPG, PNG, PDF)
             </label>
-            <input
-              ref={ugInputRef}
-              type="file"
-              accept=".jpeg,.jpg,.png,.pdf"
-              className="w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-1"
-              onChange={e => handleUpload(e, "semesterMarksheet")}
-            />
-            {data.semesterMarksheet && (
-              <p className="mt-1 text-xs text-green-600">UG marksheet uploaded.</p>
+            {data.semesterMarksheet ? (
+              <div className="flex items-center space-x-2">
+                <a
+                  href={data.semesterMarksheet}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline text-sm truncate max-w-[180px]"
+                  title={data.semesterMarksheet}
+                >
+                  {data.semesterMarksheet.split("/").pop()}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => update("semesterMarksheet", undefined)}
+                  className="text-red-500 hover:text-red-700 text-lg font-bold"
+                  title="Remove file"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <input
+                ref={ugInputRef}
+                type="file"
+                accept=".jpeg,.jpg,.png,.pdf"
+                className="w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-1"
+                onChange={e => handleUpload(e, "semesterMarksheet")}
+              />
             )}
           </div>
 
@@ -151,17 +198,36 @@ export default function UGDetailsForm({
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  PG Marksheet (JPEG, PNG, PDF)
+                  PG Marksheet (JPG, PNG, PDF)
                 </label>
-                <input
-                  ref={pgInputRef}
-                  type="file"
-                  accept=".jpeg,.jpg,.png,.pdf"
-                  className="w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-1"
-                  onChange={e => handleUpload(e, "pgSemesterMarksheet")}
-                />
-                {data.pgSemesterMarksheet && (
-                  <p className="mt-1 text-xs text-green-600">PG marksheet uploaded.</p>
+                {data.pgSemesterMarksheet ? (
+                  <div className="flex items-center space-x-2">
+                    <a
+                      href={data.pgSemesterMarksheet}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline text-sm truncate max-w-[180px]"
+                      title={data.pgSemesterMarksheet}
+                    >
+                      {data.pgSemesterMarksheet.split("/").pop()}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => update("pgSemesterMarksheet", undefined)}
+                      className="text-red-500 hover:text-red-700 text-lg font-bold"
+                      title="Remove file"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    ref={pgInputRef}
+                    type="file"
+                    accept=".jpeg,.jpg,.png,.pdf"
+                    className="w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-1"
+                    onChange={e => handleUpload(e, "pgSemesterMarksheet")}
+                  />
                 )}
               </div>
               <TestInput
