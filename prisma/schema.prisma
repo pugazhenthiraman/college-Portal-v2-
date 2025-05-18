@@ -264,8 +264,8 @@ model WorkExperience {
   studentId        Int
   student          Student  @relation(fields: [studentId], references: [id])
   employer         String
-  startDate        DateTime
-  endDate          DateTime
+  startDate        DateTime?
+  endDate          DateTime?
   role             String
   responsibilities String
   ctc              String

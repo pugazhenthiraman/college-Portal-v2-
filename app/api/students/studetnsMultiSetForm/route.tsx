@@ -113,27 +113,25 @@ export async function POST(req: NextRequest) {
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-        // ...existing code...
-case "technicalSkills":
-  await prisma.technicalSkill.deleteMany({ where: { studentId } });
-  if (Array.isArray(data) && data.length > 0) {
-    await prisma.technicalSkill.createMany({
-      data: data.map((skill: any) => {
-        const mapped: any = { studentId };
-        if (skill.courseName) mapped.courseName = skill.courseName;
-        if (skill.details) mapped.details = skill.details;
-        if (skill.level) mapped.level = skill.level.replace(/\s+/g, "_").toUpperCase(); // <-- FIXED
-        if (skill.certificateFile) mapped.certificateFile = skill.certificateFile;
-        if (skill.certificateName) mapped.certificateName = skill.certificateName;
-        if (skill.startDate) mapped.startDate = new Date(skill.startDate);
-        if (skill.endDate) mapped.endDate = new Date(skill.endDate);
-        return mapped;
-      }),
-    });
-  }
-  updatedStudent = await prisma.student.findUnique({ where: { userId } });
-  break;
-// ...existing code...
+      case "technicalSkills":
+        await prisma.technicalSkill.deleteMany({ where: { studentId } });
+        if (Array.isArray(data) && data.length > 0) {
+          await prisma.technicalSkill.createMany({
+            data: data.map((skill: any) => {
+              const mapped: any = { studentId };
+              if (skill.courseName) mapped.courseName = skill.courseName;
+              if (skill.details) mapped.details = skill.details;
+              if (skill.level) mapped.level = skill.level.replace(/\s+/g, "_").toUpperCase();
+              if (skill.certificateFile) mapped.certificateFile = skill.certificateFile;
+              if (skill.certificateName) mapped.certificateName = skill.certificateName;
+              if (skill.startDate) mapped.startDate = new Date(skill.startDate);
+              if (skill.endDate) mapped.endDate = new Date(skill.endDate);
+              return mapped;
+            }),
+          });
+        }
+        updatedStudent = await prisma.student.findUnique({ where: { userId } });
+        break;
 
       case "internships":
         await prisma.internship.deleteMany({ where: { studentId } });
@@ -155,21 +153,21 @@ case "technicalSkills":
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-      case "events":
-        await prisma.enhancementProgram.deleteMany({ where: { studentId } });
-        if (Array.isArray(data)) {
-          await prisma.enhancementProgram.createMany({
-            data: data.map((event: any) => ({
-              studentId,
-              name: event.name,
-              location: event.location,
-              details: event.details,
-              contribution: event.contribution,
-            })),
-          });
-        }
-        updatedStudent = await prisma.student.findUnique({ where: { userId } });
-        break;
+        case "events":
+          await prisma.enhancementProgram.deleteMany({ where: { studentId } });
+          if (Array.isArray(data)) {
+            await prisma.enhancementProgram.createMany({
+              data: data.map((event: any) => ({
+                studentId,
+                name: event.name,
+                location: event.location,
+                details: event.details,
+                contribution: event.contribution,
+              })),
+            });
+          }
+          updatedStudent = await prisma.student.findUnique({ where: { userId } });
+          break;
 
       case "socialProfiles":
         await prisma.socialProfile.upsert({
@@ -211,23 +209,26 @@ case "technicalSkills":
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-      case "workExperience":
-        await prisma.workExperience.deleteMany({ where: { studentId } });
-        if (Array.isArray(data)) {
-          await prisma.workExperience.createMany({
-            data: data.map((exp: any) => ({
-              studentId,
-              employer: exp.employer,
-              startDate: new Date(exp.startDate),
-              endDate: new Date(exp.endDate),
-              role: exp.role,
-              responsibilities: exp.responsibilities,
-              ctc: exp.ctc,
-            })),
-          });
-        }
-        updatedStudent = await prisma.student.findUnique({ where: { userId } });
-        break;
+case "workExperience":
+  await prisma.workExperience.deleteMany({ where: { studentId } });
+  if (Array.isArray(data)) {
+    await prisma.workExperience.createMany({
+      data: data.map((exp: any) => {
+        const mapped: any = {
+          studentId,
+          employer: exp.employer,
+          role: exp.role,
+          responsibilities: exp.responsibilities,
+          ctc: exp.ctc,
+        };
+        if (exp.startDate) mapped.startDate = new Date(exp.startDate);
+        if (exp.endDate) mapped.endDate = new Date(exp.endDate);
+        return mapped;
+      }),
+    });
+  }
+  updatedStudent = await prisma.student.findUnique({ where: { userId } });
+  break;
 
       case "publications":
         await prisma.publication.deleteMany({ where: { studentId } });

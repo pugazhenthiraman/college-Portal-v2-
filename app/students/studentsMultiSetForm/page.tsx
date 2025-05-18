@@ -143,11 +143,13 @@ export default function StudentMultiStepForm() {
       toast.error("Invalid step. Cannot save draft.");
       return;
     }
-    // For technicalSkills, send all skills (even incomplete)
     let payload = { section: key, data: data[key] };
+    console.log("Draft payload:", payload);
     if (key === "technicalSkills") {
       payload = { section: key, data: data.technicalSkills || [] };
       console.log("Draft payload for technicalSkills:", payload);
+    } else if (key === "socialProfiles") {
+      console.log("Draft payload for socialProfiles:", payload);
     } else {
       console.log("Draft payload:", payload);
     }
@@ -169,6 +171,8 @@ export default function StudentMultiStepForm() {
             ? "Graduate details saved!"
             : key === "technicalSkills"
             ? "Technical skills draft saved!"
+            : key === "socialProfiles"
+            ? "Social profiles saved!"
             : `Draft for "${steps[step]}" saved!`
         );
       }

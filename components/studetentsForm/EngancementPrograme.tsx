@@ -137,8 +137,7 @@ export default function EnhancementProgramForm({ data, onChange }: Props) {
 
       {/* Add/Edit modal */}
       {editingIndex !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-6">
             <h3 className="text-xl font-semibold">
               {editingIndex < 0 ? "Add Event/Workshop" : `Edit Event #${editingIndex + 1}`}
             </h3>
@@ -151,7 +150,7 @@ export default function EnhancementProgramForm({ data, onChange }: Props) {
                   id="ep-name"
                   placeholder="Enter event name"
                   value={draft.name}
-                  onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                  onChange={(e: { target: { value: any; }; }) => setDraft((d) => ({ ...d, name: e.target.value }))}
                 />
               </div>
               <div>
@@ -162,7 +161,7 @@ export default function EnhancementProgramForm({ data, onChange }: Props) {
                   id="ep-location"
                   placeholder="City, Venue, etc."
                   value={draft.location}
-                  onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
+                  onChange={(e: { target: { value: any; }; }) => setDraft((d) => ({ ...d, location: e.target.value }))}
                 />
               </div>
               <div>
