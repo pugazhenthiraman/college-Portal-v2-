@@ -2,6 +2,7 @@ import React from "react";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 // Utility component for displaying info items
 function InfoItem({ label, value, icon }: { label: string; value?: string | null; icon: React.ReactNode }) {
@@ -43,6 +44,14 @@ export default async function StudentDashboard() {
     return <NotLoggedIn />;
   }
 
+  // Fix: Use 'as any' to access passwordChanged
+  if (
+    session.user.role === "STUDENT" &&
+    (session.user as any).passwordChanged === false
+  ) {
+    redirect("/profile/password");
+  }
+
   const studentInfo = await prisma.student.findUnique({
     where: { userId: Number(session.user.id) },
     include: { department: { include: { hod: true, faculty: true, college: true } } },
@@ -53,13 +62,13 @@ export default async function StudentDashboard() {
   }
 
   const assignedFaculty = studentInfo.department?.faculty?.find(
-    (f: { id: number }) => f.id === studentInfo.facultyId
+    (f: { id: number }) => f.id === (studentInfo as any).facultyId
   );
 
-  const firstInitial = studentInfo.firstName?.[0] || "S";
+  const firstInitial = (studentInfo as any).firstName?.[0] || "S";
 
-  // Example: Show verification status
-  const status = studentInfo.status; // e.g., "pending", "verified", "rejected"
+  // Fix: Use 'as any' to access status
+  const status = (studentInfo as any).status;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-6">
@@ -67,7 +76,7 @@ export default async function StudentDashboard() {
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg p-6 flex items-center justify-between shadow-lg">
           <div>
-            <h1 className="text-3xl font-bold">Welcome, {studentInfo.firstName || "Student"}!</h1>
+            <h1 className="text-3xl font-bold">Welcome, {(studentInfo as any).firstName || "Student"}!</h1>
             <p className="mt-1 opacity-80">Your personalized student dashboard</p>
             <div className="mt-2">
               {status === "verified" ? (

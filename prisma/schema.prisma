@@ -40,6 +40,7 @@ model User {
   password  String
   role      UserRole
   createdAt DateTime @default(now())
+   passwordChanged Boolean  @default(false)
 
   // One-to-one relations to role-specific details (only one should be non-null)
   superAdmin SuperAdmin?

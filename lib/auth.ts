@@ -87,6 +87,8 @@ export const authOptions: AuthOptions = {
             user.faculty?.departmentId ||
             user.student?.departmentId ||
             null,
+          // Only include passwordChanged for students
+          passwordChanged: user.role === "STUDENT" ? user.passwordChanged : undefined,
         };
       },
     }),
@@ -100,6 +102,10 @@ export const authOptions: AuthOptions = {
         session.user.departmentType = token.departmentType;
         session.user.collegeId = token.collegeId;
         session.user.departmentId = token.departmentId;
+        // Pass passwordChanged to session for students
+        if (token.role === "STUDENT") {
+          session.user.passwordChanged = token.passwordChanged;
+        }
       }
       return session;
     },
@@ -111,6 +117,10 @@ export const authOptions: AuthOptions = {
         token.departmentType = user.departmentType;
         token.collegeId = user.collegeId;
         token.departmentId = user.departmentId;
+        // Pass passwordChanged to token for students
+        if (user.role === "STUDENT") {
+          token.passwordChanged = user.passwordChanged;
+        }
       }
       return token;
     },

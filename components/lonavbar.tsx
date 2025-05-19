@@ -5,7 +5,7 @@ export default function Navbar() {
 
   const handleSignOut = () => {
     signOut();
-    window.location.href = "/auth/login";
+    window.location.href = "/home";
   }
  
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ArrowPathIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, ArrowDownTrayIcon, EyeIcon } from "@heroicons/react/24/outline";
 
 interface ReviewFormProps {
   data: Record<string, any>;
@@ -9,6 +9,109 @@ interface ReviewFormProps {
   onEdit: (sectionIndex: number) => void;
   onSaveDraft: () => void;
   onSubmit: () => void;
+}
+
+// Fields to hide in review
+const HIDDEN_FIELDS = [
+  "id",
+  "studentId",
+  "userId",
+  "createdAt",
+  "updatedAt",
+  "deletedAt",
+];
+
+// Fields that are files (show as link or button)
+const FILE_FIELDS = [
+  "photo",
+  "certificateFile",
+  "certificateName",
+  "semesterMarksheet",
+  "pgSemesterMarksheet",
+];
+
+function getFileName(value: string) {
+  if (!value) return "";
+  try {
+    const url = new URL(value, window.location.origin);
+    return decodeURIComponent(url.pathname.split("/").pop() || value);
+  } catch {
+    return value.split("/").pop() || value;
+  }
+}
+
+function renderField(k: string, v: any, item?: any) {
+  if (HIDDEN_FIELDS.includes(k)) return null;
+
+  // Show image thumbnail for photo
+  if (k === "photo" && v) {
+    return (
+      <div key={k} className="flex items-center gap-2">
+        <span className="font-medium text-gray-600">{k}</span>
+        <img
+          src={v}
+          alt="Profile"
+          className="h-12 w-12 rounded object-cover border"
+        />
+        <a
+          href={v}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
+        >
+          <EyeIcon className="h-4 w-4 mr-1" />
+          View
+        </a>
+      </div>
+    );
+  }
+
+  // For certificates in skills: show name and view link
+  if (k === "certificateName" && item?.certificateFile) {
+    return (
+      <div key={k} className="flex items-center gap-2">
+        <span className="font-medium text-gray-600">{k}</span>
+        <span className="text-gray-900">{v}</span>
+        <a
+          href={item.certificateFile}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
+        >
+          <EyeIcon className="h-4 w-4 mr-1" />
+          View
+        </a>
+      </div>
+    );
+  }
+
+  // For other file fields: show file name and view link
+  if (FILE_FIELDS.includes(k) && v) {
+    const fileName = getFileName(v);
+    return (
+      <div key={k} className="flex items-center gap-2">
+        <span className="font-medium text-gray-600">{k}</span>
+        <span className="text-gray-900">{fileName}</span>
+        <a
+          href={v}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
+        >
+          <EyeIcon className="h-4 w-4 mr-1" />
+          View
+        </a>
+      </div>
+    );
+  }
+
+  // For other fields, show normally
+  return (
+    <React.Fragment key={k}>
+      <dt className="font-medium text-gray-600">{k}</dt>
+      <dd className="text-gray-900 break-words">{String(v)}</dd>
+    </React.Fragment>
+  );
 }
 
 function renderSectionContent(sectionData: any) {
@@ -22,12 +125,15 @@ function renderSectionContent(sectionData: any) {
         {sectionData.map((item, idx) => (
           <div key={idx} className="border rounded p-3 bg-gray-50">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              {Object.entries(item).map(([k, v]) => (
-                <React.Fragment key={k}>
-                  <dt className="font-medium text-gray-600">{k}</dt>
-                  <dd className="text-gray-900 break-words">{String(v)}</dd>
-                </React.Fragment>
-              ))}
+              {Object.entries(item)
+                .filter(([k]) => !HIDDEN_FIELDS.includes(k))
+                .map(([k, v]) =>
+                  FILE_FIELDS.includes(k) && v
+                    ? (
+                      <div key={k} className="col-span-2">{renderField(k, v, item)}</div>
+                    )
+                    : renderField(k, v, item)
+                )}
             </dl>
           </div>
         ))}
@@ -39,12 +145,15 @@ function renderSectionContent(sectionData: any) {
   if (typeof sectionData === "object") {
     return (
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        {Object.entries(sectionData).map(([k, v]) => (
-          <React.Fragment key={k}>
-            <dt className="font-medium text-gray-600">{k}</dt>
-            <dd className="text-gray-900 break-words">{String(v)}</dd>
-          </React.Fragment>
-        ))}
+        {Object.entries(sectionData)
+          .filter(([k]) => !HIDDEN_FIELDS.includes(k))
+          .map(([k, v]) =>
+            FILE_FIELDS.includes(k) && v
+              ? (
+                <div key={k} className="col-span-2">{renderField(k, v, sectionData)}</div>
+              )
+              : renderField(k, v, sectionData)
+          )}
       </dl>
     );
   }

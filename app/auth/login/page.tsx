@@ -80,7 +80,7 @@ export default function AdminLoginPage() {
           router.push("/students/dashboard");
           break;
         default:
-          router.push("/auth/login");
+          router.push("/home");
       }
     } catch (error: unknown) {
       if (error instanceof Error) {

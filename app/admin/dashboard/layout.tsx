@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Redirect user only after client hydration
   useEffect(() => {
     if (isClient && (status === "unauthenticated")) {
-      router.push("/auth/login");
+      router.push("/home");
     }
   }, [status, session, isClient, router]);
 

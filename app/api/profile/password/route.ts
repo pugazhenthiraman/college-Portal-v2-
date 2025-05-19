@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function PUT(req: NextRequest) {
-  const session: any = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
@@ -31,10 +31,10 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  // 3) Fetch and verify current password
+  // 3) Fetch and verify current password and role
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { password: true },
+    select: { password: true, role: true },
   });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -49,7 +49,6 @@ export async function PUT(req: NextRequest) {
   }
 
   // 4) Prevent re-using the same password
-  // If this is a validation-only request (all fields equal), skip this check and just validate current password
   if (currentPassword === newPassword && newPassword === confirmPassword) {
     // Only validate current password
     return NextResponse.json({ valid: true });
@@ -62,12 +61,20 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  // 5) Hash & save the new password
+  // 5) Hash & save the new password, set passwordChanged for students
   const hashed = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({
-    where: { id: userId },
-    data: { password: hashed },
-  });
+
+  if (user.role === "STUDENT") {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed, passwordChanged: true },
+    });
+  } else {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+  }
 
   return NextResponse.json({ message: "Password updated successfully" });
 }
