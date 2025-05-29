@@ -1,3 +1,5 @@
+// app/api/students/studetnsMultiSetForm/route.tsx
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -14,6 +16,7 @@ const ALLOWED_SECTIONS = [
   "placements",
   "workExperience",
   "publications",
+  "projects",              // ← new
 ] as const;
 type Section = typeof ALLOWED_SECTIONS[number];
 
@@ -22,7 +25,7 @@ type Section = typeof ALLOWED_SECTIONS[number];
  * Expects: { section: string, data: any }
  */
 export async function POST(req: NextRequest) {
-  console.log("API: POST /api/students/studetnsMultiSetForm called");
+  console.log("🛠 [backend] POST /api/students/studetnsMultiSetForm called");
   // 1. Check authentication
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -47,7 +50,7 @@ export async function POST(req: NextRequest) {
   // 3. Validate section
   if (typeof section !== "string" || !ALLOWED_SECTIONS.includes(section as Section)) {
     return NextResponse.json(
-      { error: `Internal error: Section "${String(section)}" is not supported. Please contact support.` },
+      { error: `Section "${String(section)}" is not supported.` },
       { status: 400 }
     );
   }
@@ -65,7 +68,6 @@ export async function POST(req: NextRequest) {
 
   try {
     let updatedStudent;
-    // 5. Handle each section
     switch (section) {
       case "general":
         updatedStudent = await prisma.student.update({
@@ -117,17 +119,16 @@ export async function POST(req: NextRequest) {
         await prisma.technicalSkill.deleteMany({ where: { studentId } });
         if (Array.isArray(data) && data.length > 0) {
           await prisma.technicalSkill.createMany({
-            data: data.map((skill: any) => {
-              const mapped: any = { studentId };
-              if (skill.courseName) mapped.courseName = skill.courseName;
-              if (skill.details) mapped.details = skill.details;
-              if (skill.level) mapped.level = skill.level.replace(/\s+/g, "_").toUpperCase();
-              if (skill.certificateFile) mapped.certificateFile = skill.certificateFile;
-              if (skill.certificateName) mapped.certificateName = skill.certificateName;
-              if (skill.startDate) mapped.startDate = new Date(skill.startDate);
-              if (skill.endDate) mapped.endDate = new Date(skill.endDate);
-              return mapped;
-            }),
+            data: data.map((skill: any) => ({
+              studentId,
+              courseName: skill.courseName || "",
+              details: skill.details || "",
+              level: skill.level?.toUpperCase() ?? "BEGINNER",
+              certificateFile: skill.certificateFile || null,
+              certificateName: skill.certificateName || null,
+              startDate: skill.startDate ? new Date(skill.startDate) : null,
+              endDate: skill.endDate ? new Date(skill.endDate) : null,
+            })),
           });
         }
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
@@ -145,29 +146,29 @@ export async function POST(req: NextRequest) {
               endDate: new Date(intern.endDate),
               location: intern.location,
               responsibilities: intern.responsibilities,
-              certificate: intern.certificate,
-              certificateName: intern.certificateName,
+              certificate: intern.certificate || null,
+              certificateName: intern.certificateName || null,
             })),
           });
         }
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-        case "events":
-          await prisma.enhancementProgram.deleteMany({ where: { studentId } });
-          if (Array.isArray(data)) {
-            await prisma.enhancementProgram.createMany({
-              data: data.map((event: any) => ({
-                studentId,
-                name: event.name,
-                location: event.location,
-                details: event.details,
-                contribution: event.contribution,
-              })),
-            });
-          }
-          updatedStudent = await prisma.student.findUnique({ where: { userId } });
-          break;
+      case "events":
+        await prisma.enhancementProgram.deleteMany({ where: { studentId } });
+        if (Array.isArray(data)) {
+          await prisma.enhancementProgram.createMany({
+            data: data.map((evt: any) => ({
+              studentId,
+              name: evt.name,
+              location: evt.location,
+              details: evt.details,
+              contribution: evt.contribution,
+            })),
+          });
+        }
+        updatedStudent = await prisma.student.findUnique({ where: { userId } });
+        break;
 
       case "socialProfiles":
         await prisma.socialProfile.upsert({
@@ -197,38 +198,35 @@ export async function POST(req: NextRequest) {
         await prisma.placement.deleteMany({ where: { studentId } });
         if (Array.isArray(data)) {
           await prisma.placement.createMany({
-            data: data.map((placement: any) => ({
+            data: data.map((pl: any) => ({
               studentId,
-              employer: placement.employer,
-              designation: placement.designation,
-              onCampus: placement.onCampus,
-              ctc: placement.ctc,
+              employer: pl.employer,
+              designation: pl.designation,
+              onCampus: pl.onCampus,
+              ctc: pl.ctc,
             })),
           });
         }
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-case "workExperience":
-  await prisma.workExperience.deleteMany({ where: { studentId } });
-  if (Array.isArray(data)) {
-    await prisma.workExperience.createMany({
-      data: data.map((exp: any) => {
-        const mapped: any = {
-          studentId,
-          employer: exp.employer,
-          role: exp.role,
-          responsibilities: exp.responsibilities,
-          ctc: exp.ctc,
-        };
-        if (exp.startDate) mapped.startDate = new Date(exp.startDate);
-        if (exp.endDate) mapped.endDate = new Date(exp.endDate);
-        return mapped;
-      }),
-    });
-  }
-  updatedStudent = await prisma.student.findUnique({ where: { userId } });
-  break;
+      case "workExperience":
+        await prisma.workExperience.deleteMany({ where: { studentId } });
+        if (Array.isArray(data)) {
+          await prisma.workExperience.createMany({
+            data: data.map((we: any) => ({
+              studentId,
+              employer: we.employer,
+              role: we.role,
+              responsibilities: we.responsibilities,
+              ctc: we.ctc,
+              startDate: we.startDate ? new Date(we.startDate) : null,
+              endDate: we.endDate ? new Date(we.endDate) : null,
+            })),
+          });
+        }
+        updatedStudent = await prisma.student.findUnique({ where: { userId } });
+        break;
 
       case "publications":
         await prisma.publication.deleteMany({ where: { studentId } });
@@ -246,6 +244,23 @@ case "workExperience":
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
+      case "projects":   // ← new
+        await prisma.project.deleteMany({ where: { studentId } });
+        if (Array.isArray(data)) {
+          await prisma.project.createMany({
+            data: data.map((prj: any) => ({
+              studentId,
+              title: prj.title,
+              link: prj.link || null,
+              startDate: new Date(prj.startDate),
+              endDate: new Date(prj.endDate),
+              description: prj.description,
+            })),
+          });
+        }
+        updatedStudent = await prisma.student.findUnique({ where: { userId } });
+        break;
+
       default:
         return NextResponse.json(
           { error: "Unknown section. Please contact support." },
@@ -253,14 +268,11 @@ case "workExperience":
         );
     }
 
-    // Success: return updated student object
     return NextResponse.json({ success: true, student: updatedStudent });
   } catch (err) {
-    // Log error for developers
     console.error(`Error saving section "${section}":`, err);
-    // User-friendly error for users
     return NextResponse.json(
-      { error: "Failed to save data. Please try again. If the problem persists, contact support." },
+      { error: "Failed to save data. Please try again later." },
       { status: 500 }
     );
   }
@@ -270,6 +282,7 @@ case "workExperience":
  * GET handler for fetching the full student record with all sections.
  */
 export async function GET() {
+  console.log("🛠 [backend] GET /api/students/studetnsMultiSetForm called");
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -279,8 +292,9 @@ export async function GET() {
   }
 
   try {
+    const userId = Number(session.user.id);
     const student = await prisma.student.findUnique({
-      where: { userId: Number(session.user.id) },
+      where: { userId },
       include: {
         college: true,
         department: true,
@@ -292,6 +306,7 @@ export async function GET() {
         placements: true,
         workExperiences: true,
         publications: true,
+        projects: true,   // ← new
       },
     });
 
@@ -302,12 +317,12 @@ export async function GET() {
       );
     }
 
-    // Success: return student object
+    console.log("🛠 [backend] fetched student.socialProfiles →", student.socialProfiles);
+    console.log("🛠 [backend] fetched student.projects →", student.projects);
+
     return NextResponse.json({ student });
   } catch (err) {
-    // Log error for developers
     console.error("Error fetching student record:", err);
-    // User-friendly error for users
     return NextResponse.json(
       { error: "Failed to load data. Please try again later." },
       { status: 500 }

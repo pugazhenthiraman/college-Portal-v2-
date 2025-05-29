@@ -178,6 +178,7 @@ model Student {
   placements      Placement[]
   workExperiences WorkExperience[]
   publications    Publication[]
+  projects       Project[]
 
   @@index([academicYear, section])
 }
@@ -210,6 +211,7 @@ model TechnicalSkill {
   student         Student               @relation(fields: [studentId], references: [id])
 }
 
+
 model Internship {
   id               Int      @id @default(autoincrement())
   studentId        Int
@@ -223,6 +225,18 @@ model Internship {
   certificate      String? // file path or URL
   certificateName  String?
   createdAt        DateTime @default(now())
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  studentId   Int
+  student     Student  @relation(fields: [studentId], references: [id])
+  title       String
+  link        String?
+  startDate   DateTime
+  endDate     DateTime
+  description String
+  createdAt   DateTime @default(now())
 }
 
 model EnhancementProgram {

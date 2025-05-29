@@ -93,7 +93,7 @@ export default function PlacementsForm({ data, onChange }: Props) {
 
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-semibold">Placement Details</h2>
+
 
       {/* Existing cards */}
       {data.map((pl, i) => (
@@ -135,7 +135,7 @@ export default function PlacementsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Employer Name</label>
                 <Input
                   value={draft.employer}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, employer: e.target.value }))
                   }
                 />
@@ -144,7 +144,7 @@ export default function PlacementsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Designation</label>
                 <Input
                   value={draft.designation}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, designation: e.target.value }))
                   }
                 />
@@ -180,7 +180,7 @@ export default function PlacementsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">CTC Offered</label>
                 <Input
                   value={draft.ctc}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, ctc: e.target.value }))
                   }
                   placeholder="e.g. 6 LPA"

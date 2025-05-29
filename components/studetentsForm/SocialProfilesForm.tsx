@@ -33,14 +33,18 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
   const [editingKey, setEditingKey] = useState<keyof SocialProfiles | null>(null);
   const [draftValue, setDraftValue] = useState("");
 
+  // Mirror incoming prop into local state
   useEffect(() => {
     setProfiles({ ...data });
   }, [data]);
 
-  const startEdit = useCallback((key: keyof SocialProfiles) => {
-    setEditingKey(key);
-    setDraftValue(profiles[key] || "");
-  }, [profiles]);
+  const startEdit = useCallback(
+    (key: keyof SocialProfiles) => {
+      setEditingKey(key);
+      setDraftValue(profiles[key] || "");
+    },
+    [profiles]
+  );
 
   const cancelEdit = useCallback(() => {
     setEditingKey(null);
@@ -69,13 +73,16 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
     toast.success("Copied to clipboard");
   }, []);
 
-  const removeKey = useCallback((key: keyof SocialProfiles) => {
-    const next = { ...profiles };
-    delete next[key];
-    setProfiles(next);
-    onChange(next);
-    toast.success("Link removed");
-  }, [onChange, profiles]);
+  const removeKey = useCallback(
+    (key: keyof SocialProfiles) => {
+      const next = { ...profiles };
+      delete next[key];
+      setProfiles(next);
+      onChange(next);
+      toast.success("Link removed");
+    },
+    [onChange, profiles]
+  );
 
   return (
     <div className="space-y-8">
@@ -117,10 +124,12 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
                   <div className="flex items-center space-x-2">
                     {current ? (
                       <>
+                        {/* show the raw link */}
                         <span className="flex items-center px-2 py-1 bg-green-50 rounded text-green-700 font-medium">
                           Link attached
                           <CheckCircle2 className="ml-1 text-green-500" size={18} />
                         </span>
+                        {/* copy / edit / remove controls */}
                         <button
                           onClick={() => copyLink(current)}
                           title="Copy link"

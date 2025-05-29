@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
+import ProjectsForm, { Project } from "@/components/studetentsForm/ProjectsForm";
 
 import Generalinfo from "@/components/studetentsForm/Generalinfo";
 import UGDetailsForm from "@/components/studetentsForm/UGdetaisl";
@@ -19,6 +20,7 @@ const steps = [
   "General Info",
   "UG Details",
   "Internships",
+  "Projects",
   "Skills",
   "Social",
   "Publications",
@@ -28,18 +30,17 @@ const steps = [
   "Review",
 ];
 
-// This array must match the order of your steps (excluding "Review" if it doesn't map to a data key)
 const dataKeys: (keyof FormData)[] = [
   "general",
   "ugDetails",
   "internships",
+  "projects", 
   "technicalSkills",
   "socialProfiles",
   "publications",
   "events",
   "workExperience",
   "placements",
-  // No data key for "Review"
 ];
 
 interface FormData {
@@ -47,6 +48,7 @@ interface FormData {
   ugDetails: any;
   technicalSkills: any[];
   internships: any[];
+  projects: Project[];  
   events: any[];
   socialProfiles: any;
   placements: any[];
@@ -55,12 +57,15 @@ interface FormData {
 }
 
 export default function StudentMultiStepForm() {
+  console.log("🛠 [frontend] StudentMultiStepForm mounted");
+
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>({
     general: {},
     ugDetails: {},
     technicalSkills: [],
     internships: [],
+    projects: [], 
     events: [],
     socialProfiles: {},
     placements: [],
@@ -71,12 +76,28 @@ export default function StudentMultiStepForm() {
 
   // Fetch existing data
   useEffect(() => {
+    console.log("🛠 [frontend] fetchData useEffect fired");
+
     async function fetchData() {
       try {
         const res = await fetch("/api/students/studetnsMultiSetForm");
-        if (!res.ok) throw new Error("Failed to fetch data.");
+        console.log("🛠 [frontend] fetch() returned status", res.status);
+        if (!res.ok) throw new Error("Fetch failed");
+
         const result = await res.json();
 
+        // 1️⃣ raw array from backend
+        console.log(
+          "🛠 [frontend] raw socialProfiles array →",
+          result.student.socialProfiles
+        );
+
+        // 2️⃣ unwrap into a single object
+        const raw = result.student.socialProfiles;
+        const socialObj = Array.isArray(raw) && raw.length > 0 ? raw[0] : raw || {};
+        console.log("🛠 [frontend] unwrapped socialProfiles →", socialObj);
+
+        // Map into your FormData shape
         if (result.student) {
           const ugRaw = result.student.ugDetails;
           const ug = Array.isArray(ugRaw) && ugRaw.length > 0 ? ugRaw[0] : ugRaw;
@@ -88,7 +109,8 @@ export default function StudentMultiStepForm() {
               candidate_id: result.student.id?.toString() || "",
               email: result.student.personalEmailId || "",
               current_degree: result.student.department?.name || "",
-              affiliate_university: result.student.college?.affiliatedUniversity || "",
+              affiliate_university:
+                result.student.college?.affiliatedUniversity || "",
               college_name: result.student.college?.name || "",
               batch: result.student.batch || "",
               roll_reg_no: result.student.rollNo || "",
@@ -111,22 +133,30 @@ export default function StudentMultiStepForm() {
               : {},
             technicalSkills: result.student.technicalSkills || [],
             internships: result.student.internships || [],
+            projects:      result.student.projects      || [],
             events: result.student.events || [],
-            socialProfiles: result.student.socialProfiles || {},
+            socialProfiles: socialObj,
             placements: result.student.placements || [],
             workExperience: result.student.workExperiences || [],
             publications: result.student.publications || [],
           };
 
+          // 3️⃣ confirm what goes into state
+          console.log(
+            "🛠 [frontend] mappedData.socialProfiles →",
+            mappedData.socialProfiles
+          );
+
           setData(mappedData);
         }
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        console.error("🛠 [frontend] fetchData error:", err);
         toast.error("Failed to load data. Please try again.");
       } finally {
         setLoading(false);
       }
     }
+
     fetchData();
   }, []);
 
@@ -137,47 +167,27 @@ export default function StudentMultiStepForm() {
   );
 
   const saveDraft = useCallback(async () => {
-    console.log("Save Draft triggered for step:", step);
     const key = dataKeys[step];
     if (!key) {
-      toast.error("Invalid step. Cannot save draft.");
+      toast.error("Invalid step.");
       return;
     }
-    let payload = { section: key, data: data[key] };
-    console.log("Draft payload:", payload);
-    if (key === "technicalSkills") {
-      payload = { section: key, data: data.technicalSkills || [] };
-      console.log("Draft payload for technicalSkills:", payload);
-    } else if (key === "socialProfiles") {
-      console.log("Draft payload for socialProfiles:", payload);
-    } else {
-      console.log("Draft payload:", payload);
-    }
-
+    const payload = { section: key, data: data[key] };
     try {
       const res = await fetch("/api/students/studetnsMultiSetForm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      console.log("🛠 [frontend] saveDraft response status", res.status);
       const result = await res.json();
-      if (!res.ok) {
-        toast.error(result.error || `Could not save "${steps[step]}".`);
+      if (res.ok) {
+        toast.success("Saved!");
       } else {
-        toast.success(
-          key === "internships"
-            ? "Internship details saved!"
-            : key === "ugDetails"
-            ? "Graduate details saved!"
-            : key === "technicalSkills"
-            ? "Technical skills draft saved!"
-            : key === "socialProfiles"
-            ? "Social profiles saved!"
-            : `Draft for "${steps[step]}" saved!`
-        );
+        toast.error(result.error || "Save failed");
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("🛠 [frontend] saveDraft error:", err);
       toast.error("Network error: Could not save draft.");
     }
   }, [data, step]);
@@ -205,18 +215,20 @@ export default function StudentMultiStepForm() {
       case 2:
         return <InternshipsForm data={data.internships} onChange={(d) => update("internships", d)} />;
       case 3:
-        return <TechnicalSkillsForm data={data.technicalSkills} onChange={(d) => update("technicalSkills", d)} />;
+        return <ProjectsForm data={data.projects} onChange={(d) => update("projects", d)} />;
       case 4:
-        return <SocialProfilesForm data={data.socialProfiles} onChange={(d) => update("socialProfiles", d)} />;
+        return <TechnicalSkillsForm data={data.technicalSkills} onChange={(d) => update("technicalSkills", d)} />;
       case 5:
-        return <PublicationsForm data={data.publications} onChange={(d) => update("publications", d)} />;
+        return <SocialProfilesForm data={data.socialProfiles} onChange={(d) => update("socialProfiles", d)} />;
       case 6:
-        return <EventsForm data={data.events} onChange={(d) => update("events", d)} />;
+        return <PublicationsForm data={data.publications} onChange={(d) => update("publications", d)} />;
       case 7:
-        return <WorkExperienceForm data={data.workExperience} onChange={(d) => update("workExperience", d)} />;
+        return <EventsForm data={data.events} onChange={(d) => update("events", d)} />;
       case 8:
-        return <PlacementsForm data={data.placements} onChange={(d) => update("placements", d)} />;
+        return <WorkExperienceForm data={data.workExperience} onChange={(d) => update("workExperience", d)} />;
       case 9:
+        return <PlacementsForm data={data.placements} onChange={(d) => update("placements", d)} />;
+      case 10:
         return (
           <ReviewForm
             data={data}
@@ -237,9 +249,9 @@ export default function StudentMultiStepForm() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-blue-50 to-white flex items-center justify-center py-12 px-4">
       <Toaster position="top-right" />
       <div className="w-full max-w-4xl space-y-6">
-        {/* Sticky, full-width Stepper */}
+        {/* Sticky Stepper */}
         <div className="sticky top-4 bg-white border-b-2 border-blue-200 z-10 py-2 px-6">
-          {/* first 5 */}
+          {/* first 5 steps */}
           <div className="flex justify-between">
             {steps.slice(0, 5).map((label, i) => {
               const idx = i;
@@ -251,15 +263,13 @@ export default function StudentMultiStepForm() {
                   whileHover={{ scale: 1.05 }}
                 >
                   <div
-                    className={`
-                      w-10 h-10 flex items-center justify-center rounded-full text-base font-semibold transition
-                      ${idx < step
+                    className={`w-10 h-10 flex items-center justify-center rounded-full text-base font-semibold transition ${
+                      idx < step
                         ? "bg-indigo-600 text-white"
                         : idx === step
                         ? "border-2 border-indigo-600 text-indigo-600"
                         : "bg-gray-100 text-gray-400"
-                      }
-                    `}
+                    }`}
                   >
                     {idx + 1}
                   </div>
@@ -270,8 +280,7 @@ export default function StudentMultiStepForm() {
               );
             })}
           </div>
-
-          {/* next 5 */}
+          {/* next 5 steps */}
           <div className="flex justify-between mt-2">
             {steps.slice(5).map((label, i) => {
               const idx = i + 5;
@@ -283,15 +292,13 @@ export default function StudentMultiStepForm() {
                   whileHover={{ scale: 1.05 }}
                 >
                   <div
-                    className={`
-                      w-10 h-10 flex items-center justify-center rounded-full text-base font-semibold transition
-                      ${idx < step
+                    className={`w-10 h-10 flex items-center justify-center rounded-full text-base font-semibold transition ${
+                      idx < step
                         ? "bg-indigo-600 text-white"
                         : idx === step
                         ? "border-2 border-indigo-600 text-indigo-600"
                         : "bg-gray-100 text-gray-400"
-                      }
-                    `}
+                    }`}
                   >
                     {idx + 1}
                   </div>
