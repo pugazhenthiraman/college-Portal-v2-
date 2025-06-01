@@ -145,9 +145,8 @@ export default function InternshipsForm({ data, onChange }: Props) {
 
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-semibold">Internships</h2>
-
-      {/* Existing cards */}
+      
+   {/* Existing cards */}
       {data.map((item, i) => (
         <div key={i} className="p-6 border rounded-lg bg-white shadow-sm">
            <Toaster position="top-right" />
@@ -197,7 +196,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 </label>
                 <Input
                   value={draft.company}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, company: e.target.value }))
                   }
                 />
@@ -209,7 +208,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 </label>
                 <Input
                   value={draft.role}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, role: e.target.value }))
                   }
                 />
@@ -222,7 +221,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 <Input
                   type="date"
                   value={draft.startDate}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, startDate: e.target.value }))
                   }
                 />
@@ -235,7 +234,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 <Input
                   type="date"
                   value={draft.endDate}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, endDate: e.target.value }))
                   }
                 />
@@ -248,7 +247,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 <Input
                   placeholder="City, State, Country"
                   value={draft.location}
-                  onChange={(e) =>
+                  onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, location: e.target.value }))
                   }
                 />
@@ -280,6 +279,8 @@ export default function InternshipsForm({ data, onChange }: Props) {
                   accept=".jpeg,.jpg,.png,.pdf"
                   className="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
                   onChange={handleCertificateUpload}
+                  title="Upload certificate (JPEG, PNG, or PDF)"
+                  placeholder="Choose a certificate file"
                 />
                 {draft.certificateName && (
                   <div className="mt-2 text-sm text-green-700">

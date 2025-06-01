@@ -83,6 +83,48 @@ export default function Generalinfo({
     onNext && onNext();
   };
 
+  // Handle photo upload using /api/upload
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("field", "photo");
+    if (merged.photo) {
+      formData.append("oldPath", merged.photo); // Remove old photo if exists
+    }
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.path) {
+      update("photo", data.path); // Save only the path in DB
+    } else {
+      toast.error(data.error || "Failed to upload photo.");
+    }
+  };
+
+  // Remove photo from server and state, then save immediately
+  const handleRemovePhoto = async () => {
+    if (merged.photo && merged.photo.startsWith("/uploads/")) {
+      await fetch("/api/upload/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: merged.photo }),
+      });
+    }
+    update("photo", null);
+    if (onSaveDraft) onSaveDraft(); // Save immediately after removal
+  };
+
+  // Helper for displaying the photo or fallback
+  const getPhotoUrl = (photo: string | undefined) => {
+    if (!photo || photo.trim() === "") return "/default-profile.png";
+    if (photo.startsWith("http") || photo.startsWith("/uploads/")) return photo;
+    return `/uploads/${photo}`;
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-indigo-200 via-blue-100 to-white">
       <div className="w-full max-w-4xl bg-white/90 backdrop-blur-sm border border-blue-200 shadow-2xl rounded-3xl p-6 md:p-10">
@@ -101,7 +143,7 @@ export default function Generalinfo({
             <div className="relative group">
               {merged.photo ? (
                 <img
-                  src={merged.photo}
+                  src={getPhotoUrl(merged.photo)}
                   alt="Profile"
                   className="w-32 h-32 rounded-full object-cover border-4 border-indigo-400 shadow transition-transform duration-300 group-hover:scale-105"
                 />
@@ -127,7 +169,7 @@ export default function Generalinfo({
               {merged.photo ? (
                 <button
                   type="button"
-                  onClick={() => update("photo", undefined)}
+                  onClick={handleRemovePhoto}
                   className="absolute bottom-2 right-2 bg-red-600 text-white px-3 py-1 rounded-full text-xs shadow hover:bg-red-700 transition-opacity"
                 >
                   Remove
@@ -139,13 +181,7 @@ export default function Generalinfo({
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => update("photo", reader.result as string);
-                      reader.readAsDataURL(file);
-                    }}
+                    onChange={handlePhotoChange}
                   />
                 </label>
               )}

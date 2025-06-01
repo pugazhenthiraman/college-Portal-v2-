@@ -230,6 +230,8 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                   accept=".jpeg,.jpg,.png,.pdf"
                   className="block w-full text-sm border border-gray-300 rounded-lg p-2 cursor-pointer bg-gray-50"
                   onChange={handleFileChange}
+                  title="Upload certificate file (JPEG, PNG, PDF)"
+                  placeholder="Choose a certificate file"
                 />
                 {draft.certificateName && (
                   <p className="mt-2 text-sm text-green-700">

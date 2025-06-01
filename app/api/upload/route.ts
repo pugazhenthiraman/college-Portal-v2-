@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
 const DOC_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 
 export async function POST(req: NextRequest) {
+  // Security: Only allow authenticated users
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const field = formData.get("field") as string | null; // "photo", "certificate", "marksheet"
+    const oldPath = formData.get("oldPath") as string | null; // optional: previous file path
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
@@ -58,8 +67,19 @@ export async function POST(req: NextRequest) {
 
     await fs.writeFile(filePath, buffer);
 
-    // Return the public path to the file
-    const response = { path: `/uploads/${safeFileName}` };
+    // Cleanup: Delete old file if oldPath is provided
+    if (oldPath && oldPath.startsWith("/uploads/")) {
+      const oldFilePath = path.join(process.cwd(), "public", oldPath);
+      try {
+        await fs.unlink(oldFilePath);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (e) {
+        // File might not exist, ignore error
+      }
+    }
+
+    // Return the public path and original file name
+    const response = { path: `/uploads/${safeFileName}`, originalName: file.name };
     console.log("Sending upload response to frontend:", response);
     return NextResponse.json(response);
   } catch (err) {

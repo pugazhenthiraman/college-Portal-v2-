@@ -1,5 +1,3 @@
-// app/api/students/studetnsMultiSetForm/route.tsx
-
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -16,7 +14,7 @@ const ALLOWED_SECTIONS = [
   "placements",
   "workExperience",
   "publications",
-  "projects",              // ← new
+  "projects",
 ] as const;
 type Section = typeof ALLOWED_SECTIONS[number];
 
@@ -70,12 +68,14 @@ export async function POST(req: NextRequest) {
     let updatedStudent;
     switch (section) {
       case "general":
+        // This is the important part for photo:
+        // If data.photo is null or "", it will set the DB field to null (removes the photo)
         updatedStudent = await prisma.student.update({
           where: { userId },
           data: {
             firstName: data.candidate_first_name,
             lastName: data.candidate_last_name,
-            photo: data.photo,
+            photo: data.photo ?? null,
             batch: data.batch,
             rollNo: data.roll_reg_no,
             sslcPercentage: data.sslc_percentage,
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-      case "projects":   // ← new
+      case "projects":
         await prisma.project.deleteMany({ where: { studentId } });
         if (Array.isArray(data)) {
           await prisma.project.createMany({
@@ -306,7 +306,7 @@ export async function GET() {
         placements: true,
         workExperiences: true,
         publications: true,
-        projects: true,   // ← new
+        projects: true,
       },
     });
 
@@ -316,9 +316,6 @@ export async function GET() {
         { status: 404 }
       );
     }
-
-    console.log("🛠 [backend] fetched student.socialProfiles →", student.socialProfiles);
-    console.log("🛠 [backend] fetched student.projects →", student.projects);
 
     return NextResponse.json({ student });
   } catch (err) {

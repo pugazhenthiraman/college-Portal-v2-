@@ -172,7 +172,12 @@ export default function StudentMultiStepForm() {
       toast.error("Invalid step.");
       return;
     }
-    const payload = { section: key, data: data[key] };
+    // Ensure photo is sent as null if removed
+    let payloadData = data[key];
+    if (key === "general" && (payloadData.photo === undefined || payloadData.photo === "")) {
+      payloadData = { ...payloadData, photo: null };
+    }
+    const payload = { section: key, data: payloadData };
     try {
       const res = await fetch("/api/students/studetnsMultiSetForm", {
         method: "POST",
