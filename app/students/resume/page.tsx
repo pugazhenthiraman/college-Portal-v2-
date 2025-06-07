@@ -1,8 +1,11 @@
 'use client';
+
 import React, { useState, useEffect } from 'react';
 import * as html2pdf from 'html2pdf.js';
 import { Toaster, toast } from 'react-hot-toast';
 import ColorPalette from '../../../components/ColorPalette';
+import FontSelector from '../../../components/FontSelector';
+import SectionReorder from '../../../components/SectionReorder';
 import Template1 from '../../../components/ResumeTemplates/Template1';
 import Template2 from '../../../components/ResumeTemplates/Template2';
 import Template3 from '../../../components/ResumeTemplates/Template3';
@@ -11,46 +14,83 @@ import Template5 from '../../../components/ResumeTemplates/Template5';
 import Template6 from '../../../components/ResumeTemplates/Template6';
 
 const templates = [
-  { name: 'Modern', component: Template1 },
-  { name: 'Classic', component: Template2 },
-  { name: 'Creative', component: Template3 },
-  { name: 'ATS Model', component: Template4 },
-  { name: 'Student Spotlight', component: Template5 },
-  { name: 'Elegant Leaf', component: Template6 },
+  { name: 'Modern', component: Template1, color: '#2563eb' },
+  { name: 'Classic', component: Template2, color: '#059669' },
+  { name: 'Creative', component: Template3, color: '#f59e42' },
+  { name: 'ATS Model', component: Template4, color: '#a21caf' },
+  { name: 'Student Spotlight', component: Template5, color: '#e11d48' },
+  { name: 'Elegant Leaf', component: Template6, color: '#16a34a' },
 ];
 
-// Define unique color classes for each box
-const templateColors = [
-  'bg-blue-100',
-  'bg-green-100',
-  'bg-yellow-100',
-  'bg-purple-100',
-  'bg-pink-100',
-  'bg-indigo-100',
+const defaultSectionOrder = [
+  'general',
+  'ugDetails',
+  'internships',
+  'projects',
+  'skills',
+  'socialProfiles',
+  'publications',
+  'enhancementPrograms',
+  'workExperience',
+  'placements',
 ];
+
+const sectionLabels = {
+  general: 'General Info',
+  ugDetails: 'UG Details',
+  internships: 'Internships',
+  projects: 'Projects',
+  skills: 'Skills',
+  socialProfiles: 'Social Profiles',
+  publications: 'Publications',
+  enhancementPrograms: 'Enhancement Programs',
+  workExperience: 'Work Experience',
+  placements: 'Placements',
+};
 
 export default function ResumePage() {
   const [selectedTemplate, setSelectedTemplate] = useState(0);
-  const [headColor, setHeadColor] = useState('#2563eb');
-  const [studentData, setStudentData] = useState<any>(null);
+  const [headerBgColor, setHeaderBgColor] = useState('#FFFFFF');
+  const [headerTextColor, setHeaderTextColor] = useState('#333333');
+  const [headerTitleColor, setHeaderTitleColor] = useState('#15157f');
+  const [fontFamily, setFontFamily] = useState('sans-serif');
+  const [fontSize, setFontSize] = useState('14px');
+  const [lineHeight, setLineHeight] = useState('1.6');
+  const [sectionSpacing, setSectionSpacing] = useState('16px');
+  const [sectionOrder, setSectionOrder] = useState(defaultSectionOrder);
+  const [studentData, setStudentData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [customizeTab, setCustomizeTab] = useState('color');
 
   const TemplateComponent = templates[selectedTemplate].component;
 
   useEffect(() => {
-    const savedHead = localStorage.getItem('resumeHeadColor');
-    if (savedHead) setHeadColor(savedHead);
+    const savedHeaderBg = localStorage.getItem('resumeHeaderBgColor');
+    const savedHeaderText = localStorage.getItem('resumeHeaderTextColor');
+    const savedHeaderTitle = localStorage.getItem('resumeHeaderTitleColor');
+    const savedFont = localStorage.getItem('resumeFontFamily');
+    const savedTemplate = localStorage.getItem('selectedTemplate');
+    const savedFontSize = localStorage.getItem('resumeFontSize');
+    const savedLineHeight = localStorage.getItem('resumeLineHeight');
+    const savedSectionSpacing = localStorage.getItem('resumeSectionSpacing');
+    const savedSectionOrder = localStorage.getItem('resumeSectionOrder');
+
+    if (savedHeaderBg) setHeaderBgColor(savedHeaderBg);
+    if (savedHeaderText) setHeaderTextColor(savedHeaderText);
+    if (savedHeaderTitle) setHeaderTitleColor(savedHeaderTitle);
+    if (savedFont) setFontFamily(savedFont);
+    if (savedTemplate) setSelectedTemplate(Number(savedTemplate));
+    if (savedFontSize) setFontSize(savedFontSize);
+    if (savedLineHeight) setLineHeight(savedLineHeight);
+    if (savedSectionSpacing) setSectionSpacing(savedSectionSpacing);
+    if (savedSectionOrder) setSectionOrder(JSON.parse(savedSectionOrder));
 
     async function fetchStudent() {
       try {
-        // Use the new resume API endpoint for mapped data
         const res = await fetch('/api/students/resume');
         const json = await res.json();
-        if (res.ok) {
-          setStudentData(json);
-        } else {
-          console.error('Error fetching student:', json.error);
-        }
+        if (res.ok) setStudentData(json);
+        else console.error('Error fetching student:', json.error);
       } catch (err) {
         console.error('Failed to fetch student:', err);
       } finally {
@@ -72,14 +112,21 @@ export default function ResumePage() {
       .from(resumeElement)
       .set({ margin: 0.5, filename: 'resume.pdf', html2canvas: { scale: 2 } })
       .save()
-      .then(() => toast.success('📥 PDF downloaded!'))
+      .then(() => toast.success('📅 PDF downloaded!'))
       .catch(() => toast.error('❌ Failed to generate PDF.'));
   };
 
   const handleSaveSettings = () => {
-    localStorage.setItem('resumeHeadColor', headColor);
+    localStorage.setItem('resumeHeaderBgColor', headerBgColor);
+    localStorage.setItem('resumeHeaderTextColor', headerTextColor);
+    localStorage.setItem('resumeHeaderTitleColor', headerTitleColor);
+    localStorage.setItem('resumeFontFamily', fontFamily);
     localStorage.setItem('selectedTemplate', selectedTemplate.toString());
-    toast.success('💾 Settings saved!');
+    localStorage.setItem('resumeFontSize', fontSize);
+    localStorage.setItem('resumeLineHeight', lineHeight);
+    localStorage.setItem('resumeSectionSpacing', sectionSpacing);
+    localStorage.setItem('resumeSectionOrder', JSON.stringify(sectionOrder));
+    toast.success('📂 Settings saved!');
   };
 
   const handleShareLink = () => {
@@ -88,41 +135,38 @@ export default function ResumePage() {
     toast.success('🔗 Share link copied to clipboard!');
   };
 
-  if (loading) {
-    return <div className="text-center py-10">Loading resume data...</div>;
-  }
-
-  if (!studentData) {
-    return (
-      <div className="text-center py-10 text-red-600">
-        Failed to load student data.
-      </div>
-    );
-  }
+  if (loading) return <div className="text-center py-10">Loading resume data...</div>;
+  if (!studentData) return <div className="text-center py-10 text-red-600">Failed to load student data.</div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-10 px-4 font-sans">
-      {/* Toaster for notifications */}
       <Toaster position="bottom-right" reverseOrder={false} />
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
-        {/* Main Content */}
-        <div>
+      <style>{`
+        #resume-preview section {
+          margin-bottom: ${sectionSpacing};
+        }
+      `}</style>
+
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-10">
+        {/* Resume Preview Area (scrollable) */}
+        <div className="overflow-y-auto max-h-[calc(100vh-80px)] pr-2">
           <h1 className="text-3xl font-bold mb-4 text-center">Resume Builder</h1>
           <h2 className="text-center mb-6 text-gray-600">
             Currently Selected: <span className="font-semibold">{templates[selectedTemplate].name}</span>
           </h2>
 
-          {/* Template Selector with unique colors */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4 mb-8">
             {templates.map((tpl, idx) => (
               <button
                 key={tpl.name}
-                className={`border px-4 py-3 rounded-lg font-medium text-center transition transform hover:scale-105 ${
-                  selectedTemplate === idx
-                    ? 'bg-blue-600 text-white'
-                    : `${templateColors[idx % templateColors.length]} hover:brightness-95`
-                }`}
+                className={`border px-4 py-3 rounded-lg font-medium text-center transition transform hover:scale-105`}
+                style={{
+                  backgroundColor: selectedTemplate === idx ? tpl.color : '#fff',
+                  color: selectedTemplate === idx ? '#fff' : tpl.color,
+                  borderColor: tpl.color,
+                  boxShadow: selectedTemplate === idx ? `0 2px 8px 0 ${tpl.color}33` : 'none',
+                }}
                 onClick={() => setSelectedTemplate(idx)}
               >
                 {tpl.name}
@@ -130,44 +174,118 @@ export default function ResumePage() {
             ))}
           </div>
 
-          {/* Resume Preview Area */}
           <div
             id="resume-preview"
-            className="border rounded-xl bg-white shadow-lg p-6 transition-opacity duration-300 ease-in-out"
+            className="border rounded-xl shadow-lg p-6 transition-opacity duration-300 ease-in-out"
+            style={{ fontFamily, fontSize, lineHeight, backgroundColor: '#ffffff', color: '#000000' }}
           >
-            <TemplateComponent color={headColor} student={studentData} />
+            <TemplateComponent
+              student={studentData}
+              sectionOrder={sectionOrder}
+              headerBgColor={headerBgColor}
+              headerTextColor={headerTextColor}
+              headerTitleColor={headerTitleColor}
+              fontFamily={fontFamily}
+            />
           </div>
         </div>
 
-        {/* Right Panel */}
-        <div className="sticky top-10 space-y-6">
-          <details open className="bg-white p-4 rounded-xl shadow space-y-4">
-            <summary className="cursor-pointer font-semibold text-center">
-              🎨 Customize Colors
-            </summary>
-            <div className="mt-2">
-              <label className="block text-sm font-medium mb-1 text-center">
-                Head Color
-              </label>
-              <ColorPalette color={headColor} setColor={setHeadColor} size="sm" />
+        {/* Customization Panel (sticky/static) */}
+        <div className="hidden lg:block">
+          <div className="sticky top-10">
+            <div className="bg-white p-4 rounded-xl shadow space-y-4">
+              <h3 className="text-lg font-semibold text-center">🛠 Customize</h3>
+              <div className="flex justify-center gap-2 flex-wrap">
+                <button onClick={() => setCustomizeTab('color')} className={`px-3 py-1 rounded text-sm font-medium ${customizeTab === 'color' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>🎨 Color</button>
+                <button onClick={() => setCustomizeTab('font')} className={`px-3 py-1 rounded text-sm font-medium ${customizeTab === 'font' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>🅰️ Font</button>
+                <button onClick={() => setCustomizeTab('spacing')} className={`px-3 py-1 rounded text-sm font-medium ${customizeTab === 'spacing' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>📏 Spacing</button>
+                <button onClick={() => setCustomizeTab('order')} className={`px-3 py-1 rounded text-sm font-medium ${customizeTab === 'order' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>📋 Section Order</button>
+              </div>
+
+              {customizeTab === 'color' && (
+                <div>
+                  <ColorPalette
+                    currentHeaderBgColor={headerBgColor}
+                    currentHeaderTextColor={headerTextColor}
+                    currentHeaderTitleColor={headerTitleColor}
+                    setHeaderBgColor={setHeaderBgColor}
+                    setHeaderTextColor={setHeaderTextColor}
+                    setHeaderTitleColor={setHeaderTitleColor}
+                  />
+                </div>
+              )}
+
+              {customizeTab === 'font' && (
+                <FontSelector font={fontFamily} setFont={setFontFamily} />
+              )}
+
+              {customizeTab === 'spacing' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-center">Font Size</label>
+                    <input
+                      type="range"
+                      min="12"
+                      max="20"
+                      value={parseInt(fontSize)}
+                      onChange={(e) => setFontSize(`${e.target.value}px`)}
+                      className="w-full"
+                    />
+                    <div className="text-center text-xs mt-1">{fontSize}</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-center">Line Height</label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="2"
+                      step="0.1"
+                      value={parseFloat(lineHeight)}
+                      onChange={(e) => setLineHeight(e.target.value)}
+                      className="w-full"
+                    />
+                    <div className="text-center text-xs mt-1">{lineHeight}</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-center">Section Spacing</label>
+                    <input
+                      type="range"
+                      min="8"
+                      max="40"
+                      value={parseInt(sectionSpacing)}
+                      onChange={(e) => setSectionSpacing(`${e.target.value}px`)}
+                      className="w-full"
+                    />
+                    <div className="text-center text-xs mt-1">{sectionSpacing}</div>
+                  </div>
+                </>
+              )}
+
+              {customizeTab === 'order' && (
+                <SectionReorder
+                  sectionOrder={sectionOrder}
+                  setSectionOrder={setSectionOrder}
+                  sectionLabels={sectionLabels}
+                  locked={false}
+                />
+              )}
             </div>
-          </details>
+          </div>
         </div>
       </div>
 
-      {/* Floating Action Buttons */}
       <div className="fixed bottom-8 right-8 flex flex-col space-y-3">
         <button
           className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition"
           onClick={handleDownloadPDF}
         >
-          📥 Download PDF
+          📅 Download PDF
         </button>
         <button
           className="bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-green-700 transition"
           onClick={handleSaveSettings}
         >
-          💾 Save Settings
+          📂 Save Settings
         </button>
         <button
           className="bg-purple-600 text-white p-3 rounded-full shadow-lg hover:bg-purple-700 transition"

@@ -293,22 +293,24 @@ export async function GET() {
 
   try {
     const userId = Number(session.user.id);
-    const student = await prisma.student.findUnique({
-      where: { userId },
-      include: {
-        college: true,
-        department: true,
-        ugDetails: true,
-        technicalSkills: true,
-        internships: true,
-        events: true,
-        socialProfiles: true,
-        placements: true,
-        workExperiences: true,
-        publications: true,
-        projects: true,
-      },
-    });
+   const student = await prisma.student.findUnique({
+  where: { userId },
+  include: {
+    college: true,
+    department: true,
+    ugDetails: true,
+    technicalSkills: true,       // ✅ correct key
+    internships: true,
+    events: true,                // ✅ correct key (not enhancementPrograms)
+    socialProfiles: true,
+    placements: true,
+    workExperiences: true,
+    publications: true,
+    projects: true,
+  },
+});
+
+    
 
     if (!student) {
       return NextResponse.json(

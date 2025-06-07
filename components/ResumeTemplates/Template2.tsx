@@ -2,11 +2,15 @@ import React from 'react';
 import Image from 'next/image';
 
 export default function Template2({
-  color,
   student,
+  headerBgColor,
+  headerTextColor,
+  fontFamily
 }: {
-  color: string;
   student: any;
+  headerBgColor: string;
+  headerTextColor: string;
+  fontFamily: string;
 }) {
   if (!student) return <div>No student data available.</div>;
 
@@ -20,18 +24,18 @@ export default function Template2({
   const publications = student.publications || [];
   const events = student.events || [];
   const placements = student.placements || [];
+  const languages: string[] = student.languages ? student.languages.split(',') : ['English'];
 
-  // Helper to get the correct photo URL or fallback
   const getPhotoUrl = (photo: string | undefined) => {
-    if (!photo || photo.trim() === "") return "/default-profile.png";
-    if (photo.startsWith("http") || photo.startsWith("/uploads/")) return photo;
+    if (!photo || photo.trim() === '') return '/default-profile.png';
+    if (photo.startsWith('http') || photo.startsWith('/uploads/')) return photo;
     return `/uploads/${photo}`;
   };
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow overflow-hidden" style={{ fontFamily }}>
       {/* Header */}
-      <div className="bg-opacity-10 p-6" style={{ backgroundColor: color }}>
+      <div className="p-6" style={{ backgroundColor: headerBgColor, color: headerTextColor }}>
         <div className="flex flex-col items-center text-center space-y-2">
           <Image
             src={getPhotoUrl(general.photo)}
@@ -40,11 +44,11 @@ export default function Template2({
             height={96}
             className="rounded-full object-cover border-4 border-white shadow"
           />
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-2xl font-bold">
             {general.candidate_first_name} {general.candidate_last_name}
           </h2>
-          <p className="text-gray-700">{general.current_degree || 'Student'}</p>
-          <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-600 justify-center">
+          <p>{general.current_degree || 'Student'}</p>
+          <div className="flex flex-wrap gap-4 mt-2 text-sm justify-center">
             <span>📞 {general.phoneNo || 'N/A'}</span>
             <span>✉️ {general.email || 'N/A'}</span>
             <span>🏠 {general.address || 'N/A'}</span>
@@ -58,17 +62,15 @@ export default function Template2({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
         {/* Left Column */}
         <div className="space-y-6">
-          {/* Summary */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Summary</h3>
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Summary</h3>
             <p className="text-gray-700">
               {general.summary || 'Motivated and enthusiastic student eager to contribute to projects and teams.'}
             </p>
-          </div>
+          </section>
 
-          {/* Education */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Education</h3>
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Education</h3>
             <ul className="text-sm text-gray-700">
               {ugDetails.overallCGPA ? (
                 <>
@@ -76,32 +78,51 @@ export default function Template2({
                   <li><span className="font-medium">Percentage:</span> {ugDetails.overallPercentage}%</li>
                   <li><span className="font-medium">Semester:</span> {ugDetails.semesterNo}</li>
                   <li><span className="font-medium">PG:</span> {ugDetails.isPG ? 'Yes' : 'No'}</li>
+                  {ugDetails.isPG && (
+                    <>
+                      <li><span className="font-medium">PG CGPA:</span> {ugDetails.pgOverallCGPA}</li>
+                      <li><span className="font-medium">PG Percentage:</span> {ugDetails.pgOverallPercentage}%</li>
+                    </>
+                  )}
                 </>
               ) : (
                 <li>UG details not available</li>
               )}
             </ul>
-          </div>
+          </section>
 
-          {/* Skills */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Skills</h3>
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Skills</h3>
             <div className="flex flex-wrap gap-2">
               {technicalSkills.length > 0 ? (
                 technicalSkills.map((skill: any, idx: number) => (
-                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs">
-                    {skill.courseName} ({skill.level})
+                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs flex items-center gap-1">
+                    {skill.courseName} {skill.level && `(${skill.level})`}
+                    {skill.certificateName && (
+                      <span className="ml-1 text-blue-600 cursor-pointer group relative">
+                        <span className="underline">{skill.certificateName}</span>
+                        {skill.certificateLink && (
+                          <a
+                            href={skill.certificateLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                          >
+                            {skill.certificateLink}
+                          </a>
+                        )}
+                      </span>
+                    )}
                   </span>
                 ))
               ) : (
                 <span className="text-xs text-gray-500">No skills listed</span>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* Social Profiles */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Social Profiles</h3>
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Social Profiles</h3>
             <ul className="text-sm text-gray-700 break-all">
               {Object.entries(socialProfiles).length > 0 ? (
                 Object.entries(socialProfiles).map(([key, value]) =>
@@ -118,86 +139,21 @@ export default function Template2({
                 <li>No social profiles</li>
               )}
             </ul>
-          </div>
-        </div>
+          </section>
 
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Work Experience */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Work Experience</h3>
-            {workExperiences.length > 0 ? (
-              workExperiences.map((exp: any, idx: number) => (
-                <div key={idx} className="mb-2">
-                  <div className="flex justify-between">
-                    <span className="font-semibold">{exp.employer}</span>
-                    <span className="text-sm text-gray-500">{exp.startDate?.slice(0, 10)} - {exp.endDate?.slice(0, 10) || 'Present'}</span>
-                  </div>
-                  <p className="text-gray-700 text-sm">{exp.role}</p>
-                  <p className="text-xs text-gray-500">{exp.responsibilities}</p>
-                  <p className="text-xs text-gray-500">CTC: {exp.ctc}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500">No work experience listed.</p>
-            )}
-          </div>
-
-          {/* Internships */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Internships</h3>
-            {internships.length > 0 ? (
-              internships.map((intern: any, idx: number) => (
-                <div key={idx} className="mb-2">
-                  <span className="font-semibold">{intern.company}</span> — {intern.role}
-                  <p className="text-xs text-gray-500">{intern.startDate?.slice(0, 10)} - {intern.endDate?.slice(0, 10)}</p>
-                  <p className="text-xs text-gray-500">{intern.location}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500">No internships listed.</p>
-            )}
-          </div>
-
-          {/* Projects */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Projects</h3>
-            {projects.length > 0 ? (
-              projects.map((proj: any, idx: number) => (
-                <div key={idx} className="mb-2">
-                  <span className="font-semibold">{proj.title}</span>
-                  <p className="text-xs text-gray-500">{proj.description}</p>
-                  {proj.link && <a href={proj.link} target="_blank" className="text-blue-600 text-xs break-all">{proj.link}</a>}
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500">No projects listed.</p>
-            )}
-          </div>
-
-          {/* Publications */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Publications</h3>
-            {publications.length > 0 ? (
-              publications.map((pub: any, idx: number) => (
-                <div key={idx} className="mb-2">
-                  <span className="font-semibold">{pub.title}</span>
-                  <p className="text-xs text-gray-500">{pub.abstract}</p>
-                  <p className="text-xs text-gray-500">{pub.publisher}</p>
-                  {pub.link && <a href={pub.link} target="_blank" className="text-blue-600 text-xs break-all">{pub.link}</a>}
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500">No publications listed.</p>
-            )}
-          </div>
-
-          {/* Enhancement Programs */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Enhancement Programs</h3>
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Languages</h3>
+            <ul className="text-sm text-gray-700">
+              {languages.map((lang, idx) => (
+                <li key={idx}>{lang}</li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Enhancement Programs</h3>
             {events.length > 0 ? (
               events.map((event: any, idx: number) => (
-                <div key={idx} className="mb-2">
+                <div key={idx}>
                   <span className="font-semibold">{event.name}</span>
                   <p className="text-xs text-gray-500">{event.details}</p>
                   <p className="text-xs text-gray-500">{event.location}</p>
@@ -207,14 +163,124 @@ export default function Template2({
             ) : (
               <p className="text-sm text-gray-500">No enhancement programs listed.</p>
             )}
-          </div>
+          </section>
+        </div>
 
-          {/* Placements */}
-          <div>
-            <h3 className="text-lg font-semibold mb-1" style={{ color }}>Placements</h3>
+        {/* Right Column */}
+        <div className="space-y-6">
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Work Experience</h3>
+            {workExperiences.length > 0 ? (
+              workExperiences.map((exp: any, idx: number) => (
+                <div key={idx}>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{exp.employer}</span>
+                    <span className="text-sm text-gray-500">
+                      {exp.startDate?.slice(0, 10)} - {exp.endDate?.slice(0, 10) || 'Present'}
+                    </span>
+                  </div>
+                  <p className="text-gray-700 text-sm">{exp.role}</p>
+                  <p className="text-xs text-gray-500">{exp.responsibilities}</p>
+                  <p className="text-xs text-gray-500">CTC: {exp.ctc}</p>
+                  {exp.certificateName && (
+                    <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                      <span className="underline">{exp.certificateName}</span>
+                      {exp.certificateLink && (
+                        <a
+                          href={exp.certificateLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                        >
+                          {exp.certificateLink}
+                        </a>
+                      )}
+                    </span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No work experience listed.</p>
+            )}
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Internships</h3>
+            {internships.length > 0 ? (
+              internships.map((intern: any, idx: number) => (
+                <div key={idx}>
+                  <span className="font-semibold">{intern.company}</span> — {intern.role}
+                  <p className="text-xs text-gray-500">{intern.startDate?.slice(0, 10)} - {intern.endDate?.slice(0, 10)}</p>
+                  <p className="text-xs text-gray-500">{intern.location}</p>
+                  <p className="text-xs text-gray-500">{intern.responsibilities}</p>
+                  {intern.certificateName && (
+                    <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                      <span className="underline">{intern.certificateName}</span>
+                      {intern.certificateLink && (
+                        <a
+                          href={intern.certificateLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                        >
+                          {intern.certificateLink}
+                        </a>
+                      )}
+                    </span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No internships listed.</p>
+            )}
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Projects</h3>
+            {projects.length > 0 ? (
+              projects.map((proj: any, idx: number) => (
+                <div key={idx}>
+                  <span className="font-semibold">{proj.title}</span>
+                  <p className="text-xs text-gray-500">{proj.description}</p>
+                  {proj.link && (
+                    <a href={proj.link} target="_blank" className="text-blue-600 text-xs break-all">
+                      {proj.link}
+                    </a>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No projects listed.</p>
+            )}
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Publications</h3>
+            {publications.length > 0 ? (
+              publications.map((pub: any, idx: number) => (
+                <div key={idx}>
+                  <span className="font-semibold">{pub.title}</span>
+                  <p className="text-xs text-gray-500">{pub.abstract}</p>
+                  <p className="text-xs text-gray-500">{pub.publisher}</p>
+                  {pub.link && (
+                    <a href={pub.link} target="_blank" className="text-blue-600 text-xs break-all">
+                      {pub.link}
+                    </a>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No publications listed.</p>
+            )}
+          </section>
+
+
+
+          <section>
+            <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Placements</h3>
             {placements.length > 0 ? (
               placements.map((placement: any, idx: number) => (
-                <div key={idx} className="mb-2">
+                <div key={idx}>
                   <span className="font-semibold">{placement.employer}</span>
                   <p className="text-xs text-gray-500">{placement.designation}</p>
                   <p className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</p>
@@ -224,7 +290,7 @@ export default function Template2({
             ) : (
               <p className="text-sm text-gray-500">No placements listed.</p>
             )}
-          </div>
+          </section>
         </div>
       </div>
     </div>

@@ -10,29 +10,38 @@ const SOCIAL_LABELS: Record<string, string> = {
 };
 
 export default function Template1({
-  color,
   student,
+  headerBgColor,
+  headerTextColor,
+  fontFamily,
 }: {
-  color: string;
   student: any;
+  headerBgColor: string;
+  headerTextColor: string;
+  fontFamily: string;
+  sectionOrder?: string[];
 }) {
   if (!student) return <div>No student data available.</div>;
 
   const social = student.socialProfiles || {};
   const general = student.general || {};
 
-  // Helper to resolve image path or fallback
   const getPhotoUrl = (photo: string | undefined) => {
-    if (!photo || photo.trim() === "") return "/default-profile.png";
-    if (photo.startsWith("http") || photo.startsWith("/uploads/")) return photo;
+    if (!photo || photo.trim() === '') return '/default-profile.png';
+    if (photo.startsWith('http') || photo.startsWith('/uploads/')) return photo;
     return `/uploads/${photo}`;
   };
 
   return (
-    <div className="flex flex-col md:flex-row bg-white rounded-lg shadow overflow-hidden">
+    <div
+      className="flex flex-col md:flex-row bg-white rounded-lg shadow overflow-hidden"
+      style={{ fontFamily }}
+    >
       {/* Sidebar */}
-      <div className="md:w-1/3 bg-gray-100 p-6 space-y-4">
-        {/* Student Photo */}
+      <div
+        className="md:w-1/3 p-6 space-y-4"
+        style={{ backgroundColor: headerBgColor, color: headerTextColor }}
+      >
         <div className="flex justify-center mb-4">
           <img
             src={getPhotoUrl(general.photo)}
@@ -45,37 +54,39 @@ export default function Template1({
           />
         </div>
 
-        <h2 className="text-xl font-bold text-center" style={{ color }}>
+        <h2 className="text-xl font-bold text-center">
           {general.candidate_first_name} {general.candidate_last_name}
         </h2>
-        <p className="text-gray-600 text-center">{general.current_degree}</p>
-        <p className="text-sm text-gray-500 text-center">{general.email}</p>
-        <p className="text-sm text-gray-500 text-center">{general.phoneNo}</p>
-        <p className="text-sm text-gray-500 text-center">{general.roll_reg_no}</p>
-        <p className="text-sm text-gray-500 text-center">{general.batch}</p>
-        <p className="text-sm text-gray-500 text-center">{general.address}</p>
+        <p className="text-sm text-center">{general.current_degree}</p>
+        <p className="text-sm text-center">{general.email}</p>
+        <p className="text-sm text-center">{general.phoneNo}</p>
+        <p className="text-sm text-center">{general.roll_reg_no}</p>
+        <p className="text-sm text-center">{general.batch}</p>
+        <p className="text-sm text-center">{general.address}</p>
 
-        {/* Skills */}
         <div>
-          <h3 className="font-semibold mb-1" style={{ color }}>
-            Skills
-          </h3>
+          <h3 className="font-semibold mb-1">Skills</h3>
           <ul className="flex flex-wrap gap-2 text-sm">
             {student.technicalSkills?.length > 0 ? (
               student.technicalSkills.map((skill: any, idx: number) => (
-                <li
-                  key={idx}
-                  className="bg-white border px-2 py-1 rounded"
-                >
+                <li key={idx} className="bg-white border px-2 py-1 rounded text-black flex items-center gap-1">
                   {skill.courseName}{' '}
                   {skill.level && (
-                    <span className="text-xs text-gray-400">
-                      ({skill.level})
-                    </span>
+                    <span className="text-xs text-gray-400">({skill.level})</span>
                   )}
                   {skill.certificateName && (
-                    <span className="ml-1 text-xs text-blue-600">
-                      [{skill.certificateName}]
+                    <span className="ml-1 text-xs text-blue-600 cursor-pointer group relative">
+                      <span className="underline">{skill.certificateName}</span>
+                      {skill.certificateLink && (
+                        <a
+                          href={skill.certificateLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                        >
+                          {skill.certificateLink}
+                        </a>
+                      )}
                     </span>
                   )}
                 </li>
@@ -86,11 +97,8 @@ export default function Template1({
           </ul>
         </div>
 
-        {/* Social Profiles */}
         <div>
-          <h3 className="font-semibold mb-1" style={{ color }}>
-            Social Profiles
-          </h3>
+          <h3 className="font-semibold mb-1">Social Profiles</h3>
           <div className="max-h-32 overflow-y-auto text-sm space-y-1 pr-2">
             {Object.entries(SOCIAL_LABELS).map(([key, label]) =>
               social[key] ? (
@@ -110,11 +118,8 @@ export default function Template1({
           </div>
         </div>
 
-        {/* Education */}
         <div>
-          <h3 className="font-semibold mb-1" style={{ color }}>
-            Education
-          </h3>
+          <h3 className="font-semibold mb-1">Education</h3>
           {student.ugDetails ? (
             <div className="text-sm">
               <div>CGPA: {student.ugDetails.overallCGPA}</div>
@@ -136,153 +141,133 @@ export default function Template1({
 
       {/* Main Content */}
       <div className="md:w-2/3 p-6 space-y-6">
-        {/* Summary */}
-        <div>
-          <h3 className="text-lg font-bold mb-1" style={{ color }}>
+        <section>
+          <h3 className="text-lg font-bold mb-1" style={{ color: headerBgColor }}>
             Summary
           </h3>
           <p className="text-gray-700">
-            {general.summary ||
-              'Motivated student passionate about growth and contribution.'}
+            {general.summary || 'Motivated student passionate about growth and contribution.'}
           </p>
-        </div>
+        </section>
 
-        {/* Internships */}
         {student.internships?.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold mb-1" style={{ color }}>
-              Internships
-            </h3>
+          <section>
+            <h3 className="text-lg font-bold mb-1" style={{ color: headerBgColor }}>Internships</h3>
             {student.internships.map((intern: any, idx: number) => (
-              <div key={idx} className="mb-2">
+              <div key={idx}>
                 <p className="font-semibold">{intern.company}</p>
                 <p className="text-sm text-gray-700">{intern.role}</p>
-                <p className="text-xs text-gray-500">
-                  {intern.startDate} - {intern.endDate}
-                </p>
+                <p className="text-xs text-gray-500">{intern.startDate} - {intern.endDate}</p>
                 <p className="text-xs text-gray-500">{intern.location}</p>
-                <p className="text-xs text-gray-500">
-                  {intern.responsibilities}
-                </p>
+                <p className="text-xs text-gray-500">{intern.responsibilities}</p>
                 {intern.certificateName && (
-                  <p className="text-xs text-blue-600">
-                    Certificate: {intern.certificateName}
-                  </p>
+                  <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                    <span className="underline">{intern.certificateName}</span>
+                    {intern.certificateLink && (
+                      <a
+                        href={intern.certificateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                      >
+                        {intern.certificateLink}
+                      </a>
+                    )}
+                  </span>
                 )}
               </div>
             ))}
-          </div>
+          </section>
         )}
 
-        {/* Projects */}
         {student.projects?.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold mb-1" style={{ color }}>
-              Projects
-            </h3>
+          <section>
+            <h3 className="text-lg font-bold mb-1" style={{ color: headerBgColor }}>Projects</h3>
             {student.projects.map((proj: any, idx: number) => (
-              <div key={idx} className="mb-2">
+              <div key={idx}>
                 <p className="font-semibold">{proj.title}</p>
                 <p className="text-sm text-gray-700">{proj.description}</p>
                 {proj.link && (
-                  <a
-                    href={proj.link}
-                    className="text-xs text-blue-600 underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {proj.link}
-                  </a>
+                  <a href={proj.link} className="text-xs text-blue-600 underline" target="_blank" rel="noopener noreferrer">{proj.link}</a>
                 )}
               </div>
             ))}
-          </div>
+          </section>
         )}
 
-        {/* Work Experience */}
         {student.workExperience?.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold mb-1" style={{ color }}>
-              Work Experience
-            </h3>
+          <section>
+            <h3 className="text-lg font-bold mb-1" style={{ color: headerBgColor }}>Work Experience</h3>
             {student.workExperience.map((work: any, idx: number) => (
-              <div key={idx} className="mb-2">
+              <div key={idx}>
                 <p className="font-semibold">{work.employer}</p>
                 <p className="text-sm text-gray-700">{work.role}</p>
-                <p className="text-xs text-gray-500">
-                  {work.startDate} - {work.endDate}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {work.responsibilities}
-                </p>
+                <p className="text-xs text-gray-500">{work.startDate} - {work.endDate}</p>
+                <p className="text-xs text-gray-500">{work.responsibilities}</p>
                 <p className="text-xs text-gray-500">CTC: {work.ctc}</p>
+                {work.certificateName && (
+                  <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                    <span className="underline">{work.certificateName}</span>
+                    {work.certificateLink && (
+                      <a
+                        href={work.certificateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                      >
+                        {work.certificateLink}
+                      </a>
+                    )}
+                  </span>
+                )}
               </div>
             ))}
-          </div>
+          </section>
         )}
 
-        {/* Publications */}
+
         {student.publications?.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold mb-1" style={{ color }}>
-              Publications
-            </h3>
+          <section>
+            <h3 className="text-lg font-bold mb-1" style={{ color: headerBgColor }}>Publications</h3>
             {student.publications.map((pub: any, idx: number) => (
-              <div key={idx} className="mb-2">
+              <div key={idx}>
                 <p className="font-semibold">{pub.title}</p>
                 <p className="text-sm text-gray-700">{pub.abstract}</p>
                 <p className="text-xs text-gray-500">{pub.publisher}</p>
                 {pub.link && (
-                  <a
-                    href={pub.link}
-                    className="text-xs text-blue-600 underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {pub.link}
-                  </a>
+                  <a href={pub.link} className="text-xs text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pub.link}</a>
                 )}
               </div>
             ))}
-          </div>
+          </section>
         )}
 
-        {/* Enhancement Programs */}
         {student.events?.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold mb-1" style={{ color }}>
-              Enhancement Programs
-            </h3>
+          <section>
+            <h3 className="text-lg font-bold mb-1" style={{ color: headerBgColor }}>Enhancement Programs</h3>
             {student.events.map((event: any, idx: number) => (
-              <div key={idx} className="mb-2">
+              <div key={idx}>
                 <p className="font-semibold">{event.name}</p>
                 <p className="text-sm text-gray-700">{event.details}</p>
                 <p className="text-xs text-gray-500">{event.location}</p>
                 <p className="text-xs text-gray-500">{event.contribution}</p>
               </div>
             ))}
-          </div>
+          </section>
         )}
 
-        {/* Placements */}
         {student.placements?.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold mb-1" style={{ color }}>
-              Placements
-            </h3>
+          <section>
+            <h3 className="text-lg font-bold mb-1" style={{ color: headerBgColor }}>Placements</h3>
             {student.placements.map((placement: any, idx: number) => (
-              <div key={idx} className="mb-2">
+              <div key={idx}>
                 <p className="font-semibold">{placement.employer}</p>
                 <p className="text-sm text-gray-700">{placement.designation}</p>
-                <p className="text-xs text-gray-500">
-                  {placement.onCampus ? 'On Campus' : 'Off Campus'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  CTC: {placement.ctc}
-                </p>
+                <p className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</p>
+                <p className="text-xs text-gray-500">CTC: {placement.ctc}</p>
               </div>
             ))}
-          </div>
+          </section>
         )}
       </div>
     </div>

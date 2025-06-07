@@ -80,7 +80,7 @@ export default function Generalinfo({
       toast.error("Please fill in all required fields.");
       return;
     }
-    onNext && onNext();
+    if (onNext) onNext();
   };
 
   // Handle photo upload using /api/upload
@@ -114,7 +114,7 @@ export default function Generalinfo({
         body: JSON.stringify({ path: merged.photo }),
       });
     }
-    update("photo", null);
+    update("photo", undefined);
     if (onSaveDraft) onSaveDraft(); // Save immediately after removal
   };
 

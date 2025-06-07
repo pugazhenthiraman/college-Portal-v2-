@@ -1,15 +1,22 @@
 "use client";
 
-import React from "react";
-import { ArrowPathIcon, ArrowDownTrayIcon, EyeIcon } from "@heroicons/react/24/outline";
+import React, { useState } from "react";
+import { ArrowPathIcon, ArrowDownTrayIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 
-interface ReviewFormProps {
-  data: Record<string, any>;
-  labels: string[];
-  onEdit: (sectionIndex: number) => void;
-  onSaveDraft: () => void;
-  onSubmit: () => void;
-}
+// Section order and their corresponding data keys
+const SECTION_ORDER: { label: string; key: string }[] = [
+  { label: "General Info", key: "general" },
+  { label: "UG Details", key: "ugDetails" },
+  { label: "Internships", key: "internships" },
+  { label: "Projects", key: "projects" },
+  { label: "Skills", key: "technicalSkills" },          // ✅ fixed
+  { label: "Social", key: "socialProfiles" },
+  { label: "Publications", key: "publications" },
+  { label: "Enhancement Program", key: "events" },     // ✅ fixed
+  { label: "Work Experience", key: "workExperiences" },
+  { label: "Placements", key: "placements" },
+];
+
 
 // Fields to hide in review
 const HIDDEN_FIELDS = [
@@ -21,15 +28,26 @@ const HIDDEN_FIELDS = [
   "deletedAt",
 ];
 
-// Fields that are files (show as link or button)
+// File fields
 const FILE_FIELDS = [
   "photo",
   "certificateFile",
   "certificateName",
   "semesterMarksheet",
   "pgSemesterMarksheet",
+  "certificate",
+  "certificateName",
 ];
 
+// File fields that should show only file name (not as a link)
+const FILE_NAME_ONLY_FIELDS = [
+  "certificateFile",
+  "semesterMarksheet",
+  "pgSemesterMarksheet",
+  "certificate",
+];
+
+// Helper to get file name from path or URL
 function getFileName(value: string) {
   if (!value) return "";
   try {
@@ -38,6 +56,26 @@ function getFileName(value: string) {
   } catch {
     return value.split("/").pop() || value;
   }
+}
+
+// Certificate file name folding component
+function FoldableFileName({ fileName }: { fileName: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (fileName.length <= 24) return <span className="text-gray-500">{fileName}</span>;
+  return (
+    <span
+      className="text-gray-500 cursor-pointer select-none inline-flex items-center"
+      title={fileName}
+      onClick={() => setExpanded(e => !e)}
+    >
+      {expanded ? fileName : fileName.slice(0, 12) + "..." + fileName.slice(-8)}
+      {expanded ? (
+        <ChevronUpIcon className="h-4 w-4 ml-1 inline" />
+      ) : (
+        <ChevronDownIcon className="h-4 w-4 ml-1 inline" />
+      )}
+    </span>
+  );
 }
 
 function renderField(k: string, v: any, item?: any) {
@@ -66,21 +104,24 @@ function renderField(k: string, v: any, item?: any) {
     );
   }
 
-  // For certificates in skills: show name and view link
-  if (k === "certificateName" && item?.certificateFile) {
+  // For certificates in skills/internships: show name and folded file name
+  if ((k === "certificateName" || k === "certificate") && item?.certificateName) {
+    const fileName = getFileName(item.certificateName);
     return (
       <div key={k} className="flex items-center gap-2">
         <span className="font-medium text-gray-600">{k}</span>
-        <span className="text-gray-900">{v}</span>
-        <a
-          href={item.certificateFile}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
-        >
-          <EyeIcon className="h-4 w-4 mr-1" />
-          View
-        </a>
+        <FoldableFileName fileName={fileName} />
+      </div>
+    );
+  }
+
+  // For file fields that should show only file name (folded)
+  if (FILE_NAME_ONLY_FIELDS.includes(k) && v) {
+    const fileName = getFileName(v);
+    return (
+      <div key={k} className="flex items-center gap-2">
+        <span className="font-medium text-gray-600">{k}</span>
+        <FoldableFileName fileName={fileName} />
       </div>
     );
   }
@@ -91,7 +132,7 @@ function renderField(k: string, v: any, item?: any) {
     return (
       <div key={k} className="flex items-center gap-2">
         <span className="font-medium text-gray-600">{k}</span>
-        <span className="text-gray-900">{fileName}</span>
+        <FoldableFileName fileName={fileName} />
         <a
           href={v}
           target="_blank"
@@ -114,12 +155,19 @@ function renderField(k: string, v: any, item?: any) {
   );
 }
 
-function renderSectionContent(sectionData: any) {
-  if (!sectionData) return <span className="text-gray-400">No data</span>;
+function renderSectionContent(sectionKey: string, sectionData: any) {
+  // LOG for each section
+  console.log(`Section "${sectionKey}" data:`, sectionData);
+
+  if (!sectionData) {
+    return <span className="text-gray-400">No data</span>;
+  }
 
   // Array of objects (e.g., experiences, skills, etc.)
   if (Array.isArray(sectionData)) {
-    if (sectionData.length === 0) return <span className="text-gray-400">No entries</span>;
+    if (sectionData.length === 0) {
+      return <span className="text-gray-400">No entries</span>;
+    }
     return (
       <div className="space-y-2">
         {sectionData.map((item, idx) => (
@@ -162,6 +210,14 @@ function renderSectionContent(sectionData: any) {
   return <span>{String(sectionData)}</span>;
 }
 
+interface ReviewFormProps {
+  data: Record<string, any>;
+  labels: string[];
+  onEdit: (sectionIndex: number) => void;
+  onSaveDraft: () => void;
+  onSubmit: () => void;
+}
+
 export default function ReviewForm({
   data,
   labels = [],
@@ -169,7 +225,9 @@ export default function ReviewForm({
   onSaveDraft,
   onSubmit,
 }: ReviewFormProps) {
-  const sections = Object.keys(data);
+  // LOG all keys at the top
+  console.log("ReviewForm data keys:", Object.keys(data));
+  console.log("ReviewForm full data:", data);
 
   const handleDownload = () => {
     const json = JSON.stringify(data, null, 2);
@@ -189,24 +247,24 @@ export default function ReviewForm({
       <h2 className="text-3xl font-bold text-center mb-4">Review & Submit</h2>
 
       <div className="space-y-6">
-        {sections.map((key, idx) => (
+        {SECTION_ORDER.map(({ label, key }, idx) => (
           <div
             key={key}
-            className="bg-white rounded-xl shadow-md p-6 border border-gray-200"
+            className={`bg-white rounded-xl shadow-md p-6 border border-gray-200 ${data[key] ? "" : "opacity-50"}`}
           >
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-xl font-semibold text-indigo-700">
-                {labels[idx] || key}
+                {label}
               </h3>
               <button
                 type="button"
-                onClick={() => onEdit(idx)}
+                onClick={() => onEdit(labels.findIndex(l => l === label))}
                 className="text-indigo-600 hover:underline text-sm"
               >
                 Edit
               </button>
             </div>
-            <div>{renderSectionContent(data[key])}</div>
+            <div>{renderSectionContent(key, data[key])}</div>
           </div>
         ))}
       </div>

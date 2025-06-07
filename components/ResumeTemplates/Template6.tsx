@@ -9,13 +9,7 @@ const SOCIAL_LABELS: Record<string, string> = {
   bitbucket: 'Bitbucket',
 };
 
-export default function Template6({
-  color,
-  student,
-}: {
-  color: string;
-  student: any;
-}) {
+export default function Template6({ headerBgColor, headerTextColor, fontFamily, student }: { headerBgColor: string; headerTextColor: string; fontFamily: string; student: any }) {
   if (!student) return <div className="text-center py-10 text-red-600">No student data available.</div>;
 
   const general = student.general || {};
@@ -25,14 +19,13 @@ export default function Template6({
   const workExperience = student.workExperience || [];
   const internships = student.internships || [];
   const projects = student.projects || [];
-  const certificates = student.certificates || [];
   const publications = student.publications || [];
   const events = student.events || [];
   const placements = student.placements || [];
   const social = student.socialProfiles || {};
-  const languages = student.languages || 'English';
+  const languages: string[] = student.languages ? student.languages.split(',') : ['English'];
+  const interests = student.interests || [];
 
-  // Helper to get the correct photo URL or fallback
   const getPhotoUrl = (photo: string | undefined) => {
     if (!photo || photo.trim() === "") return "/default-profile.png";
     if (photo.startsWith("http") || photo.startsWith("/uploads/")) return photo;
@@ -40,231 +33,202 @@ export default function Template6({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-8 max-w-4xl mx-auto space-y-6 border border-gray-200">
-      {/* Header */}
-      <div className="text-center space-y-2">
-      <div
-  className="w-24 h-24 rounded-full mx-auto bg-gray-300 overflow-hidden"
-  style={{
-    border: `3px solid ${color || "#222"}`,
-    boxShadow: `0 0 0 4px #fff, 0 2px 8px rgba(0,0,0,0.08)`,
-  }}
->
-  <img
-    src={getPhotoUrl(general.photo)}
-    alt="Profile"
-    className="w-full h-full object-cover"
-    onError={(e) => {
-      e.currentTarget.onerror = null;
-      e.currentTarget.src = '/default-profile.png';
-    }}
-  />
-</div>
-        <h2 className="text-3xl font-bold text-gray-800">
-          {general.candidate_first_name} {general.candidate_last_name}
-        </h2>
-        <p className="italic text-gray-600">{general.current_degree || 'Student'}</p>
-        <div className="text-sm text-gray-600 space-y-1">
-          <p>📧 {general.email || 'N/A'}</p>
-          <p>📍 {general.address || 'N/A'}</p>
-          <p>📞 {general.phoneNo || 'N/A'}</p>
+    <div className="bg-white max-w-4xl mx-auto shadow-lg rounded-lg overflow-hidden text-sm text-gray-800" style={{ fontFamily }}>
+      <div className="p-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: headerTextColor }}>{general.candidate_first_name} {general.candidate_last_name}</h1>
+          <p className="text-sm italic" style={{ color: headerTextColor }}>{general.current_degree}</p>
+          <ul className="mt-2 space-y-1">
+            <li>📍 {general.address}</li>
+            <li>✉ {general.email}</li>
+            <li>📞 {general.phoneNo}</li>
+            {social.linkedin && <li>in {social.linkedin}</li>}
+          </ul>
         </div>
+        <img src={getPhotoUrl(general.photo)} className="w-24 h-24 object-cover rounded-full border-2" style={{ borderColor: headerBgColor }} alt="Profile" onError={(e) => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = '/default-profile.png';
+        }} />
       </div>
 
-      {/* Summary */}
-      <section>
-        <h3 className="text-lg font-semibold mb-1" style={{ color }}>📝 Summary</h3>
-        <p className="text-sm text-gray-700">
-          {general.summary || 'Motivated student eager to apply skills and grow in a dynamic environment.'}
-        </p>
-      </section>
-
-      {/* Work Experience */}
-      <section>
-        <h3 className="text-lg font-semibold mb-1" style={{ color }}>💼 Work Experience</h3>
-        <div className="space-y-2">
-          {workExperience.length > 0 ? (
-            workExperience.map((exp: any, idx: number) => (
-              <div key={idx}>
-                <div className="flex justify-between font-semibold text-sm">
-                  <span>{exp.role}, {exp.employer}</span>
-                  <span className="text-gray-500">
-                    {exp.startDate?.slice(0, 4)} - {exp.endDate?.slice(0, 4) || 'Present'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">{exp.location || ''}</p>
-                <p className="text-sm text-gray-700">{exp.responsibilities}</p>
-                <p className="text-xs text-gray-500">CTC: {exp.ctc || 'N/A'}</p>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500">No work experience listed.</p>
-          )}
-        </div>
-      </section>
-
-      {/* Education */}
-      <section>
-        <h3 className="text-lg font-semibold mb-1" style={{ color }}>🎓 Education</h3>
-        {ugDetails.overallCGPA ? (
-          <div>
-            <p className="font-semibold text-sm">
-              UG: {ugDetails.overallCGPA} CGPA / {ugDetails.overallPercentage}% — Semester {ugDetails.semesterNo}
-            </p>
-            <p className="text-xs text-gray-500">PG: {ugDetails.isPG ? 'Yes' : 'No'}</p>
-            {ugDetails.isPG && (
-              <p className="text-xs text-gray-500">PG CGPA: {ugDetails.pgOverallCGPA} — PG %: {ugDetails.pgOverallPercentage}%</p>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">UG details not available.</p>
+      <div className="px-6 pb-6">
+        {general.summary && (
+          <ul className="list-disc list-inside text-sm text-gray-700 mb-6">
+            {general.summary.split('\n').map((line: string, i: number) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
         )}
-      </section>
 
-      {/* Internships */}
-      {internships.length > 0 && (
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>🧑‍💻 Internships</h3>
-          {internships.map((intern: any, idx: number) => (
-            <div key={idx} className="mb-2">
-              <p className="font-semibold">{intern.company} — {intern.role}</p>
-              <p className="text-xs text-gray-500">{intern.startDate} - {intern.endDate}</p>
-              <p className="text-xs text-gray-500">{intern.location}</p>
-              <p className="text-sm text-gray-700">{intern.responsibilities}</p>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {/* Projects */}
-      {projects.length > 0 && (
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>💡 Projects</h3>
-          {projects.map((proj: any, idx: number) => (
-            <div key={idx} className="mb-2">
-              <p className="font-semibold">{proj.title}</p>
-              <p className="text-sm text-gray-700">{proj.description}</p>
-              {proj.link && (
-                <a href={proj.link} className="text-xs text-blue-600 underline break-all" target="_blank" rel="noopener noreferrer">
-                  {proj.link}
-                </a>
+        <Section title="Professional Experience" color={headerBgColor}>
+          {workExperience.map((exp: any, idx: number) => (
+            <div key={idx} className="mb-3">
+              <div className="font-semibold">{exp.role}</div>
+              <div className="italic text-xs">{exp.employer}</div>
+              <ul className="list-disc list-inside text-sm mt-1">
+                {exp.responsibilities?.split('\n').map((line: string, i: number) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+              {exp.certificateName && (
+                <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                  <span className="underline">{exp.certificateName}</span>
+                  {exp.certificateLink && (
+                    <a
+                      href={exp.certificateLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                    >
+                      {exp.certificateLink}
+                    </a>
+                  )}
+                </span>
               )}
             </div>
           ))}
-        </section>
-      )}
+        </Section>
 
-      {/* Two-Column: Skills + Languages */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>🛠 Technical Skills</h3>
-          <ul className="list-disc list-inside text-sm text-gray-700">
-            {technicalSkills.length > 0 ? (
-              technicalSkills.map((skill: any, idx: number) => (
-                <li key={idx}>{skill.courseName} ({skill.level})</li>
-              ))
-            ) : (
-              <li>No technical skills listed.</li>
-            )}
-          </ul>
-        </section>
-
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>🌍 Languages</h3>
-          <ul className="list-disc list-inside text-sm text-gray-700">
-            {languages.split(',').map((lang: string, idx: number) => (
-              <li key={idx}>{lang.trim()}</li>
-            ))}
-          </ul>
-        </section>
-      </div>
-
-      {/* Soft Skills */}
-      {softSkills.length > 0 && (
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>🤝 Soft Skills</h3>
-          <ul className="list-disc list-inside text-sm text-gray-700">
-            {softSkills.map((skill: string, idx: number) => (
-              <li key={idx}>{skill}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Certificates */}
-      <section>
-        <h3 className="text-lg font-semibold mb-1" style={{ color }}>📜 Certificates</h3>
-        <ul className="list-disc list-inside text-sm text-gray-700">
-          {certificates.length > 0 ? (
-            certificates.map((cert: any, idx: number) => (
-              <li key={idx}>{cert.name}</li>
-            ))
-          ) : (
-            <li>No certificates listed.</li>
-          )}
-        </ul>
-      </section>
-
-      {/* Social Profiles */}
-      <section>
-        <h3 className="text-lg font-semibold mb-1" style={{ color }}>🌐 Social Profiles</h3>
-        <ul className="text-sm text-gray-700 space-y-1 break-all">
-          {Object.entries(SOCIAL_LABELS).map(([key, label]) =>
-            social[key] ? (
-              <li key={key}>
-                <strong>{label}:</strong>{' '}
-                <a href={social[key]} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">
-                  {social[key]}
-                </a>
-              </li>
-            ) : null
-          )}
-        </ul>
-      </section>
-
-      {/* Publications */}
-      {publications.length > 0 && (
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>📚 Publications</h3>
-          {publications.map((pub: any, idx: number) => (
-            <div key={idx} className="mb-2">
-              <p className="font-semibold">{pub.title}</p>
-              <p className="text-sm text-gray-700">{pub.abstract}</p>
-              <p className="text-xs text-gray-500">{pub.publisher}</p>
+        <Section title="Internships" color={headerBgColor}>
+          {internships.map((intern: any, idx: number) => (
+            <div key={idx} className="mb-3">
+              <div className="font-semibold">{intern.role}</div>
+              <div className="italic text-xs">{intern.company}</div>
+              <div className="text-xs text-gray-500">{intern.location}</div>
+              <ul className="list-disc list-inside text-sm mt-1">
+                {intern.responsibilities?.split('\n').map((line: string, i: number) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+              {intern.certificateName && (
+                <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                  <span className="underline">{intern.certificateName}</span>
+                  {intern.certificateLink && (
+                    <a
+                      href={intern.certificateLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                    >
+                      {intern.certificateLink}
+                    </a>
+                  )}
+                </span>
+              )}
             </div>
           ))}
-        </section>
-      )}
+        </Section>
 
-      {/* Enhancement Programs */}
-      {events.length > 0 && (
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>🏆 Enhancement Programs</h3>
+        <Section title="Projects" color={headerBgColor}>
+          {projects.map((proj: any, idx: number) => (
+            <div key={idx} className="mb-3">
+              <div className="font-semibold">{proj.title}</div>
+              <ul className="list-disc list-inside text-sm">
+                {proj.description?.split('\n').map((line: string, i: number) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+              {proj.link && <a href={proj.link} className="text-blue-600 underline text-xs">{proj.link}</a>}
+            </div>
+          ))}
+        </Section>
+
+        <Section title="Publications" color={headerBgColor}>
+          {publications.map((pub: any, idx: number) => (
+            <div key={idx} className="mb-3">
+              <div className="font-semibold">{pub.title}</div>
+              <div className="italic text-xs">{pub.publisher}</div>
+              <ul className="list-disc list-inside text-sm">
+                {pub.abstract?.split('\n').map((line: string, i: number) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+              {pub.link && <a href={pub.link} className="text-blue-600 underline text-xs">{pub.link}</a>}
+            </div>
+          ))}
+        </Section>
+
+        <Section title="Enhancement Programs" color={headerBgColor}>
           {events.map((event: any, idx: number) => (
-            <div key={idx} className="mb-2">
-              <p className="font-semibold">{event.name}</p>
-              <p className="text-sm text-gray-700">{event.details}</p>
+            <div key={idx} className="mb-3">
+              <div className="font-semibold">{event.name}</div>
+              <ul className="list-disc list-inside text-sm">
+                {event.details?.split('\n').map((line: string, i: number) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
               <p className="text-xs text-gray-500">{event.location}</p>
               <p className="text-xs text-gray-500">{event.contribution}</p>
             </div>
           ))}
-        </section>
-      )}
+        </Section>
 
-      {/* Placements */}
-      {placements.length > 0 && (
-        <section>
-          <h3 className="text-lg font-semibold mb-1" style={{ color }}>🎯 Placements</h3>
+        <Section title="Placements" color={headerBgColor}>
           {placements.map((placement: any, idx: number) => (
-            <div key={idx} className="mb-2">
-              <p className="font-semibold">{placement.employer}</p>
-              <p className="text-sm text-gray-700">{placement.designation}</p>
+            <div key={idx} className="mb-3">
+              <div className="font-semibold">{placement.employer}</div>
+              <p className="text-sm">{placement.designation}</p>
               <p className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</p>
               <p className="text-xs text-gray-500">CTC: {placement.ctc}</p>
             </div>
           ))}
-        </section>
-      )}
+        </Section>
+
+        <Section title="Education" color={headerBgColor}>
+          <div>
+            <div className="font-semibold">{ugDetails.degreeName || 'Bachelor of Science in Business Administration'}</div>
+            <p className="italic text-sm">{ugDetails.institution || 'Paris University'}</p>
+            <p className="text-xs">{ugDetails.overallCGPA ? `CGPA: ${ugDetails.overallCGPA}` : ''} {ugDetails.overallPercentage ? `| ${ugDetails.overallPercentage}%` : ''}</p>
+          </div>
+        </Section>
+
+        <Section title="Skills" color={headerBgColor}>
+          <ul className="grid md:grid-cols-2 gap-2">
+            {technicalSkills.map((s: any, idx: number) => (
+              <li key={idx}>
+                ✨ {s.courseName}
+                {s.certificateName && (
+                  <span className="ml-1 text-blue-600 cursor-pointer group relative">
+                    <span className="underline">{s.certificateName}</span>
+                    {s.certificateLink && (
+                      <a
+                        href={s.certificateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                      >
+                        {s.certificateLink}
+                      </a>
+                    )}
+                  </span>
+                )}
+              </li>
+            ))}
+            {softSkills.map((s: any, idx: number) => (
+              <li key={idx}>💡 {s}</li>
+            ))}
+          </ul>
+        </Section>
+
+        <Section title="Languages" color={headerBgColor}>
+          <ul className="grid grid-cols-2">
+            {languages.map((lang: string, idx: number) => (
+              <li key={idx}>{lang} ● ● ● ● ○</li>
+            ))}
+          </ul>
+        </Section>
+      </div>
     </div>
+  );
+}
+
+function Section({ title, children, color }: { title: string; children: React.ReactNode; color: string }) {
+  return (
+    <section className="mb-6">
+      <h2 style={{ backgroundColor: color, padding: '0.5rem 0.75rem', fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>{title}</h2>
+      <div className="mt-2 px-1 text-gray-700">
+        {children}
+      </div>
+    </section>
   );
 }

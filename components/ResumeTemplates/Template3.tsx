@@ -1,6 +1,16 @@
 import React from 'react';
 
-export default function Template3({ color, student }: { color: string; student: any }) {
+export default function Template3({
+  student,
+  headerBgColor,
+  headerTextColor,
+  fontFamily,
+}: {
+  student: any;
+  headerBgColor: string;
+  headerTextColor: string;
+  fontFamily: string;
+}) {
   if (!student) return <div>No student data available.</div>;
 
   const general = student.general || {};
@@ -15,9 +25,9 @@ export default function Template3({ color, student }: { color: string; student: 
   const placements = student.placements || [];
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow overflow-hidden" style={{ fontFamily }}>
       {/* Header */}
-      <div className="p-8 text-center" style={{ backgroundColor: color, color: '#fff' }}>
+      <div className="p-8 text-center" style={{ backgroundColor: headerBgColor, color: headerTextColor }}>
         <h2 className="text-3xl font-bold mb-1">
           {general.candidate_first_name} {general.candidate_last_name}
         </h2>
@@ -33,7 +43,7 @@ export default function Template3({ color, student }: { color: string; student: 
         <div className="space-y-4 md:col-span-1">
           {/* Profile / Summary */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Profile
             </h3>
             <p className="text-sm text-gray-700">
@@ -43,14 +53,29 @@ export default function Template3({ color, student }: { color: string; student: 
 
           {/* Skills */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Skills
             </h3>
             <div className="flex flex-wrap gap-2">
               {technicalSkills.length > 0 ? (
                 technicalSkills.map((skill: any, idx: number) => (
-                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs">
-                    {skill.courseName} ({skill.level})
+                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs flex items-center gap-1">
+                    {skill.courseName} {skill.level && `(${skill.level})`}
+                    {skill.certificateName && (
+                      <span className="ml-1 text-blue-600 cursor-pointer group relative">
+                        <span className="underline">{skill.certificateName}</span>
+                        {skill.certificateLink && (
+                          <a
+                            href={skill.certificateLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                          >
+                            {skill.certificateLink}
+                          </a>
+                        )}
+                      </span>
+                    )}
                   </span>
                 ))
               ) : (
@@ -61,7 +86,7 @@ export default function Template3({ color, student }: { color: string; student: 
 
           {/* Social Profiles */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Social Profiles
             </h3>
             <ul className="text-sm text-gray-700 break-all">
@@ -81,13 +106,10 @@ export default function Template3({ color, student }: { color: string; student: 
               )}
             </ul>
           </section>
-        </div>
 
-        {/* Right column */}
-        <div className="space-y-4 md:col-span-2">
-          {/* Education */}
-          <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+           {/* Education */}
+           <section className="p-4 rounded shadow">
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Education
             </h3>
             <ul className="text-sm text-gray-700 space-y-1">
@@ -97,16 +119,45 @@ export default function Template3({ color, student }: { color: string; student: 
                   <li><span className="font-medium">Percentage:</span> {ugDetails.overallPercentage}%</li>
                   <li><span className="font-medium">Semester:</span> {ugDetails.semesterNo}</li>
                   <li><span className="font-medium">PG:</span> {ugDetails.isPG ? 'Yes' : 'No'}</li>
+                  {ugDetails.isPG && (
+                    <>
+                      <li><span className="font-medium">PG CGPA:</span> {ugDetails.pgOverallCGPA}</li>
+                      <li><span className="font-medium">PG Percentage:</span> {ugDetails.pgOverallPercentage}%</li>
+                    </>
+                  )}
                 </>
               ) : (
                 <li>UG details not available</li>
               )}
             </ul>
           </section>
+                    {/* Enhancement Programs */}
+                    <section className="p-4 rounded shadow">
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
+              Enhancement Programs
+            </h3>
+            {events.length > 0 ? (
+              events.map((event: any, idx: number) => (
+                <div key={idx} className="mb-2">
+                  <span className="font-semibold">{event.name}</span>
+                  <p className="text-xs text-gray-500">{event.details}</p>
+                  <p className="text-xs text-gray-500">{event.location}</p>
+                  <p className="text-xs text-gray-500">{event.contribution}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No enhancement programs listed.</p>
+            )}
+          </section>
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-4 md:col-span-2">
+         
 
           {/* Work Experience */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Work Experience
             </h3>
             {workExperiences.length > 0 ? (
@@ -118,6 +169,22 @@ export default function Template3({ color, student }: { color: string; student: 
                   </div>
                   <p className="text-sm text-gray-700">{exp.role}</p>
                   <p className="text-xs text-gray-500">{exp.responsibilities}</p>
+                  <p className="text-xs text-gray-500">CTC: {exp.ctc}</p>
+                  {exp.certificateName && (
+                    <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                      <span className="underline">{exp.certificateName}</span>
+                      {exp.certificateLink && (
+                        <a
+                          href={exp.certificateLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                        >
+                          {exp.certificateLink}
+                        </a>
+                      )}
+                    </span>
+                  )}
                 </div>
               ))
             ) : (
@@ -127,7 +194,7 @@ export default function Template3({ color, student }: { color: string; student: 
 
           {/* Internships */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Internships
             </h3>
             {internships.length > 0 ? (
@@ -136,6 +203,22 @@ export default function Template3({ color, student }: { color: string; student: 
                   <span className="font-semibold">{intern.company}</span> — {intern.role}
                   <p className="text-xs text-gray-500">{intern.startDate?.slice(0, 10)} - {intern.endDate?.slice(0, 10)}</p>
                   <p className="text-xs text-gray-500">{intern.location}</p>
+                  <p className="text-xs text-gray-500">{intern.responsibilities}</p>
+                  {intern.certificateName && (
+                    <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                      <span className="underline">{intern.certificateName}</span>
+                      {intern.certificateLink && (
+                        <a
+                          href={intern.certificateLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                        >
+                          {intern.certificateLink}
+                        </a>
+                      )}
+                    </span>
+                  )}
                 </div>
               ))
             ) : (
@@ -145,7 +228,7 @@ export default function Template3({ color, student }: { color: string; student: 
 
           {/* Projects */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Projects
             </h3>
             {projects.length > 0 ? (
@@ -167,7 +250,7 @@ export default function Template3({ color, student }: { color: string; student: 
 
           {/* Publications */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Publications
             </h3>
             {publications.length > 0 ? (
@@ -188,28 +271,11 @@ export default function Template3({ color, student }: { color: string; student: 
             )}
           </section>
 
-          {/* Enhancement Programs */}
-          <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
-              Enhancement Programs
-            </h3>
-            {events.length > 0 ? (
-              events.map((event: any, idx: number) => (
-                <div key={idx} className="mb-2">
-                  <span className="font-semibold">{event.name}</span>
-                  <p className="text-xs text-gray-500">{event.details}</p>
-                  <p className="text-xs text-gray-500">{event.location}</p>
-                  <p className="text-xs text-gray-500">{event.contribution}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500">No enhancement programs listed.</p>
-            )}
-          </section>
+
 
           {/* Placements */}
           <section className="p-4 rounded shadow">
-            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: color }}>
+            <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
               Placements
             </h3>
             {placements.length > 0 ? (

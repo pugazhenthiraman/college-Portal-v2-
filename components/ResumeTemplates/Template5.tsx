@@ -1,223 +1,266 @@
+'use client';
+
 import React from 'react';
-import Image from 'next/image';
+
+const SOCIAL_LABELS: Record<string, string> = {
+  linkedin: 'LinkedIn',
+  github: 'GitHub',
+  twitter: 'Twitter',
+  portfolio: 'Portfolio',
+  gitlab: 'GitLab',
+  bitbucket: 'Bitbucket',
+};
 
 export default function Template5({
-  color,
+  headerBgColor,
+  headerTextColor,
+  fontFamily,
   student,
 }: {
-  color: string;
+  headerBgColor: string;
+  headerTextColor: string;
+  fontFamily: string;
   student: any;
 }) {
-  if (!student) return <div>No student data available.</div>;
+  if (!student) return <div className="text-center py-10 text-red-600">No student data available.</div>;
 
   const general = student.general || {};
   const ugDetails = student.ugDetails || {};
-  const socialProfiles = student.socialProfiles || {};
-  const workExperiences = student.workExperience || [];
-  const volunteerExperiences = student.volunteerExperiences || [];
-  const organizations = student.organizations || [];
-  const certificates = student.certificates || [];
-  const interests = student.interests || [];
-  const softSkills = student.softSkills || [];
-  const languages = student.languages
-    ? student.languages.split(',').map((lang: string) => lang.trim())
-    : ['English'];
+  const technicalSkills = student.technicalSkills || [];
+  const workExperience = student.workExperience || [];
+  const internships = student.internships || [];
+  const projects = student.projects || [];
+  const publications = student.publications || [];
+  const events = student.events || [];
+  const placements = student.placements || [];
+  const social = student.socialProfiles || {};
+  const languages: string[] = student.languages ? student.languages.split(',') : ['English'];
 
-    const getPhotoUrl = (photo: string | undefined) => {
-      if (!photo || photo.trim() === "") return "/default-profile.png";
-      if (photo.startsWith("http") || photo.startsWith("/uploads/")) return photo;
-      return `/uploads/${photo}`;
-    };
-
-  const photoUrl = getPhotoUrl(student.photo || general.photo);
+  const getPhotoUrl = (photo: string | undefined) => {
+    if (!photo || photo.trim() === "") return "/default-profile.png";
+    if (photo.startsWith("http") || photo.startsWith("/uploads/")) return photo;
+    return `/uploads/${photo}`;
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow grid grid-cols-1 md:grid-cols-3 overflow-hidden">
+    <div className="grid grid-cols-3 max-w-6xl mx-auto shadow-lg rounded overflow-hidden" style={{ fontFamily }}>
       {/* Sidebar */}
-      <div className="bg-gray-50 p-6 space-y-6 text-sm text-gray-700">
-        {/* Photo + Basic Info */}
-        <div className="flex flex-col items-center text-center space-y-2">
-          {photoUrl && (
-            <Image
-              src={photoUrl}
-              alt="Profile"
-              width={100}
-              height={100}
-              className="w-24 h-24 rounded-full object-cover"
-            />
-          )}
-          <h2 className="text-lg font-bold">
-            {general.candidate_first_name} {general.candidate_last_name}
-          </h2>
-          <p className="text-sm" style={{ color }}>
-            {general.current_degree || 'Student'}
-          </p>
+      <div className="bg-gray-800 text-white p-6 col-span-1" style={{ backgroundColor: headerBgColor, color: headerTextColor }}>
+        <div className="flex flex-col items-center space-y-4">
+          <img
+            src={getPhotoUrl(general.photo)}
+            alt="Profile"
+            className="w-24 h-24 object-cover rounded-full border-2"
+            style={{ borderColor: headerTextColor }}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/default-profile.png';
+            }}
+          />
+          <div className="text-center">
+            <h1 className="text-xl font-bold">{general.candidate_first_name} {general.candidate_last_name}</h1>
+            <p className="text-sm italic">{general.current_degree}</p>
+            <p className="text-xs">{general.email}</p>
+            <p className="text-xs">{general.phoneNo}</p>
+            <p className="text-xs">{general.roll_reg_no}</p>
+            <p className="text-xs">{general.batch}</p>
+            <p className="text-xs">{general.address}</p>
+          </div>
         </div>
-
-        {/* Contact */}
-        <div className="space-y-1">
-          <p>✉ {general.email}</p>
-          <p>📞 {general.phoneNo}</p>
-          <p>🎓 Batch: {general.batch}</p>
-          <p>Roll No: {general.roll_reg_no}</p>
+        <div className="mt-6">
+          <h3 className="font-semibold mb-2">Technical Skills</h3>
+          <ul className="space-y-1 text-sm">
+            {technicalSkills.length > 0 ? technicalSkills.map((skill: any, idx: number) => (
+              <li key={idx}>
+                {skill.courseName}
+                {skill.level && <span className="text-xs text-gray-300"> ({skill.level})</span>}
+                {skill.certificateName && (
+                  <span className="ml-1 text-blue-200 cursor-pointer group relative">
+                    <span className="underline">{skill.certificateName}</span>
+                    {skill.certificateLink && (
+                      <a
+                        href={skill.certificateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                      >
+                        {skill.certificateLink}
+                      </a>
+                    )}
+                  </span>
+                )}
+              </li>
+            )) : <li>No skills listed</li>}
+          </ul>
         </div>
-
-        {/* Social Links */}
-        <div>
-          <h3 className="font-semibold mb-2" style={{ color }}>
-            Social Profiles
-          </h3>
-          <ul className="space-y-1 break-words">
-            {Object.entries(socialProfiles).map(
-              ([key, value]) =>
-                value && (
-                  <li key={key}>
-                    {key}: <a href={value} className="text-blue-600" target="_blank">{value}</a>
-                  </li>
-                )
+        <div className="mt-6">
+          <h3 className="font-semibold mb-2">Social Profiles</h3>
+          <ul className="space-y-1 text-sm">
+            {Object.entries(SOCIAL_LABELS).map(([key, label]) =>
+              social[key] ? (
+                <li key={key}>
+                  <strong>{label}:</strong>{' '}
+                  <a href={social[key]} target="_blank" rel="noopener noreferrer" className="text-blue-200 underline break-words">
+                    {social[key]}
+                  </a>
+                </li>
+              ) : null
             )}
           </ul>
         </div>
-
-        {/* Skills */}
-        <div>
-          <h3 className="font-semibold mb-2" style={{ color }}>
-            Soft Skills
-          </h3>
-          <ul className="list-disc list-inside">
-            {softSkills.length > 0 ? (
-              softSkills.map((skill: string, idx: number) => <li key={idx}>{skill}</li>)
-            ) : (
-              <li>Teamwork</li>
+        <div className="mt-6">
+          <h3 className="font-semibold mb-2">Education</h3>
+          <div className="text-sm">
+            <div>CGPA: {ugDetails.overallCGPA}</div>
+            <div>Percentage: {ugDetails.overallPercentage}%</div>
+            <div>Semester: {ugDetails.semesterNo}</div>
+            <div>PG: {ugDetails.isPG ? 'Yes' : 'No'}</div>
+            {ugDetails.isPG && (
+              <>
+                <div>PG CGPA: {ugDetails.pgOverallCGPA}</div>
+                <div>PG Percentage: {ugDetails.pgOverallPercentage}%</div>
+              </>
             )}
-          </ul>
+          </div>
         </div>
-
-        {/* Languages */}
-        <div>
-          <h3 className="font-semibold mb-2" style={{ color }}>
-            Languages
-          </h3>
-          <ul className="list-disc list-inside">
-            {languages.map((lang: string, idx: number) => (
-              <li key={idx}>{lang}</li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Interests */}
-        <div>
-          <h3 className="font-semibold mb-2" style={{ color }}>
-            Interests
-          </h3>
-          <ul className="list-disc list-inside">
-            {interests.length > 0 ? (
-              interests.map((interest: string, idx: number) => <li key={idx}>{interest}</li>)
-            ) : (
-              <li>Technology</li>
-            )}
+        <div className="mt-6">
+          <h3 className="font-semibold mb-2">Languages</h3>
+          <ul className="space-y-1">
+            {languages.map((lang, idx) => <li key={idx}>{lang}</li>)}
           </ul>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="md:col-span-2 p-6 space-y-6 text-sm text-gray-800">
-        {/* Summary */}
-        <section>
-          <h3 className="text-lg font-semibold mb-2" style={{ color }}>
-            Summary
-          </h3>
-          <p>{general.summary || 'Motivated and enthusiastic undergraduate seeking opportunities to apply skills and grow.'}</p>
-        </section>
+      <div className="col-span-2 p-6 space-y-6">
+        <Section title="Summary" color={headerTextColor}>
+          <p className="text-gray-700">{general.summary || 'Motivated student passionate about growth and contribution.'}</p>
+        </Section>
 
-        {/* Education */}
-        <section>
-          <h3 className="text-lg font-semibold mb-2" style={{ color }}>
-            Education
-          </h3>
-          {ugDetails ? (
-            <p>
-              Bachelor’s Degree: {ugDetails.overallCGPA} CGPA / {ugDetails.overallPercentage}% overall
-            </p>
-          ) : (
-            <p>UG details not available.</p>
-          )}
-        </section>
-
-        {/* Work Experience */}
-        <section>
-          <h3 className="text-lg font-semibold mb-2" style={{ color }}>
-            Work Experience
-          </h3>
-          {workExperiences.length > 0 ? (
-            workExperiences.map((exp: any) => (
-              <div key={exp.id} className="mb-2">
-                <p className="font-semibold">
-                  {exp.role}, {exp.employer}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {exp.startDate?.slice(0, 10)} - {exp.endDate?.slice(0, 10) || 'Present'}
-                </p>
-                <p>{exp.responsibilities}</p>
+        {internships.length > 0 && (
+          <Section title="Internships" color={headerTextColor}>
+            {internships.map((intern: any, idx: number) => (
+              <div key={idx} className="mb-3">
+                <div className="font-semibold">{intern.company}</div>
+                <div className="text-sm">{intern.role}</div>
+                <div className="text-xs text-gray-500">{intern.startDate} - {intern.endDate}</div>
+                <div className="text-xs text-gray-500">{intern.location}</div>
+                <div className="text-xs text-gray-500">{intern.responsibilities}</div>
+                {intern.certificateName && (
+                  <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                    <span className="underline">{intern.certificateName}</span>
+                    {intern.certificateLink && (
+                      <a
+                        href={intern.certificateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                      >
+                        {intern.certificateLink}
+                      </a>
+                    )}
+                  </span>
+                )}
               </div>
-            ))
-          ) : (
-            <p>No work experience listed.</p>
-          )}
-        </section>
+            ))}
+          </Section>
+        )}
 
-        {/* Volunteer Experience */}
-        <section>
-          <h3 className="text-lg font-semibold mb-2" style={{ color }}>
-            Volunteer Experience
-          </h3>
-          {volunteerExperiences.length > 0 ? (
-            volunteerExperiences.map((vol: any) => (
-              <div key={vol.id} className="mb-2">
-                <p className="font-semibold">
-                  {vol.role} - {vol.organization}
-                </p>
-                <p className="text-xs text-gray-500">{vol.year}</p>
-                <p>{vol.description}</p>
+        {projects.length > 0 && (
+          <Section title="Projects" color={headerTextColor}>
+            {projects.map((proj: any, idx: number) => (
+              <div key={idx} className="mb-3">
+                <div className="font-semibold">{proj.title}</div>
+                <div className="text-sm">{proj.description}</div>
+                {proj.link && (
+                  <a href={proj.link} className="text-xs text-blue-600 underline" target="_blank" rel="noopener noreferrer">{proj.link}</a>
+                )}
               </div>
-            ))
-          ) : (
-            <p>No volunteer experience listed.</p>
-          )}
-        </section>
+            ))}
+          </Section>
+        )}
 
-        {/* Organizations */}
-        <section>
-          <h3 className="text-lg font-semibold mb-2" style={{ color }}>
-            Organizations
-          </h3>
-          {organizations.length > 0 ? (
-            organizations.map((org: any) => (
-              <p key={org.id}>
-                {org.name} ({org.years})
-              </p>
-            ))
-          ) : (
-            <p>No organizations listed.</p>
-          )}
-        </section>
+        {workExperience.length > 0 && (
+          <Section title="Work Experience" color={headerTextColor}>
+            {workExperience.map((work: any, idx: number) => (
+              <div key={idx} className="mb-3">
+                <div className="font-semibold">{work.employer}</div>
+                <div className="text-sm">{work.role}</div>
+                <div className="text-xs text-gray-500">{work.startDate} - {work.endDate}</div>
+                <div className="text-xs text-gray-500">{work.responsibilities}</div>
+                <div className="text-xs text-gray-500">CTC: {work.ctc}</div>
+                {work.certificateName && (
+                  <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">
+                    <span className="underline">{work.certificateName}</span>
+                    {work.certificateLink && (
+                      <a
+                        href={work.certificateLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute left-0 top-full mt-1 hidden group-hover:block bg-white border px-2 py-1 text-xs text-blue-600 z-10"
+                      >
+                        {work.certificateLink}
+                      </a>
+                    )}
+                  </span>
+                )}
+              </div>
+            ))}
+          </Section>
+        )}
 
-        {/* Certificates */}
-        <section>
-          <h3 className="text-lg font-semibold mb-2" style={{ color }}>
-            Certificates
-          </h3>
-          {certificates.length > 0 ? (
-            certificates.map((cert: any) => (
-              <p key={cert.id}>
-                {cert.name} ({cert.year})
-              </p>
-            ))
-          ) : (
-            <p>No certificates listed.</p>
-          )}
-        </section>
+        {publications.length > 0 && (
+          <Section title="Publications" color={headerTextColor}>
+            {publications.map((pub: any, idx: number) => (
+              <div key={idx} className="mb-3">
+                <div className="font-semibold">{pub.title}</div>
+                <div className="text-sm">{pub.abstract}</div>
+                <div className="text-xs text-gray-500">{pub.publisher}</div>
+                {pub.link && (
+                  <a href={pub.link} className="text-xs text-blue-600 underline" target="_blank" rel="noopener noreferrer">{pub.link}</a>
+                )}
+              </div>
+            ))}
+          </Section>
+        )}
+
+        {events.length > 0 && (
+          <Section title="Enhancement Programs" color={headerTextColor}>
+            {events.map((event: any, idx: number) => (
+              <div key={idx} className="mb-3">
+                <div className="font-semibold">{event.name}</div>
+                <div className="text-sm">{event.details}</div>
+                <div className="text-xs text-gray-500">{event.location}</div>
+                <div className="text-xs text-gray-500">{event.contribution}</div>
+              </div>
+            ))}
+          </Section>
+        )}
+
+        {placements.length > 0 && (
+          <Section title="Placements" color={headerTextColor}>
+            {placements.map((placement: any, idx: number) => (
+              <div key={idx} className="mb-3">
+                <div className="font-semibold">{placement.employer}</div>
+                <div className="text-sm">{placement.designation}</div>
+                <div className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</div>
+                <div className="text-xs text-gray-500">CTC: {placement.ctc}</div>
+              </div>
+            ))}
+          </Section>
+        )}
       </div>
     </div>
+  );
+}
+
+function Section({ title, children, color }: { title: string; children: React.ReactNode; color: string }) {
+  return (
+    <section className="mb-6">
+      <h2 style={{ color, fontWeight: 700, fontSize: '1rem', textTransform: 'uppercase', borderBottom: `2px solid ${color}`, paddingBottom: '0.25rem', marginBottom: '0.5rem' }}>{title}</h2>
+      <div className="text-gray-700 text-sm">
+        {children}
+      </div>
+    </section>
   );
 }
