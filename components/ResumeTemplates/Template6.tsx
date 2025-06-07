@@ -9,7 +9,19 @@ const SOCIAL_LABELS: Record<string, string> = {
   bitbucket: 'Bitbucket',
 };
 
-export default function Template6({ headerBgColor, headerTextColor, fontFamily, student }: { headerBgColor: string; headerTextColor: string; fontFamily: string; student: any }) {
+export default function Template6({
+  headerBgColor,
+  headerTextColor,
+  fontFamily,
+  student,
+  sectionOrder = [],
+}: {
+  headerBgColor: string;
+  headerTextColor: string;
+  fontFamily: string;
+  student: any;
+  sectionOrder?: string[];
+}) {
   if (!student) return <div className="text-center py-10 text-red-600">No student data available.</div>;
 
   const general = student.general || {};
@@ -32,35 +44,22 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
     return `/uploads/${photo}`;
   };
 
-  return (
-    <div className="bg-white max-w-4xl mx-auto shadow-lg rounded-lg overflow-hidden text-sm text-gray-800" style={{ fontFamily }}>
-      <div className="p-6 flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: headerTextColor }}>{general.candidate_first_name} {general.candidate_last_name}</h1>
-          <p className="text-sm italic" style={{ color: headerTextColor }}>{general.current_degree}</p>
-          <ul className="mt-2 space-y-1">
-            <li>📍 {general.address}</li>
-            <li>✉ {general.email}</li>
-            <li>📞 {general.phoneNo}</li>
-            {social.linkedin && <li>in {social.linkedin}</li>}
-          </ul>
-        </div>
-        <img src={getPhotoUrl(general.photo)} className="w-24 h-24 object-cover rounded-full border-2" style={{ borderColor: headerBgColor }} alt="Profile" onError={(e) => {
-          e.currentTarget.onerror = null;
-          e.currentTarget.src = '/default-profile.png';
-        }} />
-      </div>
-
-      <div className="px-6 pb-6">
-        {general.summary && (
+  // Map section keys to JSX
+  const sectionMap: { [key: string]: React.ReactNode } = {
+    summary: (
+      general.summary && (
+        <Section title="Summary" color={headerBgColor} key="summary">
           <ul className="list-disc list-inside text-sm text-gray-700 mb-6">
             {general.summary.split('\n').map((line: string, i: number) => (
               <li key={i}>{line}</li>
             ))}
           </ul>
-        )}
-
-        <Section title="Professional Experience" color={headerBgColor}>
+        </Section>
+      )
+    ),
+    workExperience: (
+      workExperience.length > 0 && (
+        <Section title="Professional Experience" color={headerBgColor} key="workExperience">
           {workExperience.map((exp: any, idx: number) => (
             <div key={idx} className="mb-3">
               <div className="font-semibold">{exp.role}</div>
@@ -88,8 +87,11 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
             </div>
           ))}
         </Section>
-
-        <Section title="Internships" color={headerBgColor}>
+      )
+    ),
+    internships: (
+      internships.length > 0 && (
+        <Section title="Internships" color={headerBgColor} key="internships">
           {internships.map((intern: any, idx: number) => (
             <div key={idx} className="mb-3">
               <div className="font-semibold">{intern.role}</div>
@@ -118,8 +120,11 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
             </div>
           ))}
         </Section>
-
-        <Section title="Projects" color={headerBgColor}>
+      )
+    ),
+    projects: (
+      projects.length > 0 && (
+        <Section title="Projects" color={headerBgColor} key="projects">
           {projects.map((proj: any, idx: number) => (
             <div key={idx} className="mb-3">
               <div className="font-semibold">{proj.title}</div>
@@ -132,8 +137,11 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
             </div>
           ))}
         </Section>
-
-        <Section title="Publications" color={headerBgColor}>
+      )
+    ),
+    publications: (
+      publications.length > 0 && (
+        <Section title="Publications" color={headerBgColor} key="publications">
           {publications.map((pub: any, idx: number) => (
             <div key={idx} className="mb-3">
               <div className="font-semibold">{pub.title}</div>
@@ -147,8 +155,11 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
             </div>
           ))}
         </Section>
-
-        <Section title="Enhancement Programs" color={headerBgColor}>
+      )
+    ),
+    enhancementPrograms: (
+      events.length > 0 && (
+        <Section title="Enhancement Programs" color={headerBgColor} key="enhancementPrograms">
           {events.map((event: any, idx: number) => (
             <div key={idx} className="mb-3">
               <div className="font-semibold">{event.name}</div>
@@ -162,8 +173,11 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
             </div>
           ))}
         </Section>
-
-        <Section title="Placements" color={headerBgColor}>
+      )
+    ),
+    placements: (
+      placements.length > 0 && (
+        <Section title="Placements" color={headerBgColor} key="placements">
           {placements.map((placement: any, idx: number) => (
             <div key={idx} className="mb-3">
               <div className="font-semibold">{placement.employer}</div>
@@ -173,16 +187,20 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
             </div>
           ))}
         </Section>
-
-        <Section title="Education" color={headerBgColor}>
-          <div>
-            <div className="font-semibold">{ugDetails.degreeName || 'Bachelor of Science in Business Administration'}</div>
-            <p className="italic text-sm">{ugDetails.institution || 'Paris University'}</p>
-            <p className="text-xs">{ugDetails.overallCGPA ? `CGPA: ${ugDetails.overallCGPA}` : ''} {ugDetails.overallPercentage ? `| ${ugDetails.overallPercentage}%` : ''}</p>
-          </div>
-        </Section>
-
-        <Section title="Skills" color={headerBgColor}>
+      )
+    ),
+    education: (
+      <Section title="Education" color={headerBgColor} key="education">
+        <div>
+          <div className="font-semibold">{ugDetails.degreeName || 'Bachelor of Science in Business Administration'}</div>
+          <p className="italic text-sm">{ugDetails.institution || 'Paris University'}</p>
+          <p className="text-xs">{ugDetails.overallCGPA ? `CGPA: ${ugDetails.overallCGPA}` : ''} {ugDetails.overallPercentage ? `| ${ugDetails.overallPercentage}%` : ''}</p>
+        </div>
+      </Section>
+    ),
+    skills: (
+      (technicalSkills.length > 0 || softSkills.length > 0) && (
+        <Section title="Skills" color={headerBgColor} key="skills">
           <ul className="grid md:grid-cols-2 gap-2">
             {technicalSkills.map((s: any, idx: number) => (
               <li key={idx}>
@@ -209,14 +227,42 @@ export default function Template6({ headerBgColor, headerTextColor, fontFamily, 
             ))}
           </ul>
         </Section>
-
-        <Section title="Languages" color={headerBgColor}>
+      )
+    ),
+    languages: (
+      languages.length > 0 && (
+        <Section title="Languages" color={headerBgColor} key="languages">
           <ul className="grid grid-cols-2">
             {languages.map((lang: string, idx: number) => (
               <li key={idx}>{lang} ● ● ● ● ○</li>
             ))}
           </ul>
         </Section>
+      )
+    ),
+  };
+
+  return (
+    <div className="bg-white max-w-4xl mx-auto shadow-lg rounded-lg overflow-hidden text-sm text-gray-800" style={{ fontFamily }}>
+      <div className="p-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: headerTextColor }}>{general.candidate_first_name} {general.candidate_last_name}</h1>
+          <p className="text-sm italic" style={{ color: headerTextColor }}>{general.current_degree}</p>
+          <ul className="mt-2 space-y-1">
+            <li>📍 {general.address}</li>
+            <li>✉ {general.email}</li>
+            <li>📞 {general.phoneNo}</li>
+            {social.linkedin && <li>in {social.linkedin}</li>}
+          </ul>
+        </div>
+        <img src={getPhotoUrl(general.photo)} className="w-24 h-24 object-cover rounded-full border-2" style={{ borderColor: headerBgColor }} alt="Profile" onError={(e) => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = '/default-profile.png';
+        }} />
+      </div>
+
+      <div className="px-6 pb-6">
+        {sectionOrder.map((key) => sectionMap[key])}
       </div>
     </div>
   );

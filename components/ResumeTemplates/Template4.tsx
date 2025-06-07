@@ -6,109 +6,40 @@ interface SectionProps {
   children: React.ReactNode;
 }
 
-interface Experience {
-  role: string;
-  employer: string;
-  startDate?: string;
-  endDate?: string;
-  responsibilities?: string;
-  certificateName?: string;
-  certificateLink?: string;
-}
-
-interface Internship {
-  company: string;
-  role: string;
-  startDate?: string;
-  endDate?: string;
-  location?: string;
-  certificateName?: string;
-  certificateLink?: string;
-}
-
-interface Project {
-  title: string;
-  description: string;
-  link?: string;
-}
-
-interface Skill {
-  courseName: string;
-  level: string;
-  certificateName?: string;
-  certificateLink?: string;
-}
-
-interface Publication {
-  title: string;
-  publisher: string;
-  abstract?: string;
-  link?: string;
-}
-
-interface Event {
-  name: string;
-  location?: string;
-  details?: string;
-  contribution?: string;
-}
-
-interface Placement {
-  employer: string;
-  designation: string;
-  onCampus: boolean;
-  ctc: string;
-}
-
 export default function TemplateATS({
   student,
   headerBgColor,
   headerTextColor,
   fontFamily,
+  sectionOrder = [],
 }: {
   student: any;
   headerBgColor: string;
   headerTextColor: string;
   fontFamily: string;
+  sectionOrder?: string[];
 }) {
   if (!student) return <div>No student data available.</div>;
 
   const general = student.general || {};
   const ugDetails = student.ugDetails || {};
-  const workExperiences: Experience[] = student.workExperience || [];
-  const internships: Internship[] = student.internships || [];
-  const projects: Project[] = student.projects || [];
-  const technicalSkills: Skill[] = student.technicalSkills || [];
-  const publications: Publication[] = student.publications || [];
-  const events: Event[] = student.events || [];
-  const placements: Placement[] = student.placements || [];
+  const workExperiences = student.workExperience || [];
+  const internships = student.internships || [];
+  const projects = student.projects || [];
+  const technicalSkills = student.technicalSkills || [];
+  const publications = student.publications || [];
+  const events = student.events || [];
+  const placements = student.placements || [];
 
-  return (
-    <div
-      className="max-w-4xl mx-auto p-8 bg-white text-black"
-      style={{
-        fontFamily,
-        fontSize: 'var(--resume-font-size)',
-        lineHeight: 'var(--resume-line-height)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--section-spacing)',
-      }}
-    >
-      <div className="text-center" style={{ backgroundColor: headerBgColor, color: headerTextColor, padding: '1rem' }}>
-        <h1 className="font-bold uppercase text-2xl">
-          {general.candidate_first_name} {general.candidate_last_name}
-        </h1>
-        <div className="text-sm mt-1">
-          ✉ {general.email} | 📞 {general.phoneNo} | 🎓 {general.current_degree}
-        </div>
-      </div>
-
-      <Section title="Professional Summary" headerBgColor={headerBgColor}>
+  // Map section keys to JSX
+  const sectionMap: { [key: string]: React.ReactNode } = {
+    summary: (
+      <Section title="Professional Summary" headerBgColor={headerBgColor} key="summary">
         <p>{general.summary || 'Motivated and enthusiastic student eager to contribute to projects and teams.'}</p>
       </Section>
-
-      <Section title="Education" headerBgColor={headerBgColor}>
+    ),
+    ugDetails: (
+      <Section title="Education" headerBgColor={headerBgColor} key="ugDetails">
         {ugDetails.overallCGPA ? (
           <ul>
             <li>CGPA: {ugDetails.overallCGPA}</li>
@@ -126,10 +57,11 @@ export default function TemplateATS({
           <p>UG details not available.</p>
         )}
       </Section>
-
-      <Section title="Work Experience" headerBgColor={headerBgColor}>
+    ),
+    workExperience: (
+      <Section title="Work Experience" headerBgColor={headerBgColor} key="workExperience">
         {workExperiences.length > 0 ? (
-          workExperiences.map((exp, idx) => (
+          workExperiences.map((exp: any, idx: number) => (
             <div key={idx}>
               <strong>{exp.role}</strong>, {exp.employer} ({exp.startDate?.slice(0, 10)} - {exp.endDate?.slice(0, 10) || 'Present'})
               <div>{exp.responsibilities}</div>
@@ -154,10 +86,11 @@ export default function TemplateATS({
           <p>No work experience listed.</p>
         )}
       </Section>
-
-      <Section title="Internships" headerBgColor={headerBgColor}>
+    ),
+    internships: (
+      <Section title="Internships" headerBgColor={headerBgColor} key="internships">
         {internships.length > 0 ? (
-          internships.map((intern, idx) => (
+          internships.map((intern: any, idx: number) => (
             <div key={idx}>
               <strong>{intern.company}</strong> — {intern.role} ({intern.startDate?.slice(0, 10)} - {intern.endDate?.slice(0, 10)})
               <div>{intern.location}</div>
@@ -182,10 +115,11 @@ export default function TemplateATS({
           <p>No internships listed.</p>
         )}
       </Section>
-
-      <Section title="Projects" headerBgColor={headerBgColor}>
+    ),
+    projects: (
+      <Section title="Projects" headerBgColor={headerBgColor} key="projects">
         {projects.length > 0 ? (
-          projects.map((proj, idx) => (
+          projects.map((proj: any, idx: number) => (
             <div key={idx}>
               <strong>{proj.title}</strong>
               <div>{proj.description}</div>
@@ -202,11 +136,12 @@ export default function TemplateATS({
           <p>No projects listed.</p>
         )}
       </Section>
-
-      <Section title="Skills" headerBgColor={headerBgColor}>
+    ),
+    skills: (
+      <Section title="Skills" headerBgColor={headerBgColor} key="skills">
         {technicalSkills.length > 0 ? (
           <ul className="flex flex-wrap gap-2">
-            {technicalSkills.map((skill, idx) => (
+            {technicalSkills.map((skill: any, idx: number) => (
               <li key={idx} className="border px-2 py-1 rounded flex items-center gap-1">
                 {skill.courseName} ({skill.level})
                 {skill.certificateName && (
@@ -231,10 +166,11 @@ export default function TemplateATS({
           <p>No skills listed.</p>
         )}
       </Section>
-
-      <Section title="Publications" headerBgColor={headerBgColor}>
+    ),
+    publications: (
+      <Section title="Publications" headerBgColor={headerBgColor} key="publications">
         {publications.length > 0 ? (
-          publications.map((pub, idx) => (
+          publications.map((pub: any, idx: number) => (
             <div key={idx}>
               <strong>{pub.title}</strong> — {pub.publisher}
               <div>{pub.abstract}</div>
@@ -251,10 +187,11 @@ export default function TemplateATS({
           <p>No publications listed.</p>
         )}
       </Section>
-
-      <Section title="Enhancement Programs" headerBgColor={headerBgColor}>
+    ),
+    enhancementPrograms: (
+      <Section title="Enhancement Programs" headerBgColor={headerBgColor} key="enhancementPrograms">
         {events.length > 0 ? (
-          events.map((event, idx) => (
+          events.map((event: any, idx: number) => (
             <div key={idx}>
               <strong>{event.name}</strong> — {event.location}
               <div>{event.details}</div>
@@ -265,10 +202,11 @@ export default function TemplateATS({
           <p>No enhancement programs listed.</p>
         )}
       </Section>
-
-      <Section title="Placements" headerBgColor={headerBgColor}>
+    ),
+    placements: (
+      <Section title="Placements" headerBgColor={headerBgColor} key="placements">
         {placements.length > 0 ? (
-          placements.map((placement, idx) => (
+          placements.map((placement: any, idx: number) => (
             <div key={idx}>
               <strong>{placement.employer}</strong> — {placement.designation}
               <div>{placement.onCampus ? 'On Campus' : 'Off Campus'} | CTC: {placement.ctc}</div>
@@ -278,6 +216,30 @@ export default function TemplateATS({
           <p>No placements listed.</p>
         )}
       </Section>
+    ),
+  };
+
+  return (
+    <div
+      className="max-w-4xl mx-auto p-8 bg-white text-black"
+      style={{
+        fontFamily,
+        fontSize: 'var(--resume-font-size)',
+        lineHeight: 'var(--resume-line-height)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--section-spacing)',
+      }}
+    >
+      <div className="text-center" style={{ backgroundColor: headerBgColor, color: headerTextColor, padding: '1rem' }}>
+        <h1 className="font-bold uppercase text-2xl">
+          {general.candidate_first_name} {general.candidate_last_name}
+        </h1>
+        <div className="text-sm mt-1">
+          ✉ {general.email} | 📞 {general.phoneNo} | 🎓 {general.current_degree}
+        </div>
+      </div>
+      {sectionOrder.map((key) => sectionMap[key])}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -82,16 +82,25 @@ export default function SectionReorder({
   locked = false,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor));
+  const [localOrder, setLocalOrder] = useState(sectionOrder);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = sectionOrder.indexOf(active.id as string);
-    const newIndex = sectionOrder.indexOf(over.id as string);
-    const newOrder = arrayMove(sectionOrder, oldIndex, newIndex);
-    setSectionOrder(newOrder);
+    const oldIndex = localOrder.indexOf(active.id as string);
+    const newIndex = localOrder.indexOf(over.id as string);
+    const newOrder = arrayMove(localOrder, oldIndex, newIndex);
+    setLocalOrder(newOrder);
   };
+
+  const handleSave = () => {
+    setSectionOrder(localOrder);
+  };
+
+  React.useEffect(() => {
+    setLocalOrder(sectionOrder);
+  }, [sectionOrder]);
 
   return (
     <div className="p-6 bg-white rounded-2xl shadow-lg max-w-md mx-auto">
@@ -107,15 +116,23 @@ export default function SectionReorder({
           </span>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
-            <ul className="space-y-3">
-              {sectionOrder.map((key) => (
-                <SortableItem key={key} id={key} label={sectionLabels[key] || key} />
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
+        <>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={localOrder} strategy={verticalListSortingStrategy}>
+              <ul className="space-y-3">
+                {localOrder.map((key) => (
+                  <SortableItem key={key} id={key} label={sectionLabels[key] || key} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+          <button
+            className="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+            onClick={handleSave}
+          >
+            Save Section Order
+          </button>
+        </>
       )}
     </div>
   );
