@@ -161,9 +161,9 @@ model Student {
   departmentName     String
   section            String?
   academicYear       String?
-  batch              String? // <-- use this for batch
-  sslcPercentage     String? // <-- add this for sslc_percentage
-  hscPercentage      String? // <-- add this for hsc_percentage
+  pgBatch            String? // PG batch for summary/quick access
+  sslcPercentage     String?
+  hscPercentage      String?
   adhaarNo           String?
   passportNo         String?
   passportExpiryDate DateTime?
@@ -187,6 +187,8 @@ model UGDetails {
   id                  Int      @id @default(autoincrement())
   studentId           Int      @unique
   student             Student  @relation(fields: [studentId], references: [id])
+  ugBatch             String? // UG batch years, e.g., 2020-2024
+  pgBatch             String? // PG batch years, e.g., 2024-2026
   semesterNo          String?
   semesterMarksheet   String?
   overallCGPA         String?

@@ -131,7 +131,6 @@ export default function Generalinfo({
 
   const handleNext = () => {
     if (
-      !merged.batch ||
       !merged.sslc_percentage ||
       !merged.hsc_percentage
     ) {
@@ -291,12 +290,7 @@ export default function Generalinfo({
           {/* Frozen fields with lock icon */}
           <TestInput
             name="candidate_first_name"
-            label={
-              <span>
-                First Name
-                <LockIcon />
-              </span>
-            }
+            label="First Name"
             placeholder="John"
             value={merged.candidate_first_name}
             readOnly
@@ -305,12 +299,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="candidate_last_name"
-            label={
-              <span>
-                Last Name
-                <LockIcon />
-              </span>
-            }
+            label="Last Name"
             placeholder="Doe"
             value={merged.candidate_last_name}
             readOnly
@@ -319,12 +308,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="email"
-            label={
-              <span>
-                Email Address
-                <LockIcon />
-              </span>
-            }
+            label="Email Address"
             type="email"
             placeholder="you@example.com"
             value={merged.email}
@@ -334,12 +318,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="affiliate_university"
-            label={
-              <span>
-                Affiliate University
-                <LockIcon />
-              </span>
-            }
+            label="Affiliate University"
             placeholder="XYZ University"
             value={merged.affiliate_university}
             readOnly
@@ -348,12 +327,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="college_name"
-            label={
-              <span>
-                College Name
-                <LockIcon />
-              </span>
-            }
+            label="College Name"
             placeholder="ABC Engineering College"
             value={merged.college_name}
             readOnly
@@ -362,12 +336,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="roll_reg_no"
-            label={
-              <span>
-                Roll / Reg No
-                <LockIcon />
-              </span>
-            }
+            label="Roll / Reg No"
             placeholder="2021CS001"
             value={merged.roll_reg_no}
             readOnly
@@ -376,12 +345,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="country"
-            label={
-              <span>
-                Country
-                <LockIcon />
-              </span>
-            }
+            label="Country"
             placeholder="India"
             value={merged.country || ""}
             readOnly
@@ -390,12 +354,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="state"
-            label={
-              <span>
-                State
-                <LockIcon />
-              </span>
-            }
+            label="State"
             placeholder="Tamil Nadu"
             value={merged.state || ""}
             readOnly
@@ -404,12 +363,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="district"
-            label={
-              <span>
-                District
-                <LockIcon />
-              </span>
-            }
+            label="District"
             placeholder="Chennai"
             value={merged.district || ""}
             readOnly
@@ -418,12 +372,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="departmentName"
-            label={
-              <span>
-                Department
-                <LockIcon />
-              </span>
-            }
+            label="Department"
             placeholder="Computer Science"
             value={merged.departmentName || ""}
             readOnly
@@ -432,12 +381,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="section"
-            label={
-              <span>
-                Section
-                <LockIcon />
-              </span>
-            }
+            label="Section"
             placeholder="A"
             value={merged.section || ""}
             readOnly
@@ -446,12 +390,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="academicYear"
-            label={
-              <span>
-                Academic Year
-                <LockIcon />
-              </span>
-            }
+            label="Academic Year"
             placeholder="2024-2025"
             value={merged.academicYear || ""}
             readOnly
@@ -460,12 +399,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="DOB"
-            label={
-              <span>
-                Date of Birth
-                <LockIcon />
-              </span>
-            }
+            label="Date of Birth"
             type="date"
             value={merged.DOB ? merged.DOB.substring(0, 10) : ""}
             readOnly
@@ -474,12 +408,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="phoneNo"
-            label={
-              <span>
-                Phone Number
-                <LockIcon />
-              </span>
-            }
+            label="Phone Number"
             placeholder="9876543210"
             value={merged.phoneNo || ""}
             readOnly
@@ -488,12 +417,7 @@ export default function Generalinfo({
           />
           <TestInput
             name="secondaryPhoneNo"
-            label={
-              <span>
-                Secondary Phone Number
-                <LockIcon />
-              </span>
-            }
+            label="Secondary Phone Number"
             placeholder="Alternate number"
             value={merged.secondaryPhoneNo || ""}
             readOnly
@@ -502,13 +426,6 @@ export default function Generalinfo({
           />
 
           {/* Editable fields */}
-          <TestInput
-            name="batch"
-            label="Batch"
-            placeholder="2021–25"
-            value={merged.batch}
-            onChange={(e) => update("batch", e.target.value)}
-          />
           <TestInput
             name="sslc_percentage"
             label="SSLC %"

@@ -74,7 +74,6 @@ export async function POST(req: NextRequest) {
             firstName: data.candidate_first_name,
             lastName: data.candidate_last_name,
             photo: data.photo ?? null,
-            batch: data.batch,
             rollNo: data.roll_reg_no,
             sslcPercentage: data.sslc_percentage,
             hscPercentage: data.hsc_percentage,
@@ -99,6 +98,8 @@ export async function POST(req: NextRequest) {
         await prisma.uGDetails.upsert({
           where: { studentId },
           update: {
+            ugBatch: data.batch || data.ugBatch,
+            pgBatch: data.pgBatch,
             semesterNo: data.semesterNo,
             semesterMarksheet: data.semesterMarksheet,
             overallCGPA: data.overallCGPA,
@@ -111,6 +112,8 @@ export async function POST(req: NextRequest) {
           },
           create: {
             studentId,
+            ugBatch: data.batch || data.ugBatch,
+            pgBatch: data.pgBatch,
             semesterNo: data.semesterNo,
             semesterMarksheet: data.semesterMarksheet,
             overallCGPA: data.overallCGPA,
@@ -309,24 +312,22 @@ export async function GET() {
 
   try {
     const userId = Number(session.user.id);
-   const student = await prisma.student.findUnique({
-  where: { userId },
-  include: {
-    college: true,
-    department: true,
-    ugDetails: true,
-    technicalSkills: true,       // ✅ correct key
-    internships: true,
-    events: true,                // ✅ correct key (not enhancementPrograms)
-    socialProfiles: true,
-    placements: true,
-    workExperiences: true,
-    publications: true,
-    projects: true,
-  },
-});
-
-    
+    const student = await prisma.student.findUnique({
+      where: { userId },
+      include: {
+        college: true,
+        department: true,
+        ugDetails: true,
+        technicalSkills: true,       // ✅ correct key
+        internships: true,
+        events: true,                // ✅ correct key (not enhancementPrograms)
+        socialProfiles: true,
+        placements: true,
+        workExperiences: true,
+        publications: true,
+        projects: true,
+      },
+    });
 
     if (!student) {
       return NextResponse.json(
@@ -335,7 +336,21 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ student });
+    // Ensure ugBatch and pgBatch are included in the ugDetails object
+    const ugDetails = student.ugDetails
+      ? {
+          ...student.ugDetails,
+          ugBatch: student.ugDetails.ugBatch,
+          pgBatch: student.ugDetails.pgBatch,
+        }
+      : {};
+
+    return NextResponse.json({
+      student: {
+        ...student,
+        ugDetails,
+      },
+    });
   } catch (err) {
     console.error("Error fetching student record:", err);
     return NextResponse.json(

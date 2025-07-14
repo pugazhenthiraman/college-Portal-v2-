@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState, useEffect } from "react";
 import { TestInput } from "@/components/ui/TestInput";
 import toast, { Toaster } from "react-hot-toast";
 
 export type UGDetailsData = {
+  ugBatch?: string;
+  pgBatch?: string;
   semesterNo?: string;
   semesterMarksheet?: string;
   overallCGPA?: string;
@@ -19,14 +21,6 @@ export type UGDetailsData = {
 interface UGDetailsFormProps {
   data: UGDetailsData;
   onChange: (data: UGDetailsData) => void;
-  batch?: string;
-}
-
-function getBatchEndYear(batch?: string): number | null {
-  if (!batch) return null;
-  const match = batch.match(/(\d{4})-(\d{4})/);
-  if (!match) return null;
-  return parseInt(match[2], 10);
 }
 
 // Helper to validate percentage input (0-100, up to 2 decimals)
@@ -47,18 +41,40 @@ function validateCGPA(value: string) {
   return num >= 0 && num <= 100;
 }
 
+function parseBatchYears(batch?: string): { start: number; end: number } | null {
+  if (!batch) return null;
+  const match = batch.match(/^(\d{4})-(\d{4})$/);
+  if (!match) return null;
+  return { start: parseInt(match[1], 10), end: parseInt(match[2], 10) };
+}
+
+function isValidBatch(batch?: string): boolean {
+  const match = batch?.match(/^(\d{4})-(\d{4})$/);
+  if (!match) return false;
+  const start = parseInt(match[1], 10);
+  const end = parseInt(match[2], 10);
+  return end - start === 4;
+}
+
 export default function UGDetailsForm({
   data,
   onChange,
-  batch,
 }: UGDetailsFormProps) {
   const ugInputRef = useRef<HTMLInputElement>(null);
   const pgInputRef = useRef<HTMLInputElement>(null);
 
-  // Only allow PG if current year > batch end year
-  const batchEndYear = getBatchEndYear(batch);
-  const currentYear = new Date().getFullYear();
-  const canEditPG = batchEndYear !== null && currentYear >= batchEndYear;
+  // Only allow PG if current date is after UG batch end year (June)
+  const batchYears = parseBatchYears(data.ugBatch);
+  const now = new Date();
+  let canEditPG = false;
+  if (batchYears) {
+    if (now.getFullYear() > batchYears.end) {
+      canEditPG = true;
+    } else if (now.getFullYear() === batchYears.end && now.getMonth() >= 5) {
+      // June is month 5 (0-indexed)
+      canEditPG = true;
+    }
+  }
 
   // Upload handler: uploads file to /api/upload and stores the returned path
   const handleUpload = useCallback(
@@ -113,6 +129,31 @@ export default function UGDetailsForm({
     [data, onChange]
   );
 
+  // Batch validation state
+  const [batchInput, setBatchInput] = useState(data.ugBatch || "");
+  const [batchValid, setBatchValid] = useState(false);
+  const [batchError, setBatchError] = useState("");
+  useEffect(() => {
+    setBatchInput(data.ugBatch || "");
+  }, [data.ugBatch]);
+  useEffect(() => {
+    if (!batchInput) {
+      setBatchValid(false);
+      setBatchError("");
+      return;
+    }
+    const handler = setTimeout(() => {
+      if (!isValidBatch(batchInput)) {
+        setBatchValid(false);
+        setBatchError("Please enter a valid batch (e.g., 2020-2024 for a 4-year UG course)");
+      } else {
+        setBatchValid(true);
+        setBatchError("");
+      }
+    }, 2000);
+    return () => clearTimeout(handler);
+  }, [batchInput]);
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-100 via-indigo-50 to-white">
       <Toaster position="top-right" />
@@ -129,6 +170,24 @@ export default function UGDetailsForm({
 
         {/* Form Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* UG Batch */}
+          <TestInput
+            name="ugBatch"
+            label="UG Batch"
+            placeholder="2021-2025"
+            title="Enter your UG batch in the format YYYY-YYYY, e.g., 2020-2024"
+            value={batchInput}
+            onChange={e => {
+              setBatchInput(e.target.value);
+              update("ugBatch", e.target.value);
+            }}
+            rightIcon={batchValid ? (
+              <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            ) : undefined}
+          />
+          {batchError && (
+            <div className="text-xs text-red-500 mt-1 mb-2">{batchError}</div>
+          )}
           {/* UG Semester No */}
           <TestInput
             name="semesterNo"
@@ -171,6 +230,8 @@ export default function UGDetailsForm({
                 type="file"
                 accept=".jpeg,.jpg,.png,.pdf"
                 className="w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-1"
+                title="Upload your UG marksheet (JPG, PNG, PDF)"
+                placeholder="Upload UG marksheet"
                 onChange={e => handleUpload(e, "semesterMarksheet")}
               />
             )}
@@ -230,7 +291,7 @@ export default function UGDetailsForm({
             </label>
             {!canEditPG && (
               <span className="text-xs text-red-500 ml-2">
-                (PG details can only be entered after UG batch completion)
+                (PG details can only be entered after UG batch completion, i.e., after {data.ugBatch ? `${data.ugBatch.split("-")[1]} June` : "UG end year"})
               </span>
             )}
           </div>
@@ -238,6 +299,14 @@ export default function UGDetailsForm({
           {/* PG Section */}
           {data.isPG && canEditPG && (
             <>
+              <TestInput
+                name="pgBatch"
+                label="PG Batch"
+                placeholder="2025-2027"
+                title="Enter your PG batch in the format YYYY-YYYY, e.g., 2025-2027"
+                value={data.pgBatch || ""}
+                onChange={e => update("pgBatch", e.target.value)}
+              />
               <TestInput
                 name="pgSemesterNo"
                 label="PG Semester No"
@@ -278,6 +347,8 @@ export default function UGDetailsForm({
                     type="file"
                     accept=".jpeg,.jpg,.png,.pdf"
                     className="w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-1"
+                    title="Upload your PG marksheet (JPG, PNG, PDF)"
+                    placeholder="Upload PG marksheet"
                     onChange={e => handleUpload(e, "pgSemesterMarksheet")}
                   />
                 )}

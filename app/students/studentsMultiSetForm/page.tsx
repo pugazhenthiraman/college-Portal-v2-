@@ -112,7 +112,6 @@ export default function StudentMultiStepForm() {
                 current_degree: result.student.department?.name || "",
                 affiliate_university: result.student.college?.affiliatedUniversity || "",
                 college_name: result.student.college?.name || "",
-                batch: result.student.batch || "",
                 roll_reg_no: result.student.rollNo || "",
                 sslc_percentage: result.student.sslcPercentage || "",
                 hsc_percentage: result.student.hscPercentage || "",
@@ -136,6 +135,8 @@ export default function StudentMultiStepForm() {
               },
               ugDetails: ug
                 ? {
+                    ugBatch: ug.ugBatch || "",
+                    pgBatch: ug.pgBatch || "",
                     semesterNo: ug.semesterNo || "",
                     semesterMarksheet: ug.semesterMarksheet || "",
                     overallCGPA: ug.overallCGPA || "",
@@ -188,10 +189,16 @@ export default function StudentMultiStepForm() {
       toast.error("Invalid step.");
       return;
     }
-    // Ensure photo is sent as null if removed
     let payloadData = data[key];
     if (key === "general" && (payloadData.photo === undefined || payloadData.photo === "")) {
       payloadData = { ...payloadData, photo: null };
+    }
+    if (key === "ugDetails") {
+      payloadData = {
+        ...payloadData,
+        ugBatch: payloadData.ugBatch,
+        pgBatch: payloadData.pgBatch,
+      };
     }
     const payload = { section: key, data: payloadData };
     try {
