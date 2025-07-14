@@ -19,14 +19,46 @@ export type UGDetailsData = {
 interface UGDetailsFormProps {
   data: UGDetailsData;
   onChange: (data: UGDetailsData) => void;
+  batch?: string;
+}
+
+function getBatchEndYear(batch?: string): number | null {
+  if (!batch) return null;
+  const match = batch.match(/(\d{4})-(\d{4})/);
+  if (!match) return null;
+  return parseInt(match[2], 10);
+}
+
+// Helper to validate percentage input (0-100, up to 2 decimals)
+function validatePercentage(value: string) {
+  if (value === "") return true;
+  const regex = /^(100(\.0{1,2})?|(\d{1,2})(\.\d{1,2})?)$/;
+  if (!regex.test(value)) return false;
+  const num = parseFloat(value);
+  return num >= 0 && num <= 100;
+}
+
+// Helper to validate CGPA input (0-100, up to 2 decimals)
+function validateCGPA(value: string) {
+  if (value === "") return true;
+  const regex = /^(100(\.0{1,2})?|(\d{1,2})(\.\d{1,2})?)$/;
+  if (!regex.test(value)) return false;
+  const num = parseFloat(value);
+  return num >= 0 && num <= 100;
 }
 
 export default function UGDetailsForm({
   data,
   onChange,
+  batch,
 }: UGDetailsFormProps) {
   const ugInputRef = useRef<HTMLInputElement>(null);
   const pgInputRef = useRef<HTMLInputElement>(null);
+
+  // Only allow PG if current year > batch end year
+  const batchEndYear = getBatchEndYear(batch);
+  const currentYear = new Date().getFullYear();
+  const canEditPG = batchEndYear !== null && currentYear >= batchEndYear;
 
   // Upload handler: uploads file to /api/upload and stores the returned path
   const handleUpload = useCallback(
@@ -44,7 +76,7 @@ export default function UGDetailsForm({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("field", "marksheet");
-  
+
       try {
         const res = await fetch("/api/upload", {
           method: "POST",
@@ -151,10 +183,17 @@ export default function UGDetailsForm({
             type="number"
             step="0.01"
             min="0"
-            max="10"
+            max="100"
             placeholder="e.g. 8.75"
             value={data.overallCGPA || ""}
-            onChange={e => update("overallCGPA", e.target.value)}
+            onChange={e => {
+              const val = e.target.value;
+              if (validateCGPA(val)) {
+                update("overallCGPA", val);
+              } else {
+                toast.error("Enter a valid CGPA (0–100, up to 2 decimals)");
+              }
+            }}
           />
           {/* UG Percentage */}
           <TestInput
@@ -166,7 +205,14 @@ export default function UGDetailsForm({
             max="100"
             placeholder="e.g. 87.5"
             value={data.overallPercentage || ""}
-            onChange={e => update("overallPercentage", e.target.value)}
+            onChange={e => {
+              const val = e.target.value;
+              if (validatePercentage(val)) {
+                update("overallPercentage", val);
+              } else {
+                toast.error("Enter a valid percentage (0–100, up to 2 decimals)");
+              }
+            }}
           />
 
           {/* PG Toggle */}
@@ -177,14 +223,20 @@ export default function UGDetailsForm({
               checked={!!data.isPG}
               onChange={e => update("isPG", e.target.checked)}
               className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+              disabled={!canEditPG}
             />
             <label htmlFor="isPG" className="text-sm text-gray-700">
               I also have Postgraduate details
             </label>
+            {!canEditPG && (
+              <span className="text-xs text-red-500 ml-2">
+                (PG details can only be entered after UG batch completion)
+              </span>
+            )}
           </div>
 
           {/* PG Section */}
-          {data.isPG && (
+          {data.isPG && canEditPG && (
             <>
               <TestInput
                 name="pgSemesterNo"
@@ -236,10 +288,17 @@ export default function UGDetailsForm({
                 type="number"
                 step="0.01"
                 min="0"
-                max="10"
+                max="100"
                 placeholder="e.g. 9.00"
                 value={data.pgOverallCGPA || ""}
-                onChange={e => update("pgOverallCGPA", e.target.value)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (validateCGPA(val)) {
+                    update("pgOverallCGPA", val);
+                  } else {
+                    toast.error("Enter a valid CGPA (0–100, up to 2 decimals)");
+                  }
+                }}
               />
               <TestInput
                 name="pgOverallPercentage"
@@ -250,7 +309,14 @@ export default function UGDetailsForm({
                 max="100"
                 placeholder="e.g. 90.0"
                 value={data.pgOverallPercentage || ""}
-                onChange={e => update("pgOverallPercentage", e.target.value)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (validatePercentage(val)) {
+                    update("pgOverallPercentage", val);
+                  } else {
+                    toast.error("Enter a valid percentage (0–100, up to 2 decimals)");
+                  }
+                }}
               />
             </>
           )}

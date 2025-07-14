@@ -8,7 +8,6 @@ export type ProfileData = {
   photo?: string;
   candidate_first_name: string;
   candidate_last_name: string;
-  candidate_id: string;
   email: string;
   current_degree: string;
   affiliate_university: string;
@@ -17,13 +16,24 @@ export type ProfileData = {
   roll_reg_no: string;
   sslc_percentage: string;
   hsc_percentage: string;
+  country?: string;
+  district?: string;
+  state?: string;
+  departmentName?: string;
+  section?: string;
+  academicYear?: string;
+  adhaarNo?: string;
+  passportNo?: string;
+  passportExpiryDate?: string; // ISO string for date
+  DOB?: string; // ISO string for date
+  phoneNo?: string;
+  secondaryPhoneNo?: string;
 };
 
 const emptyProfile: ProfileData = {
   photo: undefined,
   candidate_first_name: "",
   candidate_last_name: "",
-  candidate_id: "",
   email: "",
   current_degree: "",
   affiliate_university: "",
@@ -32,6 +42,18 @@ const emptyProfile: ProfileData = {
   roll_reg_no: "",
   sslc_percentage: "",
   hsc_percentage: "",
+  country: "",
+  district: "",
+  state: "",
+  departmentName: "",
+  section: "",
+  academicYear: "",
+  adhaarNo: "",
+  passportNo: "",
+  passportExpiryDate: "",
+  DOB: "",
+  phoneNo: "",
+  secondaryPhoneNo: "",
 };
 
 interface GeneralinfoProps {
@@ -41,15 +63,53 @@ interface GeneralinfoProps {
   onNext?: () => void;
 }
 
+// Freeze all except: batch, sslc_percentage, hsc_percentage, adhaarNo, passportNo, passportExpiryDate
 const frozenFields = [
   "candidate_first_name",
   "candidate_last_name",
-  "candidate_id",
   "email",
   "affiliate_university",
   "college_name",
   "roll_reg_no",
+  "country",
+  "district",
+  "state",
+  "departmentName",
+  "section",
+  "academicYear",
+  "DOB",
+  "phoneNo",
+  "secondaryPhoneNo",
 ];
+
+const validatePercentage = (value: string) => {
+  if (value === "") return true;
+  const regex = /^(100(\.0{1,2})?|(\d{1,2})(\.\d{1,2})?)$/;
+  if (!regex.test(value)) return false;
+  const num = parseFloat(value);
+  return num >= 0 && num <= 100;
+};
+
+// Aadhaar: allow empty or up to 12 digits, but only show error if length is 12 and not valid
+const validateAadhaar = (value: string) => {
+  return value === "" || /^\d{0,12}$/.test(value);
+};
+const isAadhaarComplete = (value: string) => value.length === 12 && !/^\d{12}$/.test(value);
+
+// Passport: allow empty or up to 8 alphanumeric, but only show error if length is 8 and not valid
+const validatePassport = (value: string) => {
+  return value === "" || /^[A-Za-z0-9]{0,8}$/.test(value);
+};
+const isPassportComplete = (value: string) => value.length === 8 && !/^[A-Za-z0-9]{8}$/.test(value);
+
+const LockIcon = () => (
+  <span className="ml-1 text-gray-400" title="Locked">
+    <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
+      <rect width="16" height="10" x="4" y="11" rx="2" />
+    </svg>
+  </span>
+);
 
 export default function Generalinfo({
   data = {},
@@ -65,12 +125,10 @@ export default function Generalinfo({
     [merged, onChange]
   );
 
-  // Handler for frozen fields
   const handleFrozenField = () => {
     toast.error("Please contact the faculty for changes.");
   };
 
-  // Only validate on "Next", not on "Save Draft"
   const handleNext = () => {
     if (
       !merged.batch ||
@@ -80,10 +138,48 @@ export default function Generalinfo({
       toast.error("Please fill in all required fields.");
       return;
     }
+    if (
+      !validatePercentage(merged.sslc_percentage) ||
+      !validatePercentage(merged.hsc_percentage)
+    ) {
+      toast.error("Enter valid percentages (0–100, up to 2 decimals)");
+      return;
+    }
+    if (
+      merged.adhaarNo &&
+      merged.adhaarNo.length > 0 &&
+      merged.adhaarNo.length !== 12
+    ) {
+      toast.error("Aadhaar must be exactly 12 digits");
+      return;
+    }
+    if (
+      merged.adhaarNo &&
+      merged.adhaarNo.length === 12 &&
+      !/^\d{12}$/.test(merged.adhaarNo)
+    ) {
+      toast.error("Aadhaar must be exactly 12 digits");
+      return;
+    }
+    if (
+      merged.passportNo &&
+      merged.passportNo.length > 0 &&
+      merged.passportNo.length !== 8
+    ) {
+      toast.error("Passport must be exactly 8 characters (A-Z, 0-9)");
+      return;
+    }
+    if (
+      merged.passportNo &&
+      merged.passportNo.length === 8 &&
+      !/^[A-Za-z0-9]{8}$/.test(merged.passportNo)
+    ) {
+      toast.error("Passport must be exactly 8 characters (A-Z, 0-9)");
+      return;
+    }
     if (onNext) onNext();
   };
 
-  // Handle photo upload using /api/upload
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,7 +187,7 @@ export default function Generalinfo({
     formData.append("file", file);
     formData.append("field", "photo");
     if (merged.photo) {
-      formData.append("oldPath", merged.photo); // Remove old photo if exists
+      formData.append("oldPath", merged.photo);
     }
     const res = await fetch("/api/upload", {
       method: "POST",
@@ -99,13 +195,12 @@ export default function Generalinfo({
     });
     const data = await res.json();
     if (data.path) {
-      update("photo", data.path); // Save only the path in DB
+      update("photo", data.path);
     } else {
       toast.error(data.error || "Failed to upload photo.");
     }
   };
 
-  // Remove photo from server and state, then save immediately
   const handleRemovePhoto = async () => {
     if (merged.photo && merged.photo.startsWith("/uploads/")) {
       await fetch("/api/upload/delete", {
@@ -115,10 +210,9 @@ export default function Generalinfo({
       });
     }
     update("photo", undefined);
-    if (onSaveDraft) onSaveDraft(); // Save immediately after removal
+    if (onSaveDraft) onSaveDraft();
   };
 
-  // Helper for displaying the photo or fallback
   const getPhotoUrl = (photo: string | undefined) => {
     if (!photo || photo.trim() === "") return "/default-profile.png";
     if (photo.startsWith("http") || photo.startsWith("/uploads/")) return photo;
@@ -194,17 +288,13 @@ export default function Generalinfo({
 
         {/* Form Inputs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          {/* Frozen fields with lock icon */}
           <TestInput
             name="candidate_first_name"
             label={
               <span>
                 First Name
-                <span className="ml-1 text-gray-400" title="Locked">
-                  <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-                    <rect width="16" height="10" x="4" y="11" rx="2" />
-                  </svg>
-                </span>
+                <LockIcon />
               </span>
             }
             placeholder="John"
@@ -218,12 +308,7 @@ export default function Generalinfo({
             label={
               <span>
                 Last Name
-                <span className="ml-1 text-gray-400" title="Locked">
-                  <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-                    <rect width="16" height="10" x="4" y="11" rx="2" />
-                  </svg>
-                </span>
+                <LockIcon />
               </span>
             }
             placeholder="Doe"
@@ -233,35 +318,11 @@ export default function Generalinfo({
             onFocus={handleFrozenField}
           />
           <TestInput
-            name="candidate_id"
-            label={
-              <span>
-                Candidate ID
-                <span className="ml-1 text-gray-400" title="Locked">
-                  <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-                    <rect width="16" height="10" x="4" y="11" rx="2" />
-                  </svg>
-                </span>
-              </span>
-            }
-            placeholder="CAND-12345"
-            value={merged.candidate_id}
-            readOnly
-            className="bg-gray-100 cursor-not-allowed"
-            onFocus={handleFrozenField}
-          />
-          <TestInput
             name="email"
             label={
               <span>
                 Email Address
-                <span className="ml-1 text-gray-400" title="Locked">
-                  <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-                    <rect width="16" height="10" x="4" y="11" rx="2" />
-                  </svg>
-                </span>
+                <LockIcon />
               </span>
             }
             type="email"
@@ -276,12 +337,7 @@ export default function Generalinfo({
             label={
               <span>
                 Affiliate University
-                <span className="ml-1 text-gray-400" title="Locked">
-                  <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-                    <rect width="16" height="10" x="4" y="11" rx="2" />
-                  </svg>
-                </span>
+                <LockIcon />
               </span>
             }
             placeholder="XYZ University"
@@ -295,12 +351,7 @@ export default function Generalinfo({
             label={
               <span>
                 College Name
-                <span className="ml-1 text-gray-400" title="Locked">
-                  <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-                    <rect width="16" height="10" x="4" y="11" rx="2" />
-                  </svg>
-                </span>
+                <LockIcon />
               </span>
             }
             placeholder="ABC Engineering College"
@@ -314,12 +365,7 @@ export default function Generalinfo({
             label={
               <span>
                 Roll / Reg No
-                <span className="ml-1 text-gray-400" title="Locked">
-                  <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-                    <rect width="16" height="10" x="4" y="11" rx="2" />
-                  </svg>
-                </span>
+                <LockIcon />
               </span>
             }
             placeholder="2021CS001"
@@ -328,7 +374,134 @@ export default function Generalinfo({
             className="bg-gray-100 cursor-not-allowed"
             onFocus={handleFrozenField}
           />
-          {/* Editable fields below */}
+          <TestInput
+            name="country"
+            label={
+              <span>
+                Country
+                <LockIcon />
+              </span>
+            }
+            placeholder="India"
+            value={merged.country || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="state"
+            label={
+              <span>
+                State
+                <LockIcon />
+              </span>
+            }
+            placeholder="Tamil Nadu"
+            value={merged.state || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="district"
+            label={
+              <span>
+                District
+                <LockIcon />
+              </span>
+            }
+            placeholder="Chennai"
+            value={merged.district || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="departmentName"
+            label={
+              <span>
+                Department
+                <LockIcon />
+              </span>
+            }
+            placeholder="Computer Science"
+            value={merged.departmentName || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="section"
+            label={
+              <span>
+                Section
+                <LockIcon />
+              </span>
+            }
+            placeholder="A"
+            value={merged.section || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="academicYear"
+            label={
+              <span>
+                Academic Year
+                <LockIcon />
+              </span>
+            }
+            placeholder="2024-2025"
+            value={merged.academicYear || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="DOB"
+            label={
+              <span>
+                Date of Birth
+                <LockIcon />
+              </span>
+            }
+            type="date"
+            value={merged.DOB ? merged.DOB.substring(0, 10) : ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="phoneNo"
+            label={
+              <span>
+                Phone Number
+                <LockIcon />
+              </span>
+            }
+            placeholder="9876543210"
+            value={merged.phoneNo || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+          <TestInput
+            name="secondaryPhoneNo"
+            label={
+              <span>
+                Secondary Phone Number
+                <LockIcon />
+              </span>
+            }
+            placeholder="Alternate number"
+            value={merged.secondaryPhoneNo || ""}
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+            onFocus={handleFrozenField}
+          />
+
+          {/* Editable fields */}
           <TestInput
             name="batch"
             label="Batch"
@@ -345,7 +518,14 @@ export default function Generalinfo({
             step="0.01"
             placeholder="88.50"
             value={merged.sslc_percentage}
-            onChange={(e) => update("sslc_percentage", e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (validatePercentage(val)) {
+                update("sslc_percentage", val);
+              } else {
+                toast.error("Enter a valid percentage (0–100, up to 2 decimals)");
+              }
+            }}
           />
           <TestInput
             name="hsc_percentage"
@@ -356,7 +536,59 @@ export default function Generalinfo({
             step="0.01"
             placeholder="91.20"
             value={merged.hsc_percentage}
-            onChange={(e) => update("hsc_percentage", e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (validatePercentage(val)) {
+                update("hsc_percentage", val);
+              } else {
+                toast.error("Enter a valid percentage (0–100, up to 2 decimals)");
+              }
+            }}
+          />
+          <TestInput
+            name="adhaarNo"
+            label="Aadhaar Number"
+            placeholder="12 digit number"
+            value={merged.adhaarNo || ""}
+            maxLength={12}
+            onChange={e => {
+              const val = e.target.value;
+              if (validateAadhaar(val)) {
+                update("adhaarNo", val);
+              }
+            }}
+            onBlur={e => {
+              const val = e.target.value;
+              if (val && val.length !== 12) {
+                toast.error("Aadhaar must be exactly 12 digits");
+              }
+            }}
+          />
+          <TestInput
+            name="passportNo"
+            label="Passport Number"
+            placeholder="8 characters"
+            value={merged.passportNo || ""}
+            maxLength={8}
+            onChange={e => {
+              const val = e.target.value;
+              if (validatePassport(val)) {
+                update("passportNo", val);
+              }
+            }}
+            onBlur={e => {
+              const val = e.target.value;
+              if (val && val.length !== 8) {
+                toast.error("Passport must be exactly 8 characters (A-Z, 0-9)");
+              }
+            }}
+          />
+          <TestInput
+            name="passportExpiryDate"
+            label="Passport Expiry Date"
+            type="date"
+            value={merged.passportExpiryDate ? merged.passportExpiryDate.substring(0, 10) : ""}
+            onChange={e => update("passportExpiryDate", e.target.value)}
           />
         </div>
 

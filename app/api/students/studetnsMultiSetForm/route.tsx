@@ -68,8 +68,6 @@ export async function POST(req: NextRequest) {
     let updatedStudent;
     switch (section) {
       case "general":
-        // This is the important part for photo:
-        // If data.photo is null or "", it will set the DB field to null (removes the photo)
         updatedStudent = await prisma.student.update({
           where: { userId },
           data: {
@@ -81,6 +79,18 @@ export async function POST(req: NextRequest) {
             sslcPercentage: data.sslc_percentage,
             hscPercentage: data.hsc_percentage,
             personalEmailId: data.email,
+            country: data.country,
+            district: data.district,
+            state: data.state,
+            departmentName: data.departmentName,
+            section: data.section,
+            academicYear: data.academicYear,
+            adhaarNo: data.adhaarNo,
+            passportNo: data.passportNo,
+            passportExpiryDate: data.passportExpiryDate ? new Date(data.passportExpiryDate) : null,
+            DOB: data.DOB ? new Date(data.DOB) : undefined,
+            phoneNo: data.phoneNo,
+            secondaryPhoneNo: data.secondaryPhoneNo,
           },
         });
         break;
@@ -222,6 +232,8 @@ export async function POST(req: NextRequest) {
               ctc: we.ctc,
               startDate: we.startDate ? new Date(we.startDate) : null,
               endDate: we.endDate ? new Date(we.endDate) : null,
+              certificate: we.certificate || null,         // <-- add this
+              certificateName: we.certificateName || null, // <-- add this
             })),
           });
         }
@@ -244,22 +256,26 @@ export async function POST(req: NextRequest) {
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-      case "projects":
-        await prisma.project.deleteMany({ where: { studentId } });
-        if (Array.isArray(data)) {
-          await prisma.project.createMany({
-            data: data.map((prj: any) => ({
-              studentId,
-              title: prj.title,
-              link: prj.link || null,
-              startDate: new Date(prj.startDate),
-              endDate: new Date(prj.endDate),
-              description: prj.description,
-            })),
-          });
-        }
-        updatedStudent = await prisma.student.findUnique({ where: { userId } });
-        break;
+        case "projects":
+          // Remove all previous projects for this student
+          await prisma.project.deleteMany({ where: { studentId } });
+          // Only create if there are projects
+          if (Array.isArray(data)) {
+            await prisma.project.createMany({
+              data: data.map((prj: any) => ({
+                studentId,
+                title: prj.title,
+                link: prj.link || null,
+                startDate: new Date(prj.startDate),
+                endDate: new Date(prj.endDate),
+                description: prj.description,
+                category: prj.category || null,      // <-- save category
+                githubRepo: prj.githubRepo || null,  // <-- save githubRepo
+              })),
+            });
+          }
+          updatedStudent = await prisma.student.findUnique({ where: { userId } });
+          break;
 
       default:
         return NextResponse.json(

@@ -6,12 +6,14 @@ import { Toaster, toast } from 'react-hot-toast';
 import ColorPalette from '../../../components/ColorPalette';
 import FontSelector from '../../../components/FontSelector';
 import SectionReorder from '../../../components/SectionReorder';
+
 import Template1 from '../../../components/ResumeTemplates/Template1';
 import Template2 from '../../../components/ResumeTemplates/Template2';
 import Template3 from '../../../components/ResumeTemplates/Template3';
 import Template4 from '../../../components/ResumeTemplates/Template4';
 import Template5 from '../../../components/ResumeTemplates/Template5';
 import Template6 from '../../../components/ResumeTemplates/Template6';
+import ResumeAISuggestions from '../../../components/ResumeAISuggestions'; // <-- Import the AI Suggestions component
 
 const templates = [
   { name: 'Modern', component: Template1, color: '#2563eb' },
@@ -135,6 +137,34 @@ export default function ResumePage() {
     toast.success('🔗 Share link copied to clipboard!');
   };
 
+  // Helper to extract plain text from studentData for AI suggestions
+  function getResumeText(data: any): string {
+    if (!data) return '';
+    // You can customize this to extract and format the most important fields
+    let text = '';
+    if (data.general) {
+      text += `Name: ${data.general.name || ''}\nEmail: ${data.general.email || ''}\n`;
+      text += `Summary: ${data.general.summary || ''}\n\n`;
+    }
+    if (data.ugDetails) {
+      text += `UG Details: ${JSON.stringify(data.ugDetails)}\n\n`;
+    }
+    if (data.internships) {
+      text += `Internships: ${JSON.stringify(data.internships)}\n\n`;
+    }
+    if (data.projects) {
+      text += `Projects: ${JSON.stringify(data.projects)}\n\n`;
+    }
+    if (data.skills) {
+      text += `Skills: ${JSON.stringify(data.skills)}\n\n`;
+    }
+    if (data.workExperience) {
+      text += `Work Experience: ${JSON.stringify(data.workExperience)}\n\n`;
+    }
+    // Add more fields as needed
+    return text;
+  }
+
   if (loading) return <div className="text-center py-10">Loading resume data...</div>;
   if (!studentData) return <div className="text-center py-10 text-red-600">Failed to load student data.</div>;
 
@@ -152,27 +182,31 @@ export default function ResumePage() {
         {/* Resume Preview Area (scrollable) */}
         <div className="overflow-y-auto max-h-[calc(100vh-80px)] pr-2">
           <h1 className="text-3xl font-bold mb-4 text-center">Resume Builder</h1>
-          <h2 className="text-center mb-6 text-gray-600">
-            Currently Selected: <span className="font-semibold">{templates[selectedTemplate].name}</span>
-          </h2>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4 mb-8">
+          
+          {/* Template Selection UI */}
+          <div className="flex gap-3 justify-center mb-6 flex-wrap">
             {templates.map((tpl, idx) => (
               <button
                 key={tpl.name}
-                className={`border px-4 py-3 rounded-lg font-medium text-center transition transform hover:scale-105`}
-                style={{
-                  backgroundColor: selectedTemplate === idx ? tpl.color : '#fff',
-                  color: selectedTemplate === idx ? '#fff' : tpl.color,
-                  borderColor: tpl.color,
-                  boxShadow: selectedTemplate === idx ? `0 2px 8px 0 ${tpl.color}33` : 'none',
-                }}
+                className={`px-4 py-2 rounded font-medium border transition-colors duration-200 ${
+                  selectedTemplate === idx
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
+                }`}
+                style={{ borderColor: tpl.color }}
                 onClick={() => setSelectedTemplate(idx)}
               >
                 {tpl.name}
               </button>
             ))}
           </div>
+
+          <h2 className="text-center mb-6 text-gray-600">
+            Currently Selected: <span className="font-semibold">{templates[selectedTemplate].name}</span>
+          </h2>
+
+          {/* AI Suggestions Component */}
+          <ResumeAISuggestions resumeText={getResumeText(studentData)} />
 
           <div
             id="resume-preview"

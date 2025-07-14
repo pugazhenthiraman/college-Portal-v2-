@@ -102,44 +102,60 @@ export default function StudentMultiStepForm() {
           const ugRaw = result.student.ugDetails;
           const ug = Array.isArray(ugRaw) && ugRaw.length > 0 ? ugRaw[0] : ugRaw;
 
-          const mappedData: FormData = {
-            general: {
-              candidate_first_name: result.student.firstName || "",
-              candidate_last_name: result.student.lastName || "",
-              candidate_id: result.student.id?.toString() || "",
-              email: result.student.personalEmailId || "",
-              current_degree: result.student.department?.name || "",
-              affiliate_university:
-                result.student.college?.affiliatedUniversity || "",
-              college_name: result.student.college?.name || "",
-              batch: result.student.batch || "",
-              roll_reg_no: result.student.rollNo || "",
-              sslc_percentage: result.student.sslcPercentage || "",
-              hsc_percentage: result.student.hscPercentage || "",
-              photo: result.student.photo || "",
-            },
-            ugDetails: ug
-              ? {
-                  semesterNo: ug.semesterNo || "",
-                  semesterMarksheet: ug.semesterMarksheet || "",
-                  overallCGPA: ug.overallCGPA || "",
-                  overallPercentage: ug.overallPercentage || "",
-                  isPG: ug.isPG || false,
-                  pgSemesterNo: ug.pgSemesterNo || "",
-                  pgSemesterMarksheet: ug.pgSemesterMarksheet || "",
-                  pgOverallCGPA: ug.pgOverallCGPA || "",
-                  pgOverallPercentage: ug.pgOverallPercentage || "",
-                }
-              : {},
-            technicalSkills: result.student.technicalSkills || [],
-            internships: result.student.internships || [],
-            projects:      result.student.projects      || [],
-            events: result.student.events || [],
-            socialProfiles: socialObj,
-            placements: result.student.placements || [],
-            workExperience: result.student.workExperiences || [],
-            publications: result.student.publications || [],
-          };
+          console.log("[frontend] ugDetails raw data →", ugRaw);
+            const mappedData: FormData = {
+              general: {
+                candidate_first_name: result.student.firstName || "",
+                candidate_last_name: result.student.lastName || "",
+                candidate_id: result.student.id?.toString() || "",
+                email: result.student.personalEmailId || "",
+                current_degree: result.student.department?.name || "",
+                affiliate_university: result.student.college?.affiliatedUniversity || "",
+                college_name: result.student.college?.name || "",
+                batch: result.student.batch || "",
+                roll_reg_no: result.student.rollNo || "",
+                sslc_percentage: result.student.sslcPercentage || "",
+                hsc_percentage: result.student.hscPercentage || "",
+                photo: result.student.photo || "",
+                country: result.student.country || "",
+                district: result.student.district || "",
+                state: result.student.state || "",
+                departmentName: result.student.departmentName || "",
+                section: result.student.section || "",
+                academicYear: result.student.academicYear || "",
+                adhaarNo: result.student.adhaarNo || "",
+                passportNo: result.student.passportNo || "",
+                passportExpiryDate: result.student.passportExpiryDate
+                  ? new Date(result.student.passportExpiryDate).toISOString().substring(0, 10)
+                  : "",
+                DOB: result.student.DOB
+                  ? new Date(result.student.DOB).toISOString().substring(0, 10)
+                  : "",
+                phoneNo: result.student.phoneNo || "",
+                secondaryPhoneNo: result.student.secondaryPhoneNo || "",
+              },
+              ugDetails: ug
+                ? {
+                    semesterNo: ug.semesterNo || "",
+                    semesterMarksheet: ug.semesterMarksheet || "",
+                    overallCGPA: ug.overallCGPA || "",
+                    overallPercentage: ug.overallPercentage || "",
+                    isPG: ug.isPG || false,
+                    pgSemesterNo: ug.pgSemesterNo || "",
+                    pgSemesterMarksheet: ug.pgSemesterMarksheet || "",
+                    pgOverallCGPA: ug.pgOverallCGPA || "",
+                    pgOverallPercentage: ug.pgOverallPercentage || "",
+                  }
+                : {},
+              technicalSkills: result.student.technicalSkills || [],
+              internships: result.student.internships || [],
+              projects:      result.student.projects      || [],
+              events: result.student.events || [],
+              socialProfiles: socialObj,
+              placements: result.student.placements || [],
+              workExperience: result.student.workExperiences || [],
+              publications: result.student.publications || [],
+            };
 
           // 3️⃣ confirm what goes into state
           console.log(

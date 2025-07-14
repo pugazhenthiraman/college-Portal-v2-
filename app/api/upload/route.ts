@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const field = formData.get("field") as string | null; // "photo", "certificate", "marksheet"
+    const field = formData.get("field") as string | null; // "photo", "certificate", "marksheet", etc.
     const oldPath = formData.get("oldPath") as string | null; // optional: previous file path
 
     if (!file) {
@@ -27,10 +27,16 @@ export async function POST(req: NextRequest) {
     // Decide allowed types based on field
     let allowedTypes: string[] = [];
     let typeLabel = "";
-    if (field === "photo") {
+    // Accept PDF for any certificate or marksheet field (including workExperienceCertificate)
+    if (
+      field === "photo"
+    ) {
       allowedTypes = IMAGE_TYPES;
       typeLabel = "JPG, PNG, or GIF images";
-    } else if (field === "certificate" || field === "marksheet") {
+    } else if (
+      field?.toLowerCase().includes("certificate") ||
+      field?.toLowerCase().includes("marksheet")
+    ) {
       allowedTypes = DOC_TYPES;
       typeLabel = "JPG, PNG, or PDF files";
     } else {
@@ -72,7 +78,6 @@ export async function POST(req: NextRequest) {
       const oldFilePath = path.join(process.cwd(), "public", oldPath);
       try {
         await fs.unlink(oldFilePath);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         // File might not exist, ignore error
       }

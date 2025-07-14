@@ -35,12 +35,12 @@ enum CollegeType {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  role      UserRole
-  createdAt DateTime @default(now())
-   passwordChanged Boolean  @default(false)
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  password        String
+  role            UserRole
+  createdAt       DateTime @default(now())
+  passwordChanged Boolean  @default(false)
 
   // One-to-one relations to role-specific details (only one should be non-null)
   superAdmin SuperAdmin?
@@ -178,7 +178,7 @@ model Student {
   placements      Placement[]
   workExperiences WorkExperience[]
   publications    Publication[]
-  projects       Project[]
+  projects        Project[]
 
   @@index([academicYear, section])
 }
@@ -199,18 +199,17 @@ model UGDetails {
 }
 
 model TechnicalSkill {
-  id              Int                   @id @default(autoincrement())
+  id              Int                  @id @default(autoincrement())
   studentId       Int
-  courseName      String?               // was String
-  details         String?               // was String
-  level           TechnicalSkillLevel?  // was TechnicalSkillLevel
+  courseName      String? // was String
+  details         String? // was String
+  level           TechnicalSkillLevel? // was TechnicalSkillLevel
   certificateFile String?
   certificateName String?
-  startDate       DateTime?             // was DateTime
-  endDate         DateTime?             // was DateTime
-  student         Student               @relation(fields: [studentId], references: [id])
+  startDate       DateTime? // was DateTime
+  endDate         DateTime? // was DateTime
+  student         Student              @relation(fields: [studentId], references: [id])
 }
-
 
 model Internship {
   id               Int      @id @default(autoincrement())
@@ -236,6 +235,8 @@ model Project {
   startDate   DateTime
   endDate     DateTime
   description String
+  category    String? // <-- add this
+  githubRepo  String? // <-- add this
   createdAt   DateTime @default(now())
 }
 
@@ -275,16 +276,18 @@ model Placement {
 }
 
 model WorkExperience {
-  id               Int      @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   studentId        Int
-  student          Student  @relation(fields: [studentId], references: [id])
+  student          Student   @relation(fields: [studentId], references: [id])
   employer         String
   startDate        DateTime?
   endDate          DateTime?
   role             String
   responsibilities String
   ctc              String
-  createdAt        DateTime @default(now())
+  certificate      String? // <-- file path or URL
+  certificateName  String? // <-- display name
+  createdAt        DateTime  @default(now())
 }
 
 model Publication {
