@@ -175,20 +175,6 @@ export default function Template6({
         </Section>
       )
     ),
-    placements: (
-      placements.length > 0 && (
-        <Section title="Placements" color={headerBgColor} key="placements">
-          {placements.map((placement: any, idx: number) => (
-            <div key={idx} className="mb-3">
-              <div className="font-semibold">{placement.employer}</div>
-              <p className="text-sm">{placement.designation}</p>
-              <p className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</p>
-              <p className="text-xs text-gray-500">CTC: {placement.ctc}</p>
-            </div>
-          ))}
-        </Section>
-      )
-    ),
     education: (
       <Section title="Education" color={headerBgColor} key="education">
         <div>

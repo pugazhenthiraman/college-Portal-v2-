@@ -207,20 +207,6 @@ export default function TemplateATS({
         )}
       </Section>
     ),
-    placements: (
-      <Section title="Placements" headerBgColor={headerBgColor} key="placements">
-        {placements.length > 0 ? (
-          placements.map((placement: any, idx: number) => (
-            <div key={idx}>
-              <strong>{placement.employer}</strong> — {placement.designation}
-              <div>{placement.onCampus ? 'On Campus' : 'Off Campus'} | CTC: {placement.ctc}</div>
-            </div>
-          ))
-        ) : (
-          <p>No placements listed.</p>
-        )}
-      </Section>
-    ),
   };
 
   return (

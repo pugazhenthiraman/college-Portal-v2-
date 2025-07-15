@@ -45,7 +45,6 @@ export default function Template5({
   const projects = student.projects || [];
   const publications = student.publications || [];
   const events = student.events || [];
-  const placements = student.placements || [];
   const social = student.socialProfiles || {};
   const languages: string[] = student.languages ? student.languages.split(',') : ['English'];
 
@@ -263,20 +262,6 @@ export default function Template5({
               <div className="text-sm">{event.details}</div>
               <div className="text-xs text-gray-500">{event.location}</div>
               <div className="text-xs text-gray-500">{event.contribution}</div>
-            </div>
-          ))}
-        </Section>
-      )
-    ),
-    placements: (
-      placements.length > 0 && (
-        <Section title="Placements" color={headerTextColor} key="placements">
-          {placements.map((placement: any, idx: number) => (
-            <div key={idx} className="mb-3">
-              <div className="font-semibold">{placement.employer}</div>
-              <div className="text-sm">{placement.designation}</div>
-              <div className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</div>
-              <div className="text-xs text-gray-500">CTC: {placement.ctc}</div>
             </div>
           ))}
         </Section>

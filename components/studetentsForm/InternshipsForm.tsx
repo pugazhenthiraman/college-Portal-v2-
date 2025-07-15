@@ -106,7 +106,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
       role: draft.role || "",
       startDate: draft.startDate || "",
       endDate: draft.endDate || "",
-      state: draft.state || selectedDistrict || "",
+      state: 'Tamil Nadu',
       district: draft.district || selectedDistrict || "",
       block: draft.block || selectedBlock || "",
       responsibilities: draft.responsibilities || "",
@@ -281,10 +281,10 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">State</label>
                 <Input
                   type="text"
-                  value={draft.state || "Tamil Nadu"}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, state: e.target.value }))}
-                  placeholder="State"
+                  value="Tamil Nadu"
+                  readOnly
                   disabled
+                  className="bg-gray-100 cursor-not-allowed"
                 />
               </div>
 

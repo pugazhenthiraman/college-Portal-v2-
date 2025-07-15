@@ -259,25 +259,6 @@ export default function Template3({
         )}
       </section>
     ),
-    placements: (
-      <section className="p-4 rounded shadow" key="placements">
-        <h3 className="font-semibold mb-2 border-b-2 pb-1" style={{ borderColor: headerBgColor }}>
-          Placements
-        </h3>
-        {placements.length > 0 ? (
-          placements.map((placement: any, idx: number) => (
-            <div key={idx} className="mb-2">
-              <span className="font-semibold">{placement.employer}</span>
-              <p className="text-xs text-gray-500">{placement.designation}</p>
-              <p className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</p>
-              <p className="text-xs text-gray-500">CTC: {placement.ctc}</p>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-500">No placements listed.</p>
-        )}
-      </section>
-    ),
   };
 
   return (

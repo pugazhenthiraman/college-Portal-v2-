@@ -41,7 +41,6 @@ export default function Template2({
   const socialProfiles = student.socialProfiles || {};
   const publications = student.publications || [];
   const events = student.events || [];
-  const placements = student.placements || [];
   const languages: string[] = student.languages ? student.languages.split(',') : ['English'];
 
   const getPhotoUrl = (photo: string | undefined) => {
@@ -273,23 +272,6 @@ export default function Template2({
           ))
         ) : (
           <p className="text-sm text-gray-500">No publications listed.</p>
-        )}
-      </section>
-    ),
-    placements: (
-      <section key="placements">
-        <h3 className="text-lg font-semibold mb-1" style={{ color: headerBgColor }}>Placements</h3>
-        {placements.length > 0 ? (
-          placements.map((placement: any, idx: number) => (
-            <div key={idx}>
-              <span className="font-semibold">{placement.employer}</span>
-              <p className="text-xs text-gray-500">{placement.designation}</p>
-              <p className="text-xs text-gray-500">{placement.onCampus ? 'On Campus' : 'Off Campus'}</p>
-              <p className="text-xs text-gray-500">CTC: {placement.ctc}</p>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-500">No placements listed.</p>
         )}
       </section>
     ),
