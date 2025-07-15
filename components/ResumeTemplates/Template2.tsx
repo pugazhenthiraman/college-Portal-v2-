@@ -207,7 +207,11 @@ export default function Template2({
             <div key={idx}>
               <span className="font-semibold">{intern.company}</span> — {intern.role}
               <p className="text-xs text-gray-500">{intern.startDate?.slice(0, 10)} - {intern.endDate?.slice(0, 10)}</p>
-              <p className="text-xs text-gray-500">{intern.location}</p>
+              {intern.state || intern.district || intern.block ? (
+                <p className="text-xs text-gray-500">
+                  {[intern.state, intern.district, intern.block].filter(Boolean).join(", ")}
+                </p>
+              ) : null}
               <p className="text-xs text-gray-500">{intern.responsibilities}</p>
               {intern.certificateName && (
                 <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">

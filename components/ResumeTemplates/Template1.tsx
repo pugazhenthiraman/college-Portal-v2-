@@ -166,7 +166,11 @@ export default function Template1({
               <p className="font-semibold">{intern.company}</p>
               <p className="text-sm text-gray-700">{intern.role}</p>
               <p className="text-xs text-gray-500">{intern.startDate} - {intern.endDate}</p>
-              <p className="text-xs text-gray-500">{intern.location}</p>
+              {intern.state || intern.district || intern.block ? (
+                <p className="text-xs text-gray-500">
+                  {[intern.state, intern.district, intern.block].filter(Boolean).join(", ")}
+                </p>
+              ) : null}
               <p className="text-xs text-gray-500">{intern.responsibilities}</p>
               {intern.certificateName && (
                 <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">

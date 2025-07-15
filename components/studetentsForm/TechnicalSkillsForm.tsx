@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
+import { formatDateRange } from "@/utils/helper";
+import { addDays, subDays } from "date-fns";
 
 export type Skill = {
   courseName: string;
@@ -55,6 +57,10 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
 
   const handleSave = useCallback(() => {
     if (editingIndex == null) return;
+    if (draft.startDate && draft.endDate && draft.endDate <= draft.startDate) {
+      toast.error("End date must be after start date.");
+      return;
+    }
     const isNew = editingIndex < 0;
 
     // No required fields check: allow partial/incomplete save
@@ -123,7 +129,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
           <div className="flex-1">
             <h3 className="text-lg font-medium">{skill.courseName}</h3>
             <p className="text-sm text-gray-600">
-              {skill.startDate} → {skill.endDate}
+              {formatDateRange(skill.startDate, skill.endDate)}
             </p>
             <p className="mt-2 text-sm">
               Level: <span className="font-medium">{skill.level}</span>
@@ -157,7 +163,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1">Course Name</label>
                 <Input
-                  value={draft.courseName}
+                  value={draft.courseName || ""}
                   onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, courseName: e.target.value }))
                   }
@@ -170,7 +176,8 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Start Date</label>
                 <Input
                   type="date"
-                  value={draft.startDate}
+                  value={draft.startDate || ""}
+                  max={draft.endDate ? subDays(new Date(draft.endDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, startDate: e.target.value }))
                   }
@@ -180,7 +187,8 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">End Date</label>
                 <Input
                   type="date"
-                  value={draft.endDate}
+                  value={draft.endDate || ""}
+                  min={draft.startDate ? addDays(new Date(draft.startDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, endDate: e.target.value }))
                   }
@@ -213,7 +221,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Course Details</label>
                 <Textarea
                   rows={4}
-                  value={draft.details}
+                  value={draft.details || ""}
                   onChange={(e) =>
                     setDraft((d) => ({ ...d, details: e.target.value }))
                   }

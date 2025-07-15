@@ -4,16 +4,25 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import toast, { Toaster } from "react-hot-toast";
+import villageData from '../../utils/village-location.json';
+import { addDays, subDays } from "date-fns";
+import { formatDateRange } from "@/utils/helper";
 
 export type Internship = {
   company: string;
   role: string;
   startDate: string;
   endDate: string;
-  location: string;
+  state?: string;
+  district?: string;
+  block?: string;
   responsibilities: string;
   certificate?: string; // Base64 or URL, for potential preview
   certificateName?: string; // Original file name
+  mode?: 'ONSITE' | 'WORK_FROM_HOME';
+  stipend?: string; // Optional
+  supervisorName?: string; // Optional
+  companyEmail: string; // Required
 };
 
 interface Props {
@@ -26,133 +35,104 @@ const emptyInternship: Internship = {
   role: "",
   startDate: "",
   endDate: "",
-  location: "",
+  state: "",
+  district: "",
+  block: "",
   responsibilities: "",
   certificate: undefined,
   certificateName: undefined,
-};
-
-// Static JSON data for states, districts, and places (replace with API if needed)
-const locationData = {
-  states: [
-    {
-      name: "State1",
-      districts: [
-        {
-          name: "District1",
-          places: ["Place1", "Place2"]
-        },
-        {
-          name: "District2",
-          places: ["Place3", "Place4"]
-        }
-      ]
-    },
-    {
-      name: "State2",
-      districts: [
-        {
-          name: "District3",
-          places: ["Place5", "Place6"]
-        },
-        {
-          name: "District4",
-          places: ["Place7", "Place8"]
-        }
-      ]
-    }
-  ]
+  mode: undefined,
+  stipend: "",
+  supervisorName: "",
+  companyEmail: "",
 };
 
 export default function InternshipsForm({ data, onChange }: Props) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<Internship>(emptyInternship);
-  const [selectedState, setSelectedState] = useState<string | null>(null);
-  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [places, setPlaces] = useState<string[]>([]);
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  const [selectedBlock, setSelectedBlock] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Populate draft on edit/add
   useEffect(() => {
     if (editingIndex === null) return;
-    setDraft(editingIndex >= 0 ? data[editingIndex] : emptyInternship);
-    setSelectedState(null);
-    setSelectedDistrict(null);
-    setDistricts([]);
-    setPlaces([]);
+    if (editingIndex >= 0) {
+      const item = data[editingIndex];
+      setDraft({
+        company: item.company || "",
+        role: item.role || "",
+        startDate: item.startDate || "",
+        endDate: item.endDate || "",
+        state: item.state || "",
+        district: item.district || "",
+        block: item.block || "",
+        responsibilities: item.responsibilities || "",
+        certificate: item.certificate ?? undefined,
+        certificateName: item.certificateName ?? undefined,
+        mode: item.mode ?? undefined,
+        stipend: item.stipend || "",
+        supervisorName: item.supervisorName || "",
+        companyEmail: item.companyEmail || "",
+      });
+      setSelectedDistrict(item.district || '');
+      setSelectedBlock(item.block || '');
+    } else {
+      setDraft(emptyInternship);
+      setSelectedDistrict('');
+      setSelectedBlock('');
+    }
   }, [editingIndex, data]);
 
   const startAdd = useCallback(() => setEditingIndex(-1), []);
   const startEdit = useCallback((i: number) => setEditingIndex(i), []);
   const cancel = useCallback(() => setEditingIndex(null), []);
 
-  // Handle location updates when state is selected
-  const handleStateChange = (state: string) => {
-    setSelectedState(state);
-    const selected = locationData.states.find((s) => s.name === state);
-    if (selected) {
-      setDistricts(selected.districts);
-      setSelectedDistrict(null);
-      setPlaces([]);
-    }
-  };
-
-  // Handle district selection
-  const handleDistrictChange = (district: string) => {
-    setSelectedDistrict(district);
-    const selected = districts.find((d) => d.name === district);
-    if (selected) {
-      setPlaces(selected.places);
-    }
-  };
+  // Get blocks for selected district
+  const blocks =
+    villageData.find(d => d.district === selectedDistrict)?.blocks.map(b => b.block) || [];
 
   // Confirm & save the internship
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (editingIndex === null) return;
-    const isNew = editingIndex < 0;
-
-    // Validation
-    if (!draft.company || !draft.role || !draft.startDate || !draft.endDate || !draft.location) {
-      toast.error("Please fill in all required fields.");
+    if (draft.startDate && draft.endDate && draft.endDate <= draft.startDate) {
+      toast.error("End date must be after start date.");
       return;
     }
-
+    const isNew = editingIndex < 0;
+    const normalizedDraft: Internship = {
+      company: draft.company || "",
+      role: draft.role || "",
+      startDate: draft.startDate || "",
+      endDate: draft.endDate || "",
+      state: draft.state || selectedDistrict || "",
+      district: draft.district || selectedDistrict || "",
+      block: draft.block || selectedBlock || "",
+      responsibilities: draft.responsibilities || "",
+      certificate: draft.certificate ?? undefined,
+      certificateName: draft.certificateName ?? undefined,
+      mode: draft.mode ?? undefined,
+      stipend: draft.stipend || "",
+      supervisorName: draft.supervisorName || "",
+      companyEmail: draft.companyEmail || "",
+    };
     let confirmMsg: string;
     if (isNew) {
       confirmMsg =
         "Add this internship?\n\n" +
-        (Object.entries(draft) as [keyof Internship, any][]).filter(([k]) => k !== "certificate")
+        (Object.entries(normalizedDraft) as [keyof Internship, any][]).filter(([k]) => k !== "certificate")
           .map(([k, v]) => `${k}: "${v ?? ""}"`)
           .join("\n");
     } else {
-      confirmMsg = "Confirm update:\n\n" + Object.entries(draft).map(([k, v]) => `${k}: "${v ?? ""}"`).join("\n");
+      confirmMsg = "Confirm update:\n\n" + Object.entries(normalizedDraft).map(([k, v]) => `${k}: "${v ?? ""}"`).join("\n");
     }
-
     if (!window.confirm(confirmMsg)) return;
-
-    const next = isNew ? [...data, draft] : data.map((it, idx) => (idx === editingIndex ? draft : it));
-
-    // Save to backend
-    try {
-      const res = await fetch("/api/students/studetnsMultiSetForm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ section: "internships", data: next }),
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        toast.error(result.error || "Failed to save internships. Please try again.");
-      } else {
-        toast.success("Internship saved successfully!");
-        onChange(next);
-        setEditingIndex(null);
-      }
-    } catch (err) {
-      toast.error("Network error: Could not save internship.");
-    }
-  }, [editingIndex, draft, data, onChange]);
+    const next = isNew ? [...data, normalizedDraft] : data.map((it, idx) => (idx === editingIndex ? normalizedDraft : it));
+    onChange(next);
+    setEditingIndex(null);
+    toast.success("Internship saved!");
+  }, [editingIndex, draft, data, onChange, selectedDistrict, selectedBlock]);
 
   // Handle certificate file upload
   const handleCertificateUpload = useCallback(
@@ -197,15 +177,39 @@ export default function InternshipsForm({ data, onChange }: Props) {
           </div>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
             <dt className="font-medium">Duration:</dt>
-            <dd>{item.startDate} – {item.endDate}</dd>
+            <dd>{formatDateRange(item.startDate, item.endDate)}</dd>
             <dt className="font-medium">Location:</dt>
-            <dd>{item.location}</dd>
+            <dd>{item.state}, {item.district}, {item.block}</dd>
             <dt className="font-medium col-span-2">Responsibilities:</dt>
             <dd className="col-span-2">{item.responsibilities}</dd>
             {item.certificateName && (
               <>
                 <dt className="font-medium">Certificate:</dt>
                 <dd>{item.certificateName}</dd>
+              </>
+            )}
+            {item.mode && (
+              <>
+                <dt className="font-medium">Mode:</dt>
+                <dd>{item.mode}</dd>
+              </>
+            )}
+            {item.stipend && (
+              <>
+                <dt className="font-medium">Stipend:</dt>
+                <dd>{item.stipend}</dd>
+              </>
+            )}
+            {item.supervisorName && (
+              <>
+                <dt className="font-medium">Supervisor:</dt>
+                <dd>{item.supervisorName}</dd>
+              </>
+            )}
+            {item.companyEmail && (
+              <>
+                <dt className="font-medium">Company Email:</dt>
+                <dd>{item.companyEmail}</dd>
               </>
             )}
           </dl>
@@ -215,66 +219,153 @@ export default function InternshipsForm({ data, onChange }: Props) {
       {/* Add/Edit overlay */}
       {editingIndex !== null && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold">
               {editingIndex < 0 ? "Add Internship" : `Edit Internship #${editingIndex + 1}`}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* State Dropdown */}
+              {/* Internship Title/Role */}
               <div>
-                <label className="block text-sm font-medium mb-1">State</label>
-                <select
-                  value={selectedState ?? ""}
-                  onChange={(e) => handleStateChange(e.target.value)}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select State</option>
-                  {locationData.states.map((state) => (
-                    <option key={state.name} value={state.name}>
-                      {state.name}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1">Internship Title / Role</label>
+                <Input
+                  type="text"
+                  value={draft.role}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, role: e.target.value }))}
+                />
               </div>
 
-              {/* District Dropdown */}
+              {/* Company Name */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Company Name</label>
+                <Input
+                  type="text"
+                  value={draft.company}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, company: e.target.value }))}
+                />
+              </div>
+
+              {/* Company Email */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Company Email</label>
+                <Input
+                  type="email"
+                  value={draft.companyEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, companyEmail: e.target.value }))}
+                />
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Start Date</label>
+                <Input
+                  type="date"
+                  value={draft.startDate}
+                  max={draft.endDate ? subDays(new Date(draft.endDate), 1).toISOString().slice(0, 10) : undefined}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, startDate: e.target.value }))}
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium mb-1">End Date</label>
+                <Input
+                  type="date"
+                  value={draft.endDate}
+                  min={draft.startDate ? addDays(new Date(draft.startDate), 1).toISOString().slice(0, 10) : undefined}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, endDate: e.target.value }))}
+                />
+              </div>
+
+              {/* State */}
+              <div>
+                <label className="block text-sm font-medium mb-1">State</label>
+                <Input
+                  type="text"
+                  value={draft.state || "Tamil Nadu"}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, state: e.target.value }))}
+                  placeholder="State"
+                  disabled
+                />
+              </div>
+
+              {/* District */}
               <div>
                 <label className="block text-sm font-medium mb-1">District</label>
                 <select
-                  value={selectedDistrict ?? ""}
-                  onChange={(e) => handleDistrictChange(e.target.value)}
-                  className="w-full p-2 border rounded"
-                  disabled={!selectedState}
+                  className="w-full border rounded px-2 py-1"
+                  value={selectedDistrict}
+                  onChange={e => {
+                    setSelectedDistrict(e.target.value);
+                    setDraft(d => ({ ...d, district: e.target.value, block: "" }));
+                    setSelectedBlock("");
+                  }}
+                  title="Select District"
                 >
                   <option value="">Select District</option>
-                  {districts.map((district) => (
-                    <option key={district.name} value={district.name}>
-                      {district.name}
-                    </option>
+                  {villageData.map((d: any) => (
+                    <option key={d.district} value={d.district}>{d.district}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Place Dropdown */}
+              {/* Block */}
               <div>
-                <label className="block text-sm font-medium mb-1">Place</label>
+                <label className="block text-sm font-medium mb-1">Block/Town</label>
                 <select
-                  value={draft.location}
-                  onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
-                  className="w-full p-2 border rounded"
+                  className="w-full border rounded px-2 py-1"
+                  value={selectedBlock}
+                  onChange={e => {
+                    setSelectedBlock(e.target.value);
+                    setDraft(d => ({ ...d, block: e.target.value }));
+                  }}
                   disabled={!selectedDistrict}
+                  title="Select Block"
                 >
-                  <option value="">Select Place</option>
-                  {places.map((place) => (
-                    <option key={place} value={place}>
-                      {place}
-                    </option>
+                  <option value="">Select Block</option>
+                  {blocks.map((b: string) => (
+                    <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Other fields */}
-              <div className="md:col-span-2">
+              {/* Mode Dropdown */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Mode</label>
+                <select
+                  value={draft.mode || ''}
+                  onChange={e => setDraft(d => ({ ...d, mode: e.target.value as 'ONSITE' | 'WORK_FROM_HOME' }))}
+                  className="w-full p-2 border rounded"
+                  title="Select Mode"
+                >
+                  <option value="">Select Mode</option>
+                  <option value="ONSITE">On-site</option>
+                  <option value="WORK_FROM_HOME">Work-from-Home</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Stipend (optional) */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1">Stipend (optional)</label>
+              <Input
+                type="text"
+                value={draft.stipend}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, stipend: e.target.value }))}
+              />
+            </div>
+
+            {/* Supervisor/Mentor Name (optional) */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1">Supervisor/Mentor Name (optional)</label>
+              <Input
+                type="text"
+                value={draft.supervisorName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, supervisorName: e.target.value }))}
+              />
+            </div>
+
+            {/* Responsibilities / Details */}
+            <div className="mt-4">
                 <label className="block text-sm font-medium mb-1">Responsibilities / Details</label>
                 <Textarea
                   rows={4}
@@ -287,7 +378,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
               </div>
 
               {/* Certificate */}
-              <div className="md:col-span-2">
+            <div className="mt-4">
                 <label className="block text-sm font-medium mb-1">Certificate (JPEG, PNG, PDF)</label>
                 <input
                   ref={fileInputRef}
@@ -303,7 +394,6 @@ export default function InternshipsForm({ data, onChange }: Props) {
                     {draft.certificateName}
                   </div>
                 )}
-              </div>
             </div>
 
             {/* Actions */}

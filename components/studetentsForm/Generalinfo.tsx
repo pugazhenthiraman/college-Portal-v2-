@@ -28,6 +28,7 @@ export type ProfileData = {
   DOB?: string; // ISO string for date
   phoneNo?: string;
   secondaryPhoneNo?: string;
+  panNo?: string;
 };
 
 const emptyProfile: ProfileData = {
@@ -54,6 +55,7 @@ const emptyProfile: ProfileData = {
   DOB: "",
   phoneNo: "",
   secondaryPhoneNo: "",
+  panNo: "",
 };
 
 interface GeneralinfoProps {
@@ -63,25 +65,6 @@ interface GeneralinfoProps {
   onNext?: () => void;
 }
 
-// Freeze all except: batch, sslc_percentage, hsc_percentage, adhaarNo, passportNo, passportExpiryDate
-const frozenFields = [
-  "candidate_first_name",
-  "candidate_last_name",
-  "email",
-  "affiliate_university",
-  "college_name",
-  "roll_reg_no",
-  "country",
-  "district",
-  "state",
-  "departmentName",
-  "section",
-  "academicYear",
-  "DOB",
-  "phoneNo",
-  "secondaryPhoneNo",
-];
-
 const validatePercentage = (value: string) => {
   if (value === "") return true;
   const regex = /^(100(\.0{1,2})?|(\d{1,2})(\.\d{1,2})?)$/;
@@ -90,26 +73,22 @@ const validatePercentage = (value: string) => {
   return num >= 0 && num <= 100;
 };
 
-// Aadhaar: allow empty or up to 12 digits, but only show error if length is 12 and not valid
-const validateAadhaar = (value: string) => {
-  return value === "" || /^\d{0,12}$/.test(value);
+// Aadhaar: allow only digits, format as '1111 2222 3333', max 12 digits
+const formatAadhaar = (value: string) => {
+  // Remove all non-digits
+  const digits = value.replace(/\D/g, '').slice(0, 12);
+  // Format as '1111 2222 3333'
+  return digits.replace(/(\d{4})(\d{0,4})(\d{0,4})/, (m, g1, g2, g3) => [g1, g2, g3].filter(Boolean).join(' '));
 };
-const isAadhaarComplete = (value: string) => value.length === 12 && !/^\d{12}$/.test(value);
 
 // Passport: allow empty or up to 8 alphanumeric, but only show error if length is 8 and not valid
 const validatePassport = (value: string) => {
   return value === "" || /^[A-Za-z0-9]{0,8}$/.test(value);
 };
-const isPassportComplete = (value: string) => value.length === 8 && !/^[A-Za-z0-9]{8}$/.test(value);
 
-const LockIcon = () => (
-  <span className="ml-1 text-gray-400" title="Locked">
-    <svg className="inline h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11V7a4 4 0 118 0v4" />
-      <rect width="16" height="10" x="4" y="11" rx="2" />
-    </svg>
-  </span>
-);
+const validatePAN = (value: string) => {
+  return value === "" || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value);
+};
 
 export default function Generalinfo({
   data = {},
@@ -242,19 +221,10 @@ export default function Generalinfo({
                 />
               ) : (
                 <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-200 to-blue-100 flex items-center justify-center text-4xl text-indigo-400 shadow-inner">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-14 w-14"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
+                  {/* Modern user avatar icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" fill="none" />
+                    <path stroke="currentColor" strokeWidth="2" d="M4 20c0-4 4-6 8-6s8 2 8 6" fill="none" />
                   </svg>
                 </div>
               )}
@@ -465,17 +435,15 @@ export default function Generalinfo({
           <TestInput
             name="adhaarNo"
             label="Aadhaar Number"
-            placeholder="12 digit number"
-            value={merged.adhaarNo || ""}
-            maxLength={12}
+            placeholder="1111 2222 3333"
+            value={formatAadhaar(merged.adhaarNo || "")}
+            maxLength={14} // 12 digits + 2 spaces
             onChange={e => {
-              const val = e.target.value;
-              if (validateAadhaar(val)) {
-                update("adhaarNo", val);
-              }
+              const val = e.target.value.replace(/\D/g, '').slice(0, 12); // Only digits, max 12
+              update("adhaarNo", val);
             }}
             onBlur={e => {
-              const val = e.target.value;
+              const val = e.target.value.replace(/\D/g, '');
               if (val && val.length !== 12) {
                 toast.error("Aadhaar must be exactly 12 digits");
               }
@@ -506,6 +474,23 @@ export default function Generalinfo({
             type="date"
             value={merged.passportExpiryDate ? merged.passportExpiryDate.substring(0, 10) : ""}
             onChange={e => update("passportExpiryDate", e.target.value)}
+          />
+          <TestInput
+            name="panNo"
+            label="PAN Number"
+            placeholder="ABCDE1234F"
+            value={merged.panNo || ""}
+            maxLength={10}
+            onChange={e => {
+              const val = e.target.value.toUpperCase();
+              update("panNo", val);
+            }}
+            onBlur={e => {
+              const val = e.target.value.toUpperCase();
+              if (val && !validatePAN(val)) {
+                toast.error("PAN must be in format AAAAA9999A");
+              }
+            }}
           />
         </div>
 

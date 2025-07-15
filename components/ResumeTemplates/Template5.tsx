@@ -167,7 +167,11 @@ export default function Template5({
               <div className="font-semibold">{intern.company}</div>
               <div className="text-sm">{intern.role}</div>
               <div className="text-xs text-gray-500">{intern.startDate} - {intern.endDate}</div>
-              <div className="text-xs text-gray-500">{intern.location}</div>
+              {intern.state || intern.district || intern.block ? (
+                <div className="text-xs text-gray-500">
+                  {[intern.state, intern.district, intern.block].filter(Boolean).join(", ")}
+                </div>
+              ) : null}
               <div className="text-xs text-gray-500">{intern.responsibilities}</div>
               {intern.certificateName && (
                 <span className="text-xs text-blue-600 cursor-pointer group relative ml-2">

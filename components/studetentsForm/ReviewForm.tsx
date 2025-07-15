@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ArrowPathIcon, ArrowDownTrayIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import { formatDateRange } from "@/utils/helper";
 
 // Section order and their corresponding data keys
 const SECTION_ORDER: { label: string; key: string }[] = [
@@ -81,6 +82,20 @@ function FoldableFileName({ fileName }: { fileName: string }) {
 function renderField(k: string, v: any, item?: any) {
   if (HIDDEN_FIELDS.includes(k)) return null;
 
+  // If this is a startDate or endDate field and the item has both, show as a range only once
+  if ((k === "startDate" || k === "endDate") && item && item.startDate && item.endDate) {
+    if (k === "startDate") {
+      return (
+        <React.Fragment key="duration">
+          <dt className="font-medium text-gray-600">Duration</dt>
+          <dd className="text-gray-900 break-words">{formatDateRange(item.startDate, item.endDate)}</dd>
+        </React.Fragment>
+      );
+    } else {
+      return null; // skip endDate, already shown
+    }
+  }
+
   // Show image thumbnail for photo
   if (k === "photo" && v) {
     return (
@@ -145,6 +160,9 @@ function renderField(k: string, v: any, item?: any) {
       </div>
     );
   }
+
+  // In renderField, skip 'location' for internships:
+  if (k === 'location' && item && item.state) return null;
 
   // For other fields, show normally
   return (

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
+import { formatDateRange } from "@/utils/helper";
+import { addDays, subDays } from "date-fns";
 
 export type Experience = {
   employer: string;
@@ -75,6 +77,10 @@ export default function WorkExperienceForm({ data, onChange }: WorkExperienceFor
 
   const handleSave = useCallback(() => {
     if (editingIndex === null) return;
+    if (draft.startDate && draft.endDate && draft.endDate <= draft.startDate) {
+      toast.error("End date must be after start date.");
+      return;
+    }
     const isNew = editingIndex < 0;
     let message: string;
 
@@ -188,7 +194,7 @@ export default function WorkExperienceForm({ data, onChange }: WorkExperienceFor
           </div>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
             <dt className="font-medium">Duration</dt>
-            <dd>{(item.startDate ?? "")} – {(item.endDate ?? "")}</dd>
+            <dd>{formatDateRange(item.startDate, item.endDate)}</dd>
             <dt className="font-medium">CTC</dt>
             <dd>{item.ctc ?? ""}</dd>
             <dt className="font-medium col-span-2">Responsibilities</dt>
@@ -249,6 +255,7 @@ export default function WorkExperienceForm({ data, onChange }: WorkExperienceFor
                 <Input
                   type="date"
                   value={draft.startDate ?? ""}
+                  max={draft.endDate ? subDays(new Date(draft.endDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={(e) => setDraft(d => ({ ...d, startDate: e.target.value }))}
                 />
               </div>
@@ -257,6 +264,7 @@ export default function WorkExperienceForm({ data, onChange }: WorkExperienceFor
                 <Input
                   type="date"
                   value={draft.endDate ?? ""}
+                  min={draft.startDate ? addDays(new Date(draft.startDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={(e) => setDraft(d => ({ ...d, endDate: e.target.value }))}
                 />
               </div>

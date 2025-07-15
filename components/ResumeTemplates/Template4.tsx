@@ -93,7 +93,11 @@ export default function TemplateATS({
           internships.map((intern: any, idx: number) => (
             <div key={idx}>
               <strong>{intern.company}</strong> — {intern.role} ({intern.startDate?.slice(0, 10)} - {intern.endDate?.slice(0, 10)})
-              <div>{intern.location}</div>
+              {intern.state || intern.district || intern.block ? (
+                <div className="text-xs text-gray-500">
+                  {[intern.state, intern.district, intern.block].filter(Boolean).join(", ")}
+                </div>
+              ) : null}
               {intern.certificateName && (
                 <span className="ml-1 text-blue-600 cursor-pointer group relative">
                   <span className="underline">{intern.certificateName}</span>

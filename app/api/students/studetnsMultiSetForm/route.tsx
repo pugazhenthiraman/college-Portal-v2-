@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
             DOB: data.DOB ? new Date(data.DOB) : undefined,
             phoneNo: data.phoneNo,
             secondaryPhoneNo: data.secondaryPhoneNo,
+            panNo: data.panNo,
           },
         });
         break;
@@ -153,14 +154,20 @@ export async function POST(req: NextRequest) {
           await prisma.internship.createMany({
             data: data.map((intern: any) => ({
               studentId,
-              company: intern.company,
-              role: intern.role,
-              startDate: new Date(intern.startDate),
-              endDate: new Date(intern.endDate),
-              location: intern.location,
-              responsibilities: intern.responsibilities,
-              certificate: intern.certificate || null,
-              certificateName: intern.certificateName || null,
+              company: intern.company ?? "",
+              role: intern.role ?? "",
+              startDate: intern.startDate ? new Date(intern.startDate) : new Date(0),
+              endDate: intern.endDate ? new Date(intern.endDate) : new Date(0),
+              state: intern.state ?? "",
+              district: intern.district ?? "",
+              block: intern.block ?? "",
+              responsibilities: intern.responsibilities ?? "",
+              certificate: intern.certificate ?? null,
+              certificateName: intern.certificateName ?? null,
+              mode: intern.mode ?? null,
+              stipend: intern.stipend ?? null,
+              supervisorName: intern.supervisorName ?? null,
+              companyEmail: intern.companyEmail ?? "",
             })),
           });
         }

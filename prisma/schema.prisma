@@ -34,6 +34,11 @@ enum CollegeType {
   ARTS
 }
 
+enum InternshipType {
+  ONSITE
+  WORK_FROM_HOME
+}
+
 model User {
   id              Int      @id @default(autoincrement())
   email           String   @unique
@@ -167,6 +172,7 @@ model Student {
   adhaarNo           String?
   passportNo         String?
   passportExpiryDate DateTime?
+  panNo              String? @db.VarChar(10) // PAN number, optional
   createdAt          DateTime    @default(now())
 
   // relations to form sections
@@ -214,18 +220,24 @@ model TechnicalSkill {
 }
 
 model Internship {
-  id               Int      @id @default(autoincrement())
+  id               Int             @id @default(autoincrement())
   studentId        Int
-  student          Student  @relation(fields: [studentId], references: [id])
+  student          Student         @relation(fields: [studentId], references: [id])
   company          String
   role             String
-  startDate        DateTime
-  endDate          DateTime
-  location         String
+  startDate        DateTime?
+  endDate          DateTime?
+  state            String?
+  district         String?
+  block            String?
   responsibilities String
   certificate      String? // file path or URL
   certificateName  String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime        @default(now())
+  mode             InternshipType?
+  stipend          String?
+  supervisorName   String?
+  companyEmail     String
 }
 
 model Project {
@@ -303,4 +315,22 @@ model Publication {
   createdAt DateTime @default(now())
 
   @@index([publisher])
+}
+
+model District {
+  id     Int     @id @default(autoincrement())
+  name   String
+  state  String // For now, just 'Tamil Nadu'
+  blocks Block[]
+
+  @@unique([name, state])
+}
+
+model Block {
+  id         Int      @id @default(autoincrement())
+  name       String
+  district   District @relation(fields: [districtId], references: [id])
+  districtId Int
+
+  @@unique([name, districtId])
 }

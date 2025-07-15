@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Copy, Edit2, X, Eye } from "lucide-react";
 import toast from "react-hot-toast";
+import { formatDateRange } from "@/utils/helper";
+import { addDays, subDays } from "date-fns";
 
 export type Project = {
   title: string;
@@ -82,6 +84,10 @@ export default function ProjectsForm({ data, onChange }: Props) {
       toast.error("Project category is required.");
       return;
     }
+    if (draft.startDate && draft.endDate && draft.endDate <= draft.startDate) {
+      toast.error("End date must be after start date.");
+      return;
+    }
     if (editingIndex === null) return;
     let next: Project[];
     const projectToSave = {
@@ -144,7 +150,7 @@ export default function ProjectsForm({ data, onChange }: Props) {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="font-semibold text-lg">{p.title || `Project #${i + 1}`}</h3>
-              <div className="text-gray-600 text-sm">{p.startDate} - {p.endDate}</div>
+              <div className="text-gray-600 text-sm">{formatDateRange(p.startDate, p.endDate)}</div>
               <div className="text-gray-500 text-xs mt-1">
                 <span className="font-medium">Category:</span> {p.category || <span className="text-gray-400">Not set</span>}
               </div>
@@ -278,6 +284,7 @@ export default function ProjectsForm({ data, onChange }: Props) {
                 <Input
                   type="date"
                   value={draft.startDate}
+                  max={draft.endDate ? subDays(new Date(draft.endDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={e =>
                     setDraft((d) => ({ ...d, startDate: e.target.value }))
                   }
@@ -288,6 +295,7 @@ export default function ProjectsForm({ data, onChange }: Props) {
                 <Input
                   type="date"
                   value={draft.endDate}
+                  min={draft.startDate ? addDays(new Date(draft.startDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={e =>
                     setDraft((d) => ({ ...d, endDate: e.target.value }))
                   }

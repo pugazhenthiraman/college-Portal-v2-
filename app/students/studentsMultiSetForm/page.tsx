@@ -132,6 +132,7 @@ export default function StudentMultiStepForm() {
                   : "",
                 phoneNo: result.student.phoneNo || "",
                 secondaryPhoneNo: result.student.secondaryPhoneNo || "",
+                panNo: result.student.panNo || "",
               },
               ugDetails: ug
                 ? {

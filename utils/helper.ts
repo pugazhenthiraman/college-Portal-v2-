@@ -104,3 +104,17 @@ export const insertStudents = async (data: any[]) => {
     return { success: false, message: error.message || "Error inserting students" };
   }
 };
+
+export function formatDate(date: string) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+export function formatDateRange(start: string, end: string) {
+  if (!start && !end) return "";
+  if (start && end) return `${formatDate(start)} - ${formatDate(end)}`;
+  if (start) return formatDate(start);
+  return formatDate(end);
+}
