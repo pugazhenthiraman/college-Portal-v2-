@@ -28,10 +28,40 @@ const PLATFORM_LABELS: { key: keyof SocialProfiles; label: string }[] = [
   { key: "portfolio", label: "Portfolio / Website" },
 ];
 
+// Validation functions for each platform
+function isValidGithubUrl(url: string) {
+  return /^https:\/\/(www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\/)?$/.test(url.trim());
+}
+function isValidGitlabUrl(url: string) {
+  return /^https:\/\/(www\.)?gitlab\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\/)?$/.test(url.trim());
+}
+function isValidBitbucketUrl(url: string) {
+  return /^https:\/\/(www\.)?bitbucket\.org\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\/)?$/.test(url.trim());
+}
+function isValidLinkedinUrl(url: string) {
+  return /^https:\/\/(www\.)?linkedin\.com\/in\/[A-Za-z0-9_-]+(\/)?$/.test(url.trim());
+}
+function isValidTwitterUrl(url: string) {
+  return /^https:\/\/(www\.)?twitter\.com\/[A-Za-z0-9_]+(\/)?$/.test(url.trim());
+}
+function isValidPortfolioUrl(url: string) {
+  return /^https?:\/\/[\w.-]+(\.[a-zA-Z]{2,})+([\/?#].*)?$/i.test(url.trim());
+}
+
+const PLATFORM_VALIDATORS: Record<keyof SocialProfiles, (url: string) => boolean> = {
+  github: isValidGithubUrl,
+  gitlab: isValidGitlabUrl,
+  bitbucket: isValidBitbucketUrl,
+  linkedin: isValidLinkedinUrl,
+  twitter: isValidTwitterUrl,
+  portfolio: isValidPortfolioUrl,
+};
+
 export default function SocialProfilesForm({ data = {}, onChange }: Props) {
   const [profiles, setProfiles] = useState<SocialProfiles>({});
   const [editingKey, setEditingKey] = useState<keyof SocialProfiles | null>(null);
   const [draftValue, setDraftValue] = useState("");
+  const [error, setError] = useState<string>("");
 
   // Mirror incoming prop into local state
   useEffect(() => {
@@ -42,6 +72,7 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
     (key: keyof SocialProfiles) => {
       setEditingKey(key);
       setDraftValue(profiles[key] || "");
+      setError("");
     },
     [profiles]
   );
@@ -54,6 +85,16 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
   const saveEdit = useCallback(() => {
     if (!editingKey) return;
     const trimmed = draftValue.trim();
+    if (trimmed) {
+      const validator = PLATFORM_VALIDATORS[editingKey];
+      if (!validator(trimmed)) {
+        const label = PLATFORM_LABELS.find(p => p.key === editingKey)?.label || "Link";
+        const msg = `Please enter a valid ${label}.`;
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+    }
     const next = { ...profiles };
     if (trimmed) {
       next[editingKey] = trimmed;
@@ -66,6 +107,7 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
     onChange(next);
     setEditingKey(null);
     setDraftValue("");
+    setError("");
   }, [draftValue, editingKey, onChange, profiles]);
 
   const copyLink = useCallback((url: string) => {
@@ -100,25 +142,31 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
               <label className="w-32 font-medium pt-1">{label}:</label>
               <div className="flex-1">
                 {isEditing ? (
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="https://..."
-                      value={draftValue}
-                      onChange={(e) => setDraftValue(e.target.value)}
-                      className="flex-1"
-                    />
-                    <button
-                      onClick={saveEdit}
-                      className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex flex-col space-y-1 w-full">
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="https://..."
+                        value={draftValue}
+                        onChange={(e) => {
+                          setDraftValue(e.target.value);
+                          setError("");
+                        }}
+                        className="flex-1"
+                      />
+                      <button
+                        onClick={saveEdit}
+                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {error && <div className="text-xs text-red-500 mt-1">{error}</div>}
                   </div>
                 ) : (
                   <div className="flex items-center space-x-2">

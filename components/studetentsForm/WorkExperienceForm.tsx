@@ -16,6 +16,7 @@ export type Experience = {
   ctc: string;
   certificate?: string;      // file path or URL
   certificateName?: string;  // display name
+  id: string;
 };
 
 interface WorkExperienceFormProps {
@@ -32,6 +33,7 @@ const emptyExperience: Experience = {
   ctc: "",
   certificate: "",
   certificateName: "",
+  id: "",
 };
 
 function sanitizeExperience(exp: Partial<Experience>): Experience {
@@ -44,6 +46,7 @@ function sanitizeExperience(exp: Partial<Experience>): Experience {
     ctc: exp.ctc ?? "",
     certificate: exp.certificate ?? "",
     certificateName: exp.certificateName ?? "",
+    id: exp.id ?? "",
   };
 }
 
@@ -173,9 +176,7 @@ export default function WorkExperienceForm({ data, onChange }: WorkExperienceFor
 
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-semibold">
-        Work Experience <span className="text-gray-500 text-base">(optional)</span>
-      </h2>
+     
 
       {/* List existing */}
       {data.map((item, i) => (
@@ -185,12 +186,40 @@ export default function WorkExperienceForm({ data, onChange }: WorkExperienceFor
               <h3 className="text-lg font-medium">{item.employer ?? ""}</h3>
               <p className="text-sm text-gray-600">{item.role ?? ""}</p>
             </div>
-            <button
-              onClick={() => startEdit(i)}
-              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Edit
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => startEdit(i)}
+                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Edit
+              </button>
+              <button
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to remove this experience?')) {
+                    try {
+                      const res = await fetch('/api/students/studetnsMultiSetForm', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: item.id, type: 'workExperience' }),
+                      });
+                      const result = await res.json();
+                      if (res.ok && result.success) {
+                        const next = data.filter((_, idx) => idx !== i);
+                        onChange(next);
+                        toast.success('Experience removed');
+                      } else {
+                        toast.error(result.error || 'Failed to remove experience');
+                      }
+                    } catch (err) {
+                      toast.error('Failed to remove experience');
+                    }
+                  }
+                }}
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-700"
+              >
+                Remove
+              </button>
+            </div>
           </div>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
             <dt className="font-medium">Duration</dt>

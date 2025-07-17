@@ -41,6 +41,11 @@ const emptyProject: Project = {
   githubRepo: "",
 };
 
+// Add a helper to validate GitHub URLs
+function isValidGithubUrl(url: string) {
+  return /^https:\/\/(www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\/)?$/.test(url.trim());
+}
+
 export default function ProjectsForm({ data, onChange }: Props) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<Project>(emptyProject);
@@ -88,6 +93,10 @@ export default function ProjectsForm({ data, onChange }: Props) {
       toast.error("End date must be after start date.");
       return;
     }
+    if (draft.githubRepo && !isValidGithubUrl(draft.githubRepo)) {
+      toast.error("Please enter a valid GitHub repository URL (e.g., https://github.com/user/repo)");
+      return;
+    }
     if (editingIndex === null) return;
     let next: Project[];
     const projectToSave = {
@@ -120,6 +129,10 @@ export default function ProjectsForm({ data, onChange }: Props) {
 
   // GitHub repo link UI logic
   const handleGithubSave = () => {
+    if (githubDraft.trim() && !isValidGithubUrl(githubDraft.trim())) {
+      toast.error("Please enter a valid GitHub repository URL (e.g., https://github.com/user/repo)");
+      return;
+    }
     setDraft((d) => ({ ...d, githubRepo: githubDraft.trim() || undefined }));
     setEditingGithub(false);
   };
@@ -164,7 +177,27 @@ export default function ProjectsForm({ data, onChange }: Props) {
                 <Edit2 size={18} />
               </button>
               <button
-                onClick={() => remove(i)}
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to remove this project?')) {
+                    try {
+                      const res = await fetch('/api/students/studetnsMultiSetForm', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: p.id, type: 'project' }),
+                      });
+                      const result = await res.json();
+                      if (res.ok && result.success) {
+                        const next = data.filter((_, idx) => idx !== i);
+                        onChange(next);
+                        toast.success('Project removed');
+                      } else {
+                        toast.error(result.error || 'Failed to remove project');
+                      }
+                    } catch (err) {
+                      toast.error('Failed to remove project');
+                    }
+                  }
+                }}
                 className="p-1 text-red-600 hover:text-red-800"
                 title="Remove"
               >
@@ -347,7 +380,7 @@ export default function ProjectsForm({ data, onChange }: Props) {
                     </button>
                     <button
                       type="button"
-                      onClick={handleLinkRemove}
+                      onClick={() => setEditingLink(true)}
                       className="p-1 text-red-500 hover:text-red-700"
                       title="Remove"
                     >

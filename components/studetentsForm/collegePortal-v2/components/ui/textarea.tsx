@@ -49,20 +49,20 @@ const LocationSelector = ({ onLocationChange }) => {
     }
   }, [selectedDistrict]);
 
-  const handleStateChange = (e) => {
+  const handleStateChange = (e: { target: { value: React.SetStateAction<string>; }; }) => {
     setSelectedState(e.target.value);
     setSelectedDistrict("");
     setPlaces([]);
     onLocationChange({ state: e.target.value, district: "", place: "" });
   };
 
-  const handleDistrictChange = (e) => {
+  const handleDistrictChange = (e: { target: { value: React.SetStateAction<string>; }; }) => {
     setSelectedDistrict(e.target.value);
     setPlaces([]);
     onLocationChange({ state: selectedState, district: e.target.value, place: "" });
   };
 
-  const handlePlaceChange = (e) => {
+  const handlePlaceChange = (e: { target: { value: any; }; }) => {
     onLocationChange({ state: selectedState, district: selectedDistrict, place: e.target.value });
   };
 
@@ -72,7 +72,7 @@ const LocationSelector = ({ onLocationChange }) => {
         <label className="block text-sm font-medium mb-1">State</label>
         <select value={selectedState} onChange={handleStateChange} className="block w-full border rounded p-2">
           <option value="">Select State</option>
-          {states.map((state) => (
+          {Array.isArray(states) && states.map((state: { id: string | number; name: string }) => (
             <option key={state.id} value={state.name}>{state.name}</option>
           ))}
         </select>
@@ -81,7 +81,7 @@ const LocationSelector = ({ onLocationChange }) => {
         <label className="block text-sm font-medium mb-1">District</label>
         <select value={selectedDistrict} onChange={handleDistrictChange} className="block w-full border rounded p-2" disabled={!selectedState}>
           <option value="">Select District</option>
-          {districts.map((district) => (
+          {Array.isArray(districts) && districts.map((district: { id: string | number; name: string }) => (
             <option key={district.id} value={district.name}>{district.name}</option>
           ))}
         </select>
@@ -90,7 +90,7 @@ const LocationSelector = ({ onLocationChange }) => {
         <label className="block text-sm font-medium mb-1">Place</label>
         <select value={places} onChange={handlePlaceChange} className="block w-full border rounded p-2" disabled={!selectedDistrict}>
           <option value="">Select Place</option>
-          {places.map((place) => (
+          {Array.isArray(places) && places.map((place: { id: string | number; name: string }) => (
             <option key={place.id} value={place.name}>{place.name}</option>
           ))}
         </select>

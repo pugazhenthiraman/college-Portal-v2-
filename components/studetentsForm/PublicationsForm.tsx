@@ -120,6 +120,10 @@ export default function PublicationsForm({ data, onChange }: Props) {
               <dt className="font-medium">Abstract:</dt>
               <dd>{pub.abstract}</dd>
             </div>
+            {/* The above is invalid: <div> is not allowed inside <dl>. Fix: use <div> outside, or use <dt> and <dd> directly */}
+            {/* Corrected version: */}
+            <dt className="font-medium">Abstract:</dt>
+            <dd>{pub.abstract}</dd>
             <div className="flex items-center space-x-2">
               <dt className="font-medium">Link:</dt>
               <dd className="flex-1">

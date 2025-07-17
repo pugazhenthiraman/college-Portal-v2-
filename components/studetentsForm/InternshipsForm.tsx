@@ -168,12 +168,40 @@ export default function InternshipsForm({ data, onChange }: Props) {
               <h3 className="text-lg font-medium">{item.company}</h3>
               <p className="text-sm text-gray-600">{item.role}</p>
             </div>
-            <button
-              onClick={() => startEdit(i)}
-              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Edit
-            </button>
+            <div>
+              <button
+                onClick={() => startEdit(i)}
+                className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Edit
+              </button>
+              <button
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to remove this internship?')) {
+                    try {
+                      const res = await fetch('/api/students/studetnsMultiSetForm', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: item.id, type: 'internship' }),
+                      });
+                      const result = await res.json();
+                      if (res.ok && result.success) {
+                        const next = data.filter((_, idx) => idx !== i);
+                        onChange(next);
+                        toast.success('Internship removed');
+                      } else {
+                        toast.error(result.error || 'Failed to remove internship');
+                      }
+                    } catch (err) {
+                      toast.error('Failed to remove internship');
+                    }
+                  }
+                }}
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-700"
+              >
+                Remove
+              </button>
+            </div>
           </div>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
             <dt className="font-medium">Duration:</dt>

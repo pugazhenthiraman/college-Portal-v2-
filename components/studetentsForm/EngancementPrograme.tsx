@@ -5,10 +5,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import villageData from '../../utils/village-location.json';
 
 export type EnhancementProgram = {
   name: string;
-  location: string;
+  district: string;
+  block: string;
   details: string;
   contribution: string;
 };
@@ -20,7 +22,8 @@ interface Props {
 
 const emptyProgram: EnhancementProgram = {
   name: "",
-  location: "",
+  district: "",
+  block: "",
   details: "",
   contribution: "",
 };
@@ -54,6 +57,10 @@ export default function EnhancementProgramForm({ data, onChange }: Props) {
 
   const handleSave = useCallback(() => {
     if (editingIndex === null) return;
+    if (!draft.district || !draft.block) {
+      toast.error("Please select both district and block.");
+      return;
+    }
     const isNew = editingIndex < 0;
     let msg: string;
 
@@ -105,7 +112,7 @@ export default function EnhancementProgramForm({ data, onChange }: Props) {
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-lg font-medium">{ev.name}</h3>
-              <p className="text-sm text-gray-600">{ev.location}</p>
+              <p className="text-sm text-gray-600">{ev.district}, {ev.block}</p>
             </div>
             <div className="space-x-2">
               <button
@@ -154,15 +161,35 @@ export default function EnhancementProgramForm({ data, onChange }: Props) {
                 />
               </div>
               <div>
-                <label htmlFor="ep-location" className="block text-sm font-medium mb-1">
-                  Location
-                </label>
-                <Input
-                  id="ep-location"
-                  placeholder="City, Venue, etc."
-                  value={draft.location}
-                  onChange={(e: { target: { value: any; }; }) => setDraft((d) => ({ ...d, location: e.target.value }))}
-                />
+                <label className="block text-sm font-medium mb-1">District</label>
+                <select
+                  className="w-full border rounded px-2 py-1 mb-2"
+                  value={draft.district}
+                  onChange={e => {
+                    const district = e.target.value;
+                    setDraft(d => ({ ...d, district, block: "" }));
+                  }}
+                  required
+                >
+                  <option value="">Select district</option>
+                  {villageData.map((d: any) => (
+                    <option key={d.district} value={d.district}>{d.district}</option>
+                  ))}
+                </select>
+                <label className="block text-sm font-medium mb-1">Block</label>
+                <select
+                  className="w-full border rounded px-2 py-1"
+                  value={draft.block}
+                  onChange={e => setDraft(d => ({ ...d, block: e.target.value }))}
+                  required
+                  disabled={!draft.district}
+                >
+                  <option value="">{draft.district ? "Select block" : "Select district first"}</option>
+                  {draft.district &&
+                    villageData.find((d: any) => d.district === draft.district)?.blocks.map((b: any) => (
+                      <option key={b.block} value={b.block}>{b.block}</option>
+                    ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="ep-details" className="block text-sm font-medium mb-1">

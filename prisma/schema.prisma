@@ -172,8 +172,15 @@ model Student {
   adhaarNo           String?
   passportNo         String?
   passportExpiryDate DateTime?
-  panNo              String? @db.VarChar(10) // PAN number, optional
+  panNo              String?     @db.VarChar(10) // PAN number, optional
   createdAt          DateTime    @default(now())
+
+  // Submission & verification fields
+  isSubmitted    Boolean   @default(false)
+  isVerified     Boolean?
+  facultyRemarks String?
+  submittedAt    DateTime?
+  verifiedAt     DateTime?
 
   // relations to form sections
   ugDetails       UGDetails? // <--- ONE-TO-ONE, not array!
@@ -259,7 +266,8 @@ model EnhancementProgram {
   studentId    Int
   student      Student  @relation(fields: [studentId], references: [id])
   name         String
-  location     String
+  district     String
+  block        String
   details      String
   contribution String
   createdAt    DateTime @default(now())

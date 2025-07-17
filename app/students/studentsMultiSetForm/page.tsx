@@ -56,6 +56,45 @@ interface FormData {
   publications: any[];
 }
 
+const OPTIONAL_INTERNSHIP_FIELDS = ["stipend", "supervisorName"];
+const OPTIONAL_PROJECT_FIELDS = ["link"];
+
+function getUnansweredFields(data: FormData): string[] {
+  const keys = Object.keys(data).filter(k => k !== 'review' && k !== 'socialProfiles') as (keyof FormData)[];
+  const missing: string[] = [];
+  for (const key of keys) {
+    const value = data[key];
+    if (Array.isArray(value)) {
+      value.forEach((item, idx) => {
+        if (typeof item === 'object' && item !== null) {
+          for (const [field, v] of Object.entries(item)) {
+            if (
+              (v === undefined || v === null || v === "") &&
+              !(
+                (key === "internships" && OPTIONAL_INTERNSHIP_FIELDS.includes(field)) ||
+                (key === "projects" && OPTIONAL_PROJECT_FIELDS.includes(field))
+              )
+            ) {
+              missing.push(`${key}[${idx}].${field}`);
+            }
+          }
+        } else if (item === undefined || item === null || item === "") {
+          missing.push(`${key}[${idx}]`);
+        }
+      });
+    } else if (typeof value === 'object' && value !== null) {
+      for (const [field, v] of Object.entries(value)) {
+        if (v === undefined || v === null || v === "") {
+          missing.push(`${key}.${field}`);
+        }
+      }
+    } else if (value === undefined || value === null || value === "") {
+      missing.push(key);
+    }
+  }
+  return missing;
+}
+
 export default function StudentMultiStepForm() {
   console.log("🛠 [frontend] StudentMultiStepForm mounted");
 
@@ -73,6 +112,7 @@ export default function StudentMultiStepForm() {
     publications: [],
   });
   const [loading, setLoading] = useState(true);
+  const [submitted, setSubmitted] = useState(false);
 
   // Fetch existing data
   useEffect(() => {
@@ -235,6 +275,14 @@ export default function StudentMultiStepForm() {
       100
   );
 
+  // Helper: is a step complete?
+  const isStepComplete = (idx: number) => {
+    const key = dataKeys[idx];
+    if (!key) return false;
+    const v = data[key];
+    return Array.isArray(v) ? v.length > 0 : Object.values(v || {}).some(Boolean);
+  };
+
   const renderStep = () => {
     switch (step) {
       case 0:
@@ -263,12 +311,35 @@ export default function StudentMultiStepForm() {
             data={data}
             labels={steps}
             onEdit={setStep}
-            onSaveDraft={saveDraft}
-            onSubmit={() => {}}
           />
         );
       default:
         return null;
+    }
+  };
+
+  const handleSubmit = async () => {
+    const missingFields = getUnansweredFields(data);
+    if (missingFields.length > 0) {
+      toast.error("Please fill all required fields: " + missingFields.join(", "));
+      return;
+    }
+    try {
+      console.log("[Submit] Sending POST request to /api/students/submit");
+      const res = await fetch("/api/students/submit", {
+        method: "POST",
+      });
+      const result = await res.json();
+      console.log("[Submit] Response status:", res.status, "Response body:", result);
+      if (res.ok && result.success) {
+        toast.success("Profile submitted for faculty review!");
+        setSubmitted(true);
+      } else {
+        toast.error(result.error || "Submission failed.");
+      }
+    } catch (e) {
+      console.error("[Submit] Network error:", e);
+      toast.error("Network error. Please try again.");
     }
   };
 
@@ -284,6 +355,7 @@ export default function StudentMultiStepForm() {
           <div className="flex justify-between">
             {steps.slice(0, 5).map((label, i) => {
               const idx = i;
+              const complete = isStepComplete(idx);
               return (
                 <motion.div
                   key={idx}
@@ -293,10 +365,12 @@ export default function StudentMultiStepForm() {
                 >
                   <div
                     className={`w-10 h-10 flex items-center justify-center rounded-full text-base font-semibold transition ${
-                      idx < step
-                        ? "bg-indigo-600 text-white"
+                      complete
+                        ? idx === step
+                          ? "bg-indigo-600 border-4 border-indigo-300 text-white"
+                          : "bg-indigo-600 text-white"
                         : idx === step
-                        ? "border-2 border-indigo-600 text-indigo-600"
+                        ? "border-2 border-indigo-600 text-indigo-600 bg-white"
                         : "bg-gray-100 text-gray-400"
                     }`}
                   >
@@ -313,6 +387,7 @@ export default function StudentMultiStepForm() {
           <div className="flex justify-between mt-2">
             {steps.slice(5).map((label, i) => {
               const idx = i + 5;
+              const complete = isStepComplete(idx);
               return (
                 <motion.div
                   key={idx}
@@ -322,10 +397,12 @@ export default function StudentMultiStepForm() {
                 >
                   <div
                     className={`w-10 h-10 flex items-center justify-center rounded-full text-base font-semibold transition ${
-                      idx < step
-                        ? "bg-indigo-600 text-white"
+                      complete
+                        ? idx === step
+                          ? "bg-indigo-600 border-4 border-indigo-300 text-white"
+                          : "bg-indigo-600 text-white"
                         : idx === step
-                        ? "border-2 border-indigo-600 text-indigo-600"
+                        ? "border-2 border-indigo-600 text-indigo-600 bg-white"
                         : "bg-gray-100 text-gray-400"
                     }`}
                   >
@@ -380,10 +457,11 @@ export default function StudentMultiStepForm() {
                 </button>
               )}
               <button
-                onClick={step === steps.length - 1 ? () => {} : next}
+                onClick={step === steps.length - 1 ? handleSubmit : next}
                 className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                disabled={step === steps.length - 1 && submitted}
               >
-                {step === steps.length - 1 ? "Submit" : "Next"}
+                {step === steps.length - 1 ? (submitted ? "Submitted" : "Submit") : "Next"}
               </button>
             </div>
           </footer>

@@ -83,7 +83,9 @@ const formatAadhaar = (value: string) => {
 
 // Passport: allow empty or up to 8 alphanumeric, but only show error if length is 8 and not valid
 const validatePassport = (value: string) => {
-  return value === "" || /^[A-Za-z0-9]{0,8}$/.test(value);
+  // Remove spaces before validating
+  const val = value.replace(/\s/g, '');
+  return val === "" || /^[A-Z]{1}[0-9]{7}$/.test(val);
 };
 
 const validatePAN = (value: string) => {
@@ -452,19 +454,31 @@ export default function Generalinfo({
           <TestInput
             name="passportNo"
             label="Passport Number"
-            placeholder="8 characters"
-            value={merged.passportNo || ""}
-            maxLength={8}
+            placeholder="A 1234567"
+            value={
+              merged.passportNo
+                ? merged.passportNo.length > 1
+                  ? `${merged.passportNo[0]} ${merged.passportNo.slice(1)}`
+                  : merged.passportNo
+                : ""
+            }
+            maxLength={9} // 8 chars + 1 space
             onChange={e => {
-              const val = e.target.value;
-              if (validatePassport(val)) {
-                update("passportNo", val);
+              let val = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+              // Remove all spaces for storage/validation
+              val = val.replace(/\s/g, '');
+              // Only allow first char as letter, rest as digits
+              if (val.length > 0) {
+                val = val[0].replace(/[^A-Z]/g, '') + val.slice(1).replace(/[^0-9]/g, '');
               }
+              // Limit to 8 chars (1 letter + 7 digits)
+              val = val.slice(0, 8);
+              update("passportNo", val);
             }}
             onBlur={e => {
-              const val = e.target.value;
-              if (val && val.length !== 8) {
-                toast.error("Passport must be exactly 8 characters (A-Z, 0-9)");
+              const val = e.target.value.toUpperCase().replace(/\s/g, '');
+              if (val && !validatePassport(val)) {
+                toast.error("Passport must be 1 capital letter followed by 7 digits (e.g., A 1234567)");
               }
             }}
           />

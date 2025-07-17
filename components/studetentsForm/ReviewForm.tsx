@@ -1,23 +1,40 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowPathIcon, ArrowDownTrayIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import { EyeIcon, ChevronDownIcon, ChevronUpIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { formatDateRange } from "@/utils/helper";
 
 // Section order and their corresponding data keys
 const SECTION_ORDER: { label: string; key: string }[] = [
   { label: "General Info", key: "general" },
-  { label: "UG Details", key: "ugDetails" },
+  { label: "UG Details", key: "ugDetailsUG" },
+  { label: "PG Details", key: "ugDetailsPG" },
   { label: "Internships", key: "internships" },
   { label: "Projects", key: "projects" },
   { label: "Skills", key: "technicalSkills" },          // ✅ fixed
   { label: "Social", key: "socialProfiles" },
   { label: "Publications", key: "publications" },
   { label: "Enhancement Program", key: "events" },     // ✅ fixed
-  { label: "Work Experience", key: "workExperiences" },
+  { label: "Work Experience", key: "workExperience" },
   { label: "Placements", key: "placements" },
 ];
 
+// UG and PG field keys
+const UG_FIELDS = [
+  "ugBatch",
+  "semesterNo",
+  "semesterMarksheet",
+  "overallCGPA",
+  "overallPercentage",
+];
+const PG_FIELDS = [
+  "isPG",
+  "pgBatch",
+  "pgSemesterNo",
+  "pgSemesterMarksheet",
+  "pgOverallCGPA",
+  "pgOverallPercentage",
+];
 
 // Fields to hide in review
 const HIDDEN_FIELDS = [
@@ -40,13 +57,9 @@ const FILE_FIELDS = [
   "certificateName",
 ];
 
-// File fields that should show only file name (not as a link)
-const FILE_NAME_ONLY_FIELDS = [
-  "certificateFile",
-  "semesterMarksheet",
-  "pgSemesterMarksheet",
-  "certificate",
-];
+// Add a set of optional fields for internships and projects
+const OPTIONAL_INTERNSHIP_FIELDS = ["stipend", "supervisorName"];
+const OPTIONAL_PROJECT_FIELDS = ["link"];
 
 // Helper to get file name from path or URL
 function getFileName(value: string) {
@@ -81,6 +94,8 @@ function FoldableFileName({ fileName }: { fileName: string }) {
 
 function renderField(k: string, v: any, item?: any) {
   if (HIDDEN_FIELDS.includes(k)) return null;
+  // Hide 'batch' from General Info
+  if (k === 'batch') return null;
 
   // If this is a startDate or endDate field and the item has both, show as a range only once
   if ((k === "startDate" || k === "endDate") && item && item.startDate && item.endDate) {
@@ -99,65 +114,47 @@ function renderField(k: string, v: any, item?: any) {
   // Show image thumbnail for photo
   if (k === "photo" && v) {
     return (
-      <div key={k} className="flex items-center gap-2">
-        <span className="font-medium text-gray-600">{k}</span>
-        <img
-          src={v}
-          alt="Profile"
-          className="h-12 w-12 rounded object-cover border"
-        />
-        <a
-          href={v}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
-        >
-          <EyeIcon className="h-4 w-4 mr-1" />
-          View
-        </a>
-      </div>
+      <>
+        <dt className="font-medium text-gray-600">{k}</dt>
+        <dd className="flex items-center gap-2">
+          <img
+            src={v}
+            alt="Profile"
+            className="h-12 w-12 rounded object-cover border"
+          />
+          <a
+            href={v}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
+          >
+            <EyeIcon className="h-4 w-4 mr-1" />
+            View
+          </a>
+        </dd>
+      </>
     );
   }
 
-  // For certificates in skills/internships: show name and folded file name
-  if ((k === "certificateName" || k === "certificate") && item?.certificateName) {
-    const fileName = getFileName(item.certificateName);
-    return (
-      <div key={k} className="flex items-center gap-2">
-        <span className="font-medium text-gray-600">{k}</span>
-        <FoldableFileName fileName={fileName} />
-      </div>
-    );
-  }
-
-  // For file fields that should show only file name (folded)
-  if (FILE_NAME_ONLY_FIELDS.includes(k) && v) {
-    const fileName = getFileName(v);
-    return (
-      <div key={k} className="flex items-center gap-2">
-        <span className="font-medium text-gray-600">{k}</span>
-        <FoldableFileName fileName={fileName} />
-      </div>
-    );
-  }
-
-  // For other file fields: show file name and view link
+  // For certificates/marksheets: show field name left, file name + view button right
   if (FILE_FIELDS.includes(k) && v) {
     const fileName = getFileName(v);
     return (
-      <div key={k} className="flex items-center gap-2">
-        <span className="font-medium text-gray-600">{k}</span>
-        <FoldableFileName fileName={fileName} />
-        <a
-          href={v}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
-        >
-          <EyeIcon className="h-4 w-4 mr-1" />
-          View
-        </a>
-      </div>
+      <>
+        <dt className="font-medium text-gray-600">{k}</dt>
+        <dd className="flex items-center gap-2 whitespace-nowrap justify-end">
+          <FoldableFileName fileName={fileName} />
+          <a
+            href={v}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
+          >
+            <EyeIcon className="h-4 w-4 mr-1" />
+            View
+          </a>
+        </dd>
+      </>
     );
   }
 
@@ -166,14 +163,25 @@ function renderField(k: string, v: any, item?: any) {
 
   // For other fields, show normally
   return (
-    <React.Fragment key={k}>
+    <>
       <dt className="font-medium text-gray-600">{k}</dt>
       <dd className="text-gray-900 break-words">{String(v)}</dd>
-    </React.Fragment>
+    </>
   );
 }
 
-function renderSectionContent(sectionKey: string, sectionData: any) {
+function renderSectionContent(sectionKey: string, sectionData: any, fullData?: any) {
+  // Special handling for UG/PG split
+  if (sectionKey === "ugDetailsUG" || sectionKey === "ugDetailsPG") {
+    const ugDetails = fullData?.ugDetails || {};
+    const fieldKeys = sectionKey === "ugDetailsUG" ? UG_FIELDS : PG_FIELDS;
+    const filtered = Object.fromEntries(
+      Object.entries(ugDetails).filter(([k]) => fieldKeys.includes(k))
+    );
+    // Reuse the object rendering logic
+    sectionData = filtered;
+  }
+
   // LOG for each section
   console.log(`Section "${sectionKey}" data:`, sectionData);
 
@@ -186,41 +194,98 @@ function renderSectionContent(sectionKey: string, sectionData: any) {
     if (sectionData.length === 0) {
       return <span className="text-gray-400">No entries</span>;
     }
+    // Only show items with at least one filled field
+    const filledItems = sectionData.filter(item =>
+      Object.entries(item).some(([k, v]) => !HIDDEN_FIELDS.includes(k) && v && String(v).trim() !== "")
+    );
     return (
       <div className="space-y-2">
-        {sectionData.map((item, idx) => (
-          <div key={idx} className="border rounded p-3 bg-gray-50">
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              {Object.entries(item)
-                .filter(([k]) => !HIDDEN_FIELDS.includes(k))
-                .map(([k, v]) =>
-                  FILE_FIELDS.includes(k) && v
-                    ? (
-                      <div key={k} className="col-span-2">{renderField(k, v, item)}</div>
-                    )
-                    : renderField(k, v, item)
+        {filledItems.map((item, i) => {
+          const filledFields = Object.entries(item).filter(
+            ([k, v]) => !HIDDEN_FIELDS.includes(k) && v && String(v).trim() !== ""
+          );
+          // For internships, treat stipend and supervisorName as optional
+          let emptyFields = Object.entries(item).filter(
+            ([k, v]) => !HIDDEN_FIELDS.includes(k) && (!v || String(v).trim() === "")
+          );
+          let optionalFields: [string, any][] = [];
+          if (sectionKey === "internships") {
+            optionalFields = emptyFields.filter(([k]) => OPTIONAL_INTERNSHIP_FIELDS.includes(k));
+            emptyFields = emptyFields.filter(([k]) => !OPTIONAL_INTERNSHIP_FIELDS.includes(k));
+          }
+          // For projects, treat 'link' as optional
+          if (sectionKey === "projects") {
+            optionalFields = optionalFields.concat(emptyFields.filter(([k]) => OPTIONAL_PROJECT_FIELDS.includes(k)));
+            emptyFields = emptyFields.filter(([k]) => !OPTIONAL_PROJECT_FIELDS.includes(k));
+          }
+          // --- Always show all unanswered fields (required + optional) ---
+          const allUnanswered = [
+            ...emptyFields.map(([k]) => ({ name: k, optional: false })),
+            ...optionalFields.map(([k]) => ({ name: k, optional: true })),
+          ];
+          return (
+            <div key={i} className="border rounded p-3 bg-gray-50">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm w-full table-fixed">
+                {filledFields.map(([k, v], idx) =>
+                  <React.Fragment key={k + '-' + idx}>{renderField(k, v, item)}</React.Fragment>
                 )}
-            </dl>
-          </div>
-        ))}
+              </dl>
+              {/* Always show unanswered questions block */}
+              {allUnanswered.length > 0 && (
+                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm flex items-start gap-2">
+                  <ExclamationCircleIcon className="h-5 w-5 text-yellow-500 mt-0.5" />
+                  <div>
+                    <strong>Unanswered Questions:</strong>
+                    <ul className="list-disc ml-6">
+                      {allUnanswered.map(({ name, optional }, idx) => (
+                        <li key={name + '-' + idx}>
+                          {name}
+                          {optional && <span className="italic text-xs text-yellow-600 ml-1">(optional)</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
 
   // Object (e.g., general info, social profiles)
   if (typeof sectionData === "object") {
+    const filledFields = Object.entries(sectionData).filter(
+      ([k, v]) => !HIDDEN_FIELDS.includes(k) && v && String(v).trim() !== ""
+    );
+    const emptyFields = Object.entries(sectionData).filter(
+      ([k, v]) => !HIDDEN_FIELDS.includes(k) && (!v || String(v).trim() === "")
+    );
+    // --- Always show all unanswered fields (required + optional) ---
+    const allUnanswered = emptyFields.map(([k]) => ({ name: k, optional: false }));
     return (
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        {Object.entries(sectionData)
-          .filter(([k]) => !HIDDEN_FIELDS.includes(k))
-          .map(([k, v]) =>
-            FILE_FIELDS.includes(k) && v
-              ? (
-                <div key={k} className="col-span-2">{renderField(k, v, sectionData)}</div>
-              )
-              : renderField(k, v, sectionData)
+      <>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm w-full table-fixed">
+          {filledFields.map(([k, v], idx) =>
+            <React.Fragment key={k + '-' + idx}>{renderField(k, v, sectionData)}</React.Fragment>
           )}
-      </dl>
+        </dl>
+        {/* Always show unanswered questions block */}
+        {allUnanswered.length > 0 && (
+          <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm flex items-start gap-2">
+            <ExclamationCircleIcon className="h-5 w-5 text-yellow-500 mt-0.5" />
+            <div>
+              <strong>Unanswered Questions:</strong>
+              <ul className="list-disc ml-6">
+                {allUnanswered.map(({ name }, idx) => (
+                  <li key={name + '-' + idx}>{name}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -232,43 +297,69 @@ interface ReviewFormProps {
   data: Record<string, any>;
   labels: string[];
   onEdit: (sectionIndex: number) => void;
-  onSaveDraft: () => void;
-  onSubmit: () => void;
 }
 
 export default function ReviewForm({
   data,
   labels = [],
   onEdit,
-  onSaveDraft,
-  onSubmit,
 }: ReviewFormProps) {
   // LOG all keys at the top
   console.log("ReviewForm data keys:", Object.keys(data));
   console.log("ReviewForm full data:", data);
 
-  const handleDownload = () => {
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "student_profile.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  // Helper to check if a value is empty
+  function isEmptyValue(v: any) {
+    return v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+  }
+
+  // For debugging: log unanswered required fields per section (except Social)
+  SECTION_ORDER.forEach(({ key, label }) => {
+    if (key === "socialProfiles") return; // Social section is fully optional
+
+    const sectionData = data[key];
+    if (!sectionData) {
+      console.log(`[ReviewForm] Section "${label}" is missing entirely (required)`);
+      return;
+    }
+
+    const unanswered: string[] = [];
+
+    if (Array.isArray(sectionData)) {
+      sectionData.forEach((item, idx) => {
+        Object.entries(item).forEach(([k, v]) => {
+          if (
+            !HIDDEN_FIELDS.includes(k) &&
+            !(key === "internships" && OPTIONAL_INTERNSHIP_FIELDS.includes(k)) &&
+            !(key === "projects" && OPTIONAL_PROJECT_FIELDS.includes(k)) &&
+            isEmptyValue(v)
+          ) {
+            unanswered.push(`${k} (item ${idx + 1})`);
+          }
+        });
+      });
+    } else if (typeof sectionData === "object") {
+      Object.entries(sectionData).forEach(([k, v]) => {
+        if (!HIDDEN_FIELDS.includes(k) && isEmptyValue(v)) {
+          unanswered.push(k);
+        }
+      });
+    }
+
+    if (unanswered.length > 0) {
+      console.log(`[ReviewForm] Section "${label}" has unanswered required fields:`, unanswered);
+    }
+  });
 
   return (
-    <div className="space-y-10 max-w-3xl mx-auto">
+    <div className="space-y-10 max-w-3xl mx-auto" id="review-form-pdf-content">
       <h2 className="text-3xl font-bold text-center mb-4">Review & Submit</h2>
 
       <div className="space-y-6">
-        {SECTION_ORDER.map(({ label, key }, idx) => (
+        {SECTION_ORDER.map(({ label, key }) => (
           <div
             key={key}
-            className={`bg-white rounded-xl shadow-md p-6 border border-gray-200 ${data[key] ? "" : "opacity-50"}`}
+            className={`bg-white rounded-xl shadow-md p-6 border border-gray-200`}
           >
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-xl font-semibold text-indigo-700">
@@ -276,44 +367,18 @@ export default function ReviewForm({
               </h3>
               <button
                 type="button"
-                onClick={() => onEdit(labels.findIndex(l => l === label))}
+                onClick={() => onEdit(labels.findIndex(l => l === (label === "UG Details" ? "UG Details" : label === "PG Details" ? "UG Details" : label)))}
                 className="text-indigo-600 hover:underline text-sm"
               >
                 Edit
               </button>
             </div>
-            <div>{renderSectionContent(key, data[key])}</div>
+            <div>{renderSectionContent(key, data[key], data)}</div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-gray-200">
-        <div className="space-x-2">
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded hover:bg-green-200 transition"
-          >
-            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-            Download JSON
-          </button>
-          <button
-            type="button"
-            onClick={onSaveDraft}
-            className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition"
-          >
-            <ArrowPathIcon className="h-5 w-5 mr-2" />
-            Save Draft
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={onSubmit}
-          className="inline-flex items-center px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition font-semibold"
-        >
-          Submit All
-        </button>
-      </div>
+      {/* No action buttons at the bottom as requested */}
     </div>
   );
 }

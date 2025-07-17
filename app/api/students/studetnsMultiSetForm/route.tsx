@@ -181,7 +181,8 @@ export async function POST(req: NextRequest) {
             data: data.map((evt: any) => ({
               studentId,
               name: evt.name,
-              location: evt.location,
+              district: evt.district,
+              block: evt.block,
               details: evt.details,
               contribution: evt.contribution,
             })),
@@ -266,13 +267,17 @@ export async function POST(req: NextRequest) {
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
         break;
 
-        case "projects":
-          // Remove all previous projects for this student
-          await prisma.project.deleteMany({ where: { studentId } });
-          // Only create if there are projects
-          if (Array.isArray(data)) {
+      case "projects":
+        // Remove all previous projects for this student
+        await prisma.project.deleteMany({ where: { studentId } });
+        // Only create if there are projects
+        if (Array.isArray(data)) {
+          const validProjects = data.filter(
+            (prj: any) => prj.startDate && prj.endDate
+          );
+          if (validProjects.length > 0) {
             await prisma.project.createMany({
-              data: data.map((prj: any) => ({
+              data: validProjects.map((prj: any) => ({
                 studentId,
                 title: prj.title,
                 link: prj.link || null,
@@ -284,8 +289,9 @@ export async function POST(req: NextRequest) {
               })),
             });
           }
-          updatedStudent = await prisma.student.findUnique({ where: { userId } });
-          break;
+        }
+        updatedStudent = await prisma.student.findUnique({ where: { userId } });
+        break;
 
       default:
         return NextResponse.json(
@@ -362,6 +368,72 @@ export async function GET() {
     console.error("Error fetching student record:", err);
     return NextResponse.json(
       { error: "Failed to load data. Please try again later." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE handler for removing a work experience, internship, or project by ID.
+ * Expects: { id: number, type: string }
+ */
+export async function DELETE(req: NextRequest) {
+  // 1. Check authentication
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { error: "You are not authorized. Please log in again." },
+      { status: 401 }
+    );
+  }
+
+  // 2. Parse request body
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request format. Please refresh and try again." },
+      { status: 400 }
+    );
+  }
+  const { id, type } = body as { id?: number | string, type?: string };
+  if (!id || !type) {
+    return NextResponse.json(
+      { error: "Missing type or ID." },
+      { status: 400 }
+    );
+  }
+
+  // Convert id to integer if it's a string
+  let deleteId = id;
+  if (typeof deleteId === 'string') {
+    const parsed = parseInt(deleteId, 10);
+    if (isNaN(parsed)) {
+      return NextResponse.json(
+        { error: "Invalid ID format. ID must be an integer." },
+        { status: 400 }
+      );
+    }
+    deleteId = parsed;
+  }
+
+  try {
+    // For future extensibility: add more types as needed
+    if (type === "workExperience") {
+      await prisma.workExperience.delete({ where: { id: deleteId } });
+    } else if (type === "internship") {
+      await prisma.internship.delete({ where: { id: deleteId } });
+    } else if (type === "project") {
+      await prisma.project.delete({ where: { id: deleteId } });
+    } else {
+      return NextResponse.json({ error: "Invalid type." }, { status: 400 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting entry:", err);
+    return NextResponse.json(
+      { error: "Failed to delete entry. Please try again later." },
       { status: 500 }
     );
   }

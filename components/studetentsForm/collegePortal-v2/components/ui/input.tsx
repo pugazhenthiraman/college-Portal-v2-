@@ -3,11 +3,15 @@
 
 import React, { useEffect, useState } from "react";
 
-const LocationSelector = ({ onLocationChange }) => {
-  const [states, setStates] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [places, setPlaces] = useState([]);
-  const [selectedState, setSelectedState] = useState("");
+interface LocationSelectorProps {
+  onLocationChange: (location: { state: string; district: string; place: string }) => void;
+}
+
+const LocationSelector: React.FC<LocationSelectorProps> = ({ onLocationChange }) => {
+  const [states, setStates] = useState<string[]>([]);
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [places, setPlaces] = useState<string[]>([]);
+  const [selectedState, setSelectedState] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
 
   useEffect(() => {
@@ -49,18 +53,18 @@ const LocationSelector = ({ onLocationChange }) => {
     }
   }, [selectedDistrict]);
 
-  const handleStateChange = (e) => {
-    setSelectedState(e.target.value);
+  const handleStateChange = (e: { target: { value: React.SetStateAction<string>; }; }) => {
+    setSelectedState(e.target.value as string);
     setSelectedDistrict("");
-    onLocationChange({ state: e.target.value, district: "", place: "" });
+    onLocationChange({ state: e.target.value as string, district: "", place: "" });
   };
 
-  const handleDistrictChange = (e) => {
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedDistrict(e.target.value);
     onLocationChange({ state: selectedState, district: e.target.value, place: "" });
-  };
+  }
 
-  const handlePlaceChange = (e) => {
+  const handlePlaceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onLocationChange({ state: selectedState, district: selectedDistrict, place: e.target.value });
   };
 
@@ -71,7 +75,7 @@ const LocationSelector = ({ onLocationChange }) => {
         <select value={selectedState} onChange={handleStateChange} className="block w-full border rounded">
           <option value="">Select State</option>
           {states.map((state) => (
-            <option key={state.id} value={state.name}>{state.name}</option>
+            <option key={state} value={state}>{state}</option>
           ))}
         </select>
       </div>
@@ -80,7 +84,7 @@ const LocationSelector = ({ onLocationChange }) => {
         <select value={selectedDistrict} onChange={handleDistrictChange} className="block w-full border rounded" disabled={!selectedState}>
           <option value="">Select District</option>
           {districts.map((district) => (
-            <option key={district.id} value={district.name}>{district.name}</option>
+            <option key={district} value={district}>{district}</option>
           ))}
         </select>
       </div>
@@ -89,7 +93,7 @@ const LocationSelector = ({ onLocationChange }) => {
         <select onChange={handlePlaceChange} className="block w-full border rounded" disabled={!selectedDistrict}>
           <option value="">Select Place</option>
           {places.map((place) => (
-            <option key={place.id} value={place.name}>{place.name}</option>
+            <option key={place} value={place}>{place}</option>
           ))}
         </select>
       </div>
