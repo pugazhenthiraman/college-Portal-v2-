@@ -48,12 +48,14 @@ model User {
   passwordChanged Boolean  @default(false)
 
   // One-to-one relations to role-specific details (only one should be non-null)
-  superAdmin SuperAdmin?
-  college    College?
+  superAdmin            SuperAdmin?
+  college               College?
   // Removed relation for department login
-  hod        HOD?
-  faculty    Faculty?
-  student    Student?
+  hod                   HOD?
+  faculty               Faculty?
+  student               Student?
+  sentNotifications     Notification[] @relation("SentNotifications")
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
 }
 
 model SuperAdmin {
@@ -192,6 +194,7 @@ model Student {
   workExperiences WorkExperience[]
   publications    Publication[]
   projects        Project[]
+  Notification    Notification[]
 
   @@index([academicYear, section])
 }
@@ -341,4 +344,20 @@ model Block {
   districtId Int
 
   @@unique([name, districtId])
+}
+
+model Notification {
+  id               Int      @id @default(autoincrement())
+  type             String // e.g., 'submission', 'review', 'message'
+  status           String // e.g., 'info', 'success', 'error', 'action_required'
+  message          String
+  senderId         Int // User who triggered the notification
+  receiverId       Int // User who receives the notification
+  relatedStudentId Int? // Optionally link to a student profile
+  createdAt        DateTime @default(now())
+  read             Boolean  @default(false)
+
+  sender         User     @relation("SentNotifications", fields: [senderId], references: [id])
+  receiver       User     @relation("ReceivedNotifications", fields: [receiverId], references: [id])
+  relatedStudent Student? @relation(fields: [relatedStudentId], references: [id])
 }

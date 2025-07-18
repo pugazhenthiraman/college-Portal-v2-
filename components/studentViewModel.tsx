@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast";
 
 type Props = {
   isOpen: boolean;
@@ -15,6 +16,9 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
   // mode can be "view" or "edit"
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [editedStudent, setEditedStudent] = useState<any | null>(student);
+  // Add state for remark
+  const [remark, setRemark] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     setEditedStudent(student);
@@ -67,6 +71,31 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
 
   const toggleEditMode = () => {
     setMode(mode === "view" ? "edit" : "view");
+  };
+
+  // Handler for verify/reject
+  const handleVerifyReject = async (action: "verify" | "reject") => {
+    if (!student?.id) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/faculty/students/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: student.id, action, remarks: remark }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Student ${action === "verify" ? "verified" : "rejected"} successfully`);
+        onClose();
+        onSave && onSave(student); // Optionally trigger parent refresh
+      } else {
+        toast.error(data.error || "Action failed");
+      }
+    } catch (e) {
+      toast.error("Network error");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // In view mode, display all fields
@@ -350,21 +379,50 @@ export const StudentViewModal = ({ isOpen, onClose, student, onSave }: Props) =>
             {mode === "view" ? renderViewMode() : renderEditMode()}
           </div>
           {/* Modal Footer */}
-          <div className="flex justify-end space-x-3 border-t border-gray-300 pt-3">
-            {mode === "edit" && (
-              <Button
-                onClick={handleSave}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg border border-green-500"
-              >
-                Save Changes
-              </Button>
+          <div className="flex flex-col gap-2 border-t border-gray-300 pt-3">
+            {/* Show verify/reject only if student is submitted and not yet verified */}
+            {mode === "view" && student?.isSubmitted && student?.isVerified === null && (
+              <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Enter remark (optional)"
+                  value={remark}
+                  onChange={e => setRemark(e.target.value)}
+                  className="flex-1 border border-gray-300 rounded px-3 py-2"
+                  disabled={actionLoading}
+                />
+                <Button
+                  onClick={() => handleVerifyReject("verify")}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg border border-green-600"
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? "Processing..." : "Verify"}
+                </Button>
+                <Button
+                  onClick={() => handleVerifyReject("reject")}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg border border-red-600"
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? "Processing..." : "Reject"}
+                </Button>
+              </div>
             )}
-            <Button
-              onClick={onClose}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg border border-red-500"
-            >
-              Close
-            </Button>
+            <div className="flex justify-end space-x-3">
+              {mode === "edit" && (
+                <Button
+                  onClick={handleSave}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg border border-green-500"
+                >
+                  Save Changes
+                </Button>
+              )}
+              <Button
+                onClick={onClose}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg border border-red-500"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       </div>

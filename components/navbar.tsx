@@ -5,6 +5,7 @@ import Image from "next/image"; // Next.js Image component
 import { useRouter, usePathname } from "next/navigation";
 import { User, Home } from "lucide-react";
 import LogoutButton from "../components/logoutButton";
+import NotificationBell from "./notifications/NotificationBell";
 
 export default function Navbar() {
   const router = useRouter();
@@ -46,7 +47,8 @@ export default function Navbar() {
 
         {/* Profile and Logout functionality */}
         {!hideProfileIcon && (
-          <div className="relative">
+          <div className="relative flex items-center gap-4">
+            <NotificationBell onClick={() => router.push("/notifications")} />
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               className="flex items-center space-x-2"
