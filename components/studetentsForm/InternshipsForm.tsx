@@ -3,10 +3,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import villageData from '../../utils/village-location.json';
 import { addDays, subDays } from "date-fns";
 import { formatDateRange } from "@/utils/helper";
+import { useFormActions } from '@/hooks/useFormActions';
+import { Combobox } from '@headlessui/react';
+import { CheckCircle2, Loader2 } from "lucide-react";
+import ExpandableText from "../ExpandableText";
 
 export type Internship = {
   company: string;
@@ -47,122 +51,186 @@ const emptyInternship: Internship = {
   companyEmail: "",
 };
 
+// Helper: compare two internship objects for changes
+function diffFields(orig: Internship, upd: Internship) {
+  const keys = Object.keys(orig) as (keyof Internship)[];
+  return keys.filter(k => (orig[k] ?? "") !== (upd[k] ?? ""));
+}
+
+// Helper: get missing required fields (excluding optional ones)
+function getMissingFields(d: Internship) {
+  const required: (keyof Internship)[] = [
+    "company", "role", "startDate", "endDate", "district", "block", "responsibilities", "companyEmail", "mode"
+  ];
+  return required.filter(k => !d[k] || String(d[k]).trim() === "");
+}
+
+// Helper: format field name to be more readable
+function formatFieldName(field: string): string {
+  return field
+    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+    .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+    .trim();
+}
+
+// Helper function to ensure all required fields are present
+function ensureInternship(data: Partial<Internship>): Internship {
+  return {
+    company: data.company || "",
+    role: data.role || "",
+    startDate: data.startDate || "",
+    endDate: data.endDate || "",
+    state: data.state || "Tamil Nadu",
+    district: data.district || "",
+    block: data.block || "",
+    responsibilities: data.responsibilities || "",
+    certificate: data.certificate,
+    certificateName: data.certificateName,
+    mode: data.mode,
+    stipend: data.stipend || "",
+    supervisorName: data.supervisorName || "",
+    companyEmail: data.companyEmail || "",
+  };
+}
+
+function RemoveToast({ label, onConfirm, onCancel }) {
+  const [loading, setLoading] = React.useState(false);
+  const [success, setSuccess] = React.useState(false);
+  const handleRemove = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+    setSuccess(true);
+    setTimeout(onCancel, 900);
+  };
+  return (
+    <div className="bg-white rounded-xl shadow-2xl p-8 border-2 border-red-200 flex flex-col items-center min-w-[320px] max-w-[90vw]">
+      <div className="text-lg font-semibold mb-3 text-red-700">{label}</div>
+      <div className="flex gap-3 justify-center mt-2">
+        <button
+          className="px-5 py-2 bg-red-600 text-white rounded-lg font-bold flex items-center gap-2 text-base disabled:opacity-60"
+          disabled={loading || success}
+          onClick={handleRemove}
+        >
+          {loading ? <Loader2 className="animate-spin" size={20} /> : success ? <CheckCircle2 className="text-green-500" size={20} /> : null}
+          {success ? "Removed!" : loading ? "Removing..." : "Confirm"}
+        </button>
+        <button
+          className="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg font-bold text-base hover:bg-gray-300"
+          disabled={loading || success}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function InternshipsForm({ data, onChange }: Props) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [draft, setDraft] = useState<Internship>(emptyInternship);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedBlock, setSelectedBlock] = useState<string>('');
-
+  const [districtQuery, setDistrictQuery] = useState('');
+  const [blockQuery, setBlockQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [removingIdx, setRemovingIdx] = useState<number | null>(null);
+  const [removalSuccess, setRemovalSuccess] = useState(false);
 
-  // Populate draft on edit/add
+  const {
+    editingIndex,
+    draft,
+    setDraft,
+    startEdit,
+    startAdd,
+    cancel,
+    save
+  } = useFormActions<Internship>({
+    getMissingFields,
+    diffFields,
+    onSave: onChange
+  });
+
+  // Update draft with proper typing
+  const updateDraft = useCallback((updates: Partial<Internship>) => {
+    setDraft((current) => {
+      if (!current) return null;
+      return ensureInternship({ ...current, ...updates });
+    });
+  }, [setDraft]);
+
+  // Populate district/block when editing
   useEffect(() => {
-    if (editingIndex === null) return;
-    if (editingIndex >= 0) {
-      const item = data[editingIndex];
-      setDraft({
-        company: item.company || "",
-        role: item.role || "",
-        startDate: item.startDate || "",
-        endDate: item.endDate || "",
-        state: item.state || "",
-        district: item.district || "",
-        block: item.block || "",
-        responsibilities: item.responsibilities || "",
-        certificate: item.certificate ?? undefined,
-        certificateName: item.certificateName ?? undefined,
-        mode: item.mode ?? undefined,
-        stipend: item.stipend || "",
-        supervisorName: item.supervisorName || "",
-        companyEmail: item.companyEmail || "",
-      });
-      setSelectedDistrict(item.district || '');
-      setSelectedBlock(item.block || '');
-    } else {
-      setDraft(emptyInternship);
-      setSelectedDistrict('');
-      setSelectedBlock('');
-    }
-  }, [editingIndex, data]);
-
-  const startAdd = useCallback(() => setEditingIndex(-1), []);
-  const startEdit = useCallback((i: number) => setEditingIndex(i), []);
-  const cancel = useCallback(() => setEditingIndex(null), []);
+    if (!draft) return;
+    setSelectedDistrict(draft.district || '');
+    setSelectedBlock(draft.block || '');
+  }, [draft]);
 
   // Get blocks for selected district
   const blocks =
     villageData.find(d => d.district === selectedDistrict)?.blocks.map(b => b.block) || [];
+  const filteredDistricts = districtQuery === ''
+    ? villageData
+    : villageData.filter(d => d.district.toLowerCase().includes(districtQuery.toLowerCase()));
+  const filteredBlocks = blockQuery === ''
+    ? blocks
+    : blocks.filter(b => b.toLowerCase().includes(blockQuery.toLowerCase()));
 
-  // Confirm & save the internship
+  // Save with date validation
   const handleSave = useCallback(() => {
-    if (editingIndex === null) return;
-    if (draft.startDate && draft.endDate && draft.endDate <= draft.startDate) {
-      toast.error("End date must be after start date.");
+    // Allow empty companyEmail, but if filled, must be valid format
+    if (draft.companyEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.companyEmail)) {
+      toast.error("Please enter a valid company email address.");
       return;
     }
-    const isNew = editingIndex < 0;
-    const normalizedDraft: Internship = {
-      company: draft.company || "",
-      role: draft.role || "",
-      startDate: draft.startDate || "",
-      endDate: draft.endDate || "",
-      state: 'Tamil Nadu',
-      district: draft.district || selectedDistrict || "",
-      block: draft.block || selectedBlock || "",
-      responsibilities: draft.responsibilities || "",
-      certificate: draft.certificate ?? undefined,
-      certificateName: draft.certificateName ?? undefined,
-      mode: draft.mode ?? undefined,
-      stipend: draft.stipend || "",
-      supervisorName: draft.supervisorName || "",
-      companyEmail: draft.companyEmail || "",
-    };
-    let confirmMsg: string;
-    if (isNew) {
-      confirmMsg =
-        "Add this internship?\n\n" +
-        (Object.entries(normalizedDraft) as [keyof Internship, any][]).filter(([k]) => k !== "certificate")
-          .map(([k, v]) => `${k}: "${v ?? ""}"`)
-          .join("\n");
-    } else {
-      confirmMsg = "Confirm update:\n\n" + Object.entries(normalizedDraft).map(([k, v]) => `${k}: "${v ?? ""}"`).join("\n");
-    }
-    if (!window.confirm(confirmMsg)) return;
-    const next = isNew ? [...data, normalizedDraft] : data.map((it, idx) => (idx === editingIndex ? normalizedDraft : it));
-    onChange(next);
-    setEditingIndex(null);
-    toast.success("Internship saved!");
-  }, [editingIndex, draft, data, onChange, selectedDistrict, selectedBlock]);
+    save(data); // Only update local state, no backend sync here
+  }, [draft, data, save]);
 
   // Handle certificate file upload
   const handleCertificateUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!draft) return;
       const file = e.target.files?.[0];
       if (!file) return;
       const allowed = ["image/jpeg", "image/png", "application/pdf"];
       if (!allowed.includes(file.type)) {
-        alert("Only JPEG, PNG, or PDF allowed");
+        toast.error("Only JPEG, PNG, or PDF allowed");
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setDraft((d) => ({
-          ...d,
-          certificate: reader.result as string,
-          certificateName: file.name,
-        }));
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("field", "internshipCertificate");
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await res.json();
+        if (result.path) {
+          updateDraft({
+            certificate: result.path,
+            certificateName: file.name,
+          });
+        } else {
+          toast.error(result.error || "Upload failed");
+        }
+      } catch {
+        toast.error("Upload failed");
+      }
     },
-    []
+    [draft, updateDraft]
   );
+
+  // Handle form input changes
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    updateDraft({ [name]: value } as Partial<Internship>);
+  }, [updateDraft]);
 
   return (
     <div className="space-y-8">
       {/* Existing internship entries */}
       {data.map((item, i) => (
         <div key={i} className="p-6 border rounded-lg bg-white shadow-sm">
-          <Toaster position="top-right" />
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-lg font-medium">{item.company}</h3>
@@ -170,34 +238,39 @@ export default function InternshipsForm({ data, onChange }: Props) {
             </div>
             <div>
               <button
-                onClick={() => startEdit(i)}
+                onClick={() => startEdit(i, item)}
                 className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 Edit
               </button>
               <button
-                onClick={async () => {
-                  if (window.confirm('Are you sure you want to remove this internship?')) {
-                    try {
-                      const res = await fetch('/api/students/studetnsMultiSetForm', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: item.id, type: 'internship' }),
-                      });
-                      const result = await res.json();
-                      if (res.ok && result.success) {
-                        const next = data.filter((_, idx) => idx !== i);
-                        onChange(next);
-                        toast.success('Internship removed');
-                      } else {
-                        toast.error(result.error || 'Failed to remove internship');
-                      }
-                    } catch (err) {
-                      toast.error('Failed to remove internship');
-                    }
-                  }
+                onClick={() => {
+                  toast.custom((t) => (
+                    <RemoveToast
+                      label="Remove this internship?"
+                      onConfirm={async () => {
+                        try {
+                          const res = await fetch('/api/students/studetnsMultiSetForm', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: item.id, type: 'internship' }),
+                          });
+                          const result = await res.json();
+                          if (res.ok && result.success) {
+                            onChange(data.filter((_, idx) => idx !== i));
+                            toast.success('Internship removed!');
+                          } else {
+                            toast.error(result.error || 'Failed to remove internship');
+                          }
+                        } catch (err) {
+                          toast.error('Failed to remove internship');
+                        }
+                      }}
+                      onCancel={() => toast.dismiss(t.id)}
+                    />
+                  ), { position: 'top-center', duration: 6000 });
                 }}
-                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-700"
+                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-700 ml-2"
               >
                 Remove
               </button>
@@ -207,9 +280,9 @@ export default function InternshipsForm({ data, onChange }: Props) {
             <dt className="font-medium">Duration:</dt>
             <dd>{formatDateRange(item.startDate, item.endDate)}</dd>
             <dt className="font-medium">Location:</dt>
-            <dd>{item.state}, {item.district}, {item.block}</dd>
+            <dd>{item.state || 'Tamil Nadu'}, {item.district}, {item.block}</dd>
             <dt className="font-medium col-span-2">Responsibilities:</dt>
-            <dd className="col-span-2">{item.responsibilities}</dd>
+            <dd className="col-span-2"><ExpandableText value={item.responsibilities} /></dd>
             {item.certificateName && (
               <>
                 <dt className="font-medium">Certificate:</dt>
@@ -245,30 +318,32 @@ export default function InternshipsForm({ data, onChange }: Props) {
       ))}
 
       {/* Add/Edit overlay */}
-      {editingIndex !== null && (
+      {editingIndex !== null && draft && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold">
               {editingIndex < 0 ? "Add Internship" : `Edit Internship #${editingIndex + 1}`}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Internship Title/Role */}
+              {/* Role */}
               <div>
-                <label className="block text-sm font-medium mb-1">Internship Title / Role</label>
+                <label className="block text-sm font-medium mb-1">Role</label>
                 <Input
                   type="text"
+                  name="role"
                   value={draft.role}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, role: e.target.value }))}
+                  onChange={handleInputChange}
                 />
               </div>
 
-              {/* Company Name */}
+              {/* Company */}
               <div>
-                <label className="block text-sm font-medium mb-1">Company Name</label>
+                <label className="block text-sm font-medium mb-1">Company</label>
                 <Input
                   type="text"
+                  name="company"
                   value={draft.company}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, company: e.target.value }))}
+                  onChange={handleInputChange}
                 />
               </div>
 
@@ -277,8 +352,9 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Company Email</label>
                 <Input
                   type="email"
+                  name="companyEmail"
                   value={draft.companyEmail}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, companyEmail: e.target.value }))}
+                  onChange={handleInputChange}
                 />
               </div>
 
@@ -287,9 +363,10 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Start Date</label>
                 <Input
                   type="date"
-                  value={draft.startDate}
+                  name="startDate"
+                  value={draft.startDate ? draft.startDate.substring(0, 10) : ""}
                   max={draft.endDate ? subDays(new Date(draft.endDate), 1).toISOString().slice(0, 10) : undefined}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, startDate: e.target.value }))}
+                  onChange={handleInputChange}
                 />
               </div>
 
@@ -298,70 +375,106 @@ export default function InternshipsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">End Date</label>
                 <Input
                   type="date"
-                  value={draft.endDate}
+                  name="endDate"
+                  value={draft.endDate ? draft.endDate.substring(0, 10) : ""}
                   min={draft.startDate ? addDays(new Date(draft.startDate), 1).toISOString().slice(0, 10) : undefined}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, endDate: e.target.value }))}
-                />
-              </div>
-
-              {/* State */}
-              <div>
-                <label className="block text-sm font-medium mb-1">State</label>
-                <Input
-                  type="text"
-                  value="Tamil Nadu"
-                  readOnly
-                  disabled
-                  className="bg-gray-100 cursor-not-allowed"
+                  onChange={handleInputChange}
                 />
               </div>
 
               {/* District */}
               <div>
                 <label className="block text-sm font-medium mb-1">District</label>
-                <select
+                <Combobox value={selectedDistrict} onChange={(value) => {
+                  setSelectedDistrict(value ?? "");
+                  updateDraft({ district: value ?? "", block: "" });
+                  setSelectedBlock("");
+                  setDistrictQuery('');
+                }}>
+                  {({ open }) => (
+                    <div className="relative">
+                      <Combobox.Input
                   className="w-full border rounded px-2 py-1"
-                  value={selectedDistrict}
-                  onChange={e => {
-                    setSelectedDistrict(e.target.value);
-                    setDraft(d => ({ ...d, district: e.target.value, block: "" }));
-                    setSelectedBlock("");
-                  }}
-                  title="Select District"
-                >
-                  <option value="">Select District</option>
-                  {villageData.map((d: any) => (
-                    <option key={d.district} value={d.district}>{d.district}</option>
-                  ))}
-                </select>
+                        displayValue={(district: string) => district}
+                        onFocus={e => { if (!open) e.target.select(); }}
+                        onChange={e => setDistrictQuery(e.target.value)}
+                        placeholder="Select District"
+                        value={districtQuery || selectedDistrict}
+                      />
+                      {open && (
+                        <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
+                          {filteredDistricts.length === 0 ? (
+                            <div className="px-4 py-2 text-gray-500">No districts found</div>
+                          ) : (
+                            filteredDistricts.map((d: any) => (
+                              <Combobox.Option
+                                key={d.district}
+                                value={d.district}
+                                className={({ active }) =>
+                                  `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-indigo-600 text-white' : 'text-gray-900'}`
+                                }
+                              >
+                                {d.district}
+                              </Combobox.Option>
+                            ))
+                          )}
+                        </Combobox.Options>
+                      )}
+                    </div>
+                  )}
+                </Combobox>
               </div>
 
               {/* Block */}
               <div>
-                <label className="block text-sm font-medium mb-1">Block/Town</label>
-                <select
+                <label className="block text-sm font-medium mb-1">Block</label>
+                <Combobox value={selectedBlock} onChange={(value) => {
+                  setSelectedBlock(value ?? "");
+                  updateDraft({ block: value ?? "" });
+                  setBlockQuery('');
+                }} disabled={!selectedDistrict}>
+                  {({ open }) => (
+                    <div className="relative">
+                      <Combobox.Input
                   className="w-full border rounded px-2 py-1"
-                  value={selectedBlock}
-                  onChange={e => {
-                    setSelectedBlock(e.target.value);
-                    setDraft(d => ({ ...d, block: e.target.value }));
-                  }}
+                        displayValue={(block: string) => block}
+                        onFocus={e => { if (!open) e.target.select(); }}
+                        onChange={e => setBlockQuery(e.target.value)}
+                        placeholder="Select Block"
                   disabled={!selectedDistrict}
-                  title="Select Block"
-                >
-                  <option value="">Select Block</option>
-                  {blocks.map((b: string) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                        value={blockQuery || selectedBlock}
+                      />
+                      {open && (
+                        <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
+                          {filteredBlocks.length === 0 ? (
+                            <div className="px-4 py-2 text-gray-500">No blocks found</div>
+                          ) : (
+                            filteredBlocks.map((b: string) => (
+                              <Combobox.Option
+                                key={b}
+                                value={b}
+                                className={({ active }) =>
+                                  `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-indigo-600 text-white' : 'text-gray-900'}`
+                                }
+                              >
+                                {b}
+                              </Combobox.Option>
+                            ))
+                          )}
+                        </Combobox.Options>
+                      )}
+                    </div>
+                  )}
+                </Combobox>
               </div>
 
-              {/* Mode Dropdown */}
+              {/* Mode */}
               <div>
                 <label className="block text-sm font-medium mb-1">Mode</label>
                 <select
+                  name="mode"
                   value={draft.mode || ''}
-                  onChange={e => setDraft(d => ({ ...d, mode: e.target.value as 'ONSITE' | 'WORK_FROM_HOME' }))}
+                  onChange={handleInputChange}
                   className="w-full p-2 border rounded"
                   title="Select Mode"
                 >
@@ -372,56 +485,55 @@ export default function InternshipsForm({ data, onChange }: Props) {
               </div>
             </div>
 
-            {/* Stipend (optional) */}
-            <div className="mt-4">
+            {/* Stipend */}
+            <div>
               <label className="block text-sm font-medium mb-1">Stipend (optional)</label>
               <Input
                 type="text"
+                name="stipend"
                 value={draft.stipend}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, stipend: e.target.value }))}
+                onChange={handleInputChange}
               />
             </div>
 
-            {/* Supervisor/Mentor Name (optional) */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium mb-1">Supervisor/Mentor Name (optional)</label>
+            {/* Supervisor Name */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Supervisor Name (optional)</label>
               <Input
                 type="text"
+                name="supervisorName"
                 value={draft.supervisorName}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(d => ({ ...d, supervisorName: e.target.value }))}
+                onChange={handleInputChange}
               />
             </div>
 
-            {/* Responsibilities / Details */}
-            <div className="mt-4">
-                <label className="block text-sm font-medium mb-1">Responsibilities / Details</label>
-                <Textarea
-                  rows={4}
-                  value={draft.responsibilities}
-                  onChange={(e) => setDraft((d) => ({
-                    ...d,
-                    responsibilities: e.target.value,
-                  }))}
-                />
-              </div>
+            {/* Responsibilities */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Responsibilities</label>
+              <Textarea
+                name="responsibilities"
+                rows={4}
+                value={draft.responsibilities}
+                onChange={handleInputChange}
+              />
+            </div>
 
-              {/* Certificate */}
-            <div className="mt-4">
-                <label className="block text-sm font-medium mb-1">Certificate (JPEG, PNG, PDF)</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".jpeg,.jpg,.png,.pdf"
-                  className="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
-                  onChange={handleCertificateUpload}
-                  title="Upload certificate (JPEG, PNG, or PDF)"
-                  placeholder="Choose a certificate file"
-                />
-                {draft.certificateName && (
-                  <div className="mt-2 text-sm text-green-700">
-                    {draft.certificateName}
-                  </div>
-                )}
+            {/* Certificate */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Certificate (JPEG, PNG, PDF)</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".jpeg,.jpg,.png,.pdf"
+                className="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+                onChange={handleCertificateUpload}
+                title="Upload certificate (JPEG, PNG, or PDF)"
+              />
+              {draft.certificateName && (
+                <div className="mt-2 text-sm text-green-700">
+                  {draft.certificateName}
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -446,7 +558,7 @@ export default function InternshipsForm({ data, onChange }: Props) {
       {/* Add new button */}
       {editingIndex === null && (
         <button
-          onClick={startAdd}
+          onClick={() => startAdd(emptyInternship)}
           className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
         >
           + Add Internship

@@ -79,20 +79,33 @@ export default function FacultyStudentsPage() {
   // Combine global search and column filters
   useEffect(() => {
     let filtered = [...students];
-    // Global search
+    // Status logic for each student
+    const getStatus = (student: any) => {
+      if (!student.isSubmitted) return "Not Submitted";
+      if (student.isVerified === null) return "Pending";
+      if (student.isVerified === true) return "Verified";
+      if (student.isVerified === false) return "Rejected";
+      return "Unknown";
+    };
+    // Status filter from sidebar
+    if (columnFilters.status && columnFilters.status !== "") {
+      filtered = filtered.filter((student) => getStatus(student) === columnFilters.status);
+    }
+    // Global search (now includes status)
     if (globalSearch) {
       const term = globalSearch.toLowerCase();
       filtered = filtered.filter((student) =>
         Object.values(student).some(
           (value) =>
             value && value.toString().toLowerCase().includes(term)
-        )
+        ) || getStatus(student).toLowerCase().includes(term)
       );
     }
-    // Column filters
-    if (Object.values(columnFilters).some(val => val)) {
+    // Column filters (excluding status)
+    if (Object.entries(columnFilters).some(([key, val]) => key !== "status" && val)) {
       filtered = filtered.filter((student) =>
         Object.entries(columnFilters).every(([key, filterValue]) => {
+          if (key === "status") return true;
           if (!filterValue) return true;
           const studentValue = student[key]
             ? student[key].toString().toLowerCase()
@@ -127,9 +140,22 @@ export default function FacultyStudentsPage() {
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / rowsPerPage));
 
   // Modal open
-  const handleViewClick = (student: any) => {
-    setSelectedStudent(student);
-    setIsViewModalOpen(true);
+  const handleViewClick = async (student: any) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/students/full/${student.userId}`);
+      const data = await res.json();
+      if (res.ok && data.student) {
+        setSelectedStudent(data.student);
+        setIsViewModalOpen(true);
+      } else {
+        toast.error(data.error || 'Failed to load student details');
+      }
+    } catch (e) {
+      toast.error('Error fetching student details');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Save changes from modal (optional)
@@ -174,6 +200,15 @@ export default function FacultyStudentsPage() {
             >
               Filters
             </motion.button>
+          </div>
+
+          {/* Table Head: List of Students Assigned */}
+          <div className="max-w-6xl mt-4 mb-2">
+            <div className="inline-block bg-gradient-to-r from-indigo-900 via-purple-900 to-pink-900 rounded-lg px-6 py-2 shadow-sm ml-28">
+              <span className="text-xl font-extrabold text-white tracking-wide">
+                List of Students Assigned
+              </span>
+            </div>
           </div>
 
           {/* Student Table */}

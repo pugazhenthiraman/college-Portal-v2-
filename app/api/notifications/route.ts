@@ -16,8 +16,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type"); // incoming|outgoing
   const unread = searchParams.get("unread");
+  const studentId = searchParams.get("studentId");
   const where: any = {};
-  if (type === "incoming") {
+  if (studentId) {
+    where.relatedStudentId = Number(studentId);
+  } else if (type === "incoming") {
     where.receiverId = user.id;
   } else if (type === "outgoing") {
     where.senderId = user.id;
@@ -29,13 +32,37 @@ export async function GET(req: NextRequest) {
   const notifications = await prisma.notification.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      message: true,
+      senderId: true,
+      receiverId: true,
+      relatedStudentId: true,
+      createdAt: true,
+      read: true,
+      remarks: true,
       sender: { select: { id: true, email: true, role: true } },
       receiver: { select: { id: true, email: true, role: true } },
-      relatedStudent: { select: { id: true, firstName: true, lastName: true } },
+      relatedStudent: { select: { id: true, userId: true, firstName: true, lastName: true, departmentName: true, section: true, academicYear: true, rollNo: true } },
     },
   });
-  return NextResponse.json({ notifications });
+
+  // If fetching for a specific student, return full history (no grouping)
+  if (studentId) {
+    return NextResponse.json({ notifications });
+  }
+  // Otherwise, group by relatedStudentId + status, keep only the latest
+  const uniqueMap = new Map();
+  for (const n of notifications) {
+    const key = `${n.relatedStudentId || "none"}-${n.status}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, n);
+    }
+  }
+  const uniqueNotifications = Array.from(uniqueMap.values());
+  return NextResponse.json({ notifications: uniqueNotifications });
 }
 
 // POST /api/notifications
@@ -49,7 +76,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
   const body = await req.json();
-  const { type, status, message, receiverId, relatedStudentId } = body;
+  const { type, status, message, receiverId, relatedStudentId, remarks } = body;
   if (!type || !status || !message || !receiverId) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -61,6 +88,7 @@ export async function POST(req: NextRequest) {
       senderId: user.id,
       receiverId,
       relatedStudentId,
+      ...(remarks !== undefined ? { remarks } : {}),
     },
   });
   return NextResponse.json({ notification });

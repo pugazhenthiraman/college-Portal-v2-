@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Copy, Edit2, X, Eye } from "lucide-react";
+import { CheckCircle2, Copy, Edit2, X, Eye, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatDateRange } from "@/utils/helper";
 import { addDays, subDays } from "date-fns";
@@ -46,6 +46,40 @@ function isValidGithubUrl(url: string) {
   return /^https:\/\/(www\.)?github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\/)?$/.test(url.trim());
 }
 
+function RemoveToast({ label, onConfirm, onCancel }) {
+  const [loading, setLoading] = React.useState(false);
+  const [success, setSuccess] = React.useState(false);
+  const handleRemove = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+    setSuccess(true);
+    setTimeout(onCancel, 900);
+  };
+  return (
+    <div className="bg-white rounded-xl shadow-2xl p-8 border-2 border-red-200 flex flex-col items-center min-w-[320px] max-w-[90vw]">
+      <div className="text-lg font-semibold mb-3 text-red-700">{label}</div>
+      <div className="flex gap-3 justify-center mt-2">
+        <button
+          className="px-5 py-2 bg-red-600 text-white rounded-lg font-bold flex items-center gap-2 text-base disabled:opacity-60"
+          disabled={loading || success}
+          onClick={handleRemove}
+        >
+          {loading ? <Loader2 className="animate-spin" size={20} /> : success ? <CheckCircle2 className="text-green-500" size={20} /> : null}
+          {success ? "Removed!" : loading ? "Removing..." : "Confirm"}
+        </button>
+        <button
+          className="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg font-bold text-base hover:bg-gray-300"
+          disabled={loading || success}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectsForm({ data, onChange }: Props) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<Project>(emptyProject);
@@ -53,6 +87,8 @@ export default function ProjectsForm({ data, onChange }: Props) {
   const [githubDraft, setGithubDraft] = useState("");
   const [editingLink, setEditingLink] = useState(false);
   const [linkDraft, setLinkDraft] = useState("");
+  const [removingIdx, setRemovingIdx] = useState<number | null>(null);
+  const [removalSuccess, setRemovalSuccess] = useState(false);
 
   // Populate draft when editingIndex changes
   useEffect(() => {
@@ -85,10 +121,6 @@ export default function ProjectsForm({ data, onChange }: Props) {
       toast.error("Project title is required.");
       return;
     }
-    if (!draft.category) {
-      toast.error("Project category is required.");
-      return;
-    }
     if (draft.startDate && draft.endDate && draft.endDate <= draft.startDate) {
       toast.error("End date must be after start date.");
       return;
@@ -114,13 +146,19 @@ export default function ProjectsForm({ data, onChange }: Props) {
     toast.success("Project saved.");
   }, [data, draft, editingIndex, onChange, githubDraft, linkDraft]);
 
-  const remove = useCallback(
-    (idx: number) => {
-      if (!window.confirm("Remove this project?")) return;
-      onChange(data.filter((_, i) => i !== idx));
-    },
-    [data, onChange]
-  );
+  const remove = useCallback((idx: number) => {
+    toast.custom((t) => (
+      <RemoveToast
+        label="Remove this project?"
+        onConfirm={async () => {
+          await new Promise(r => setTimeout(r, 500)); // Simulate async
+          onChange(data.filter((_, i) => i !== idx));
+          toast.success("Project removed!");
+        }}
+        onCancel={() => toast.dismiss(t.id)}
+      />
+    ), { position: 'top-center', duration: 6000 });
+  }, [data, onChange]);
 
   const copyLink = useCallback((url: string) => {
     navigator.clipboard.writeText(url);
@@ -159,59 +197,41 @@ export default function ProjectsForm({ data, onChange }: Props) {
     <div className="space-y-8">
       {/* Existing cards */}
       {data.map((p, i) => (
-        <div key={i} className="p-6 border rounded-lg bg-white shadow-sm space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="font-semibold text-lg">{p.title || `Project #${i + 1}`}</h3>
-              <div className="text-gray-600 text-sm">{formatDateRange(p.startDate, p.endDate)}</div>
-              <div className="text-gray-500 text-xs mt-1">
-                <span className="font-medium">Category:</span> {p.category || <span className="text-gray-400">Not set</span>}
+        <div key={i} className="rounded-xl border bg-white shadow flex flex-col md:flex-row md:items-stretch md:justify-between p-6 gap-6">
+          {/* Left: Main info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-bold text-xl text-indigo-800 truncate">{p.title || `Project #${i + 1}`}</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => startEdit(i)}
+                  className="p-1 text-blue-500 hover:text-blue-700"
+                  title="Edit"
+                >
+                  <Edit2 size={18} />
+                </button>
+                <button
+                  onClick={() => remove(i)}
+                  className="p-1 text-red-600 hover:text-red-800"
+                  title="Remove"
+                >
+                  <X size={18} />
+                </button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => startEdit(i)}
-                className="p-1 text-blue-500 hover:text-blue-700"
-                title="Edit"
-              >
-                <Edit2 size={18} />
-              </button>
-              <button
-                onClick={async () => {
-                  if (window.confirm('Are you sure you want to remove this project?')) {
-                    try {
-                      const res = await fetch('/api/students/studetnsMultiSetForm', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: p.id, type: 'project' }),
-                      });
-                      const result = await res.json();
-                      if (res.ok && result.success) {
-                        const next = data.filter((_, idx) => idx !== i);
-                        onChange(next);
-                        toast.success('Project removed');
-                      } else {
-                        toast.error(result.error || 'Failed to remove project');
-                      }
-                    } catch (err) {
-                      toast.error('Failed to remove project');
-                    }
-                  }
-                }}
-                className="p-1 text-red-600 hover:text-red-800"
-                title="Remove"
-              >
-                Remove
-              </button>
+            <div className="text-gray-600 text-sm mt-1">{formatDateRange(p.startDate, p.endDate)}</div>
+            <div className="text-gray-500 text-xs mt-1">
+              <span className="font-medium">Category:</span> {p.category || <span className="text-gray-400">Not set</span>}
+            </div>
+            <div className="mt-3">
+              <span className="block font-medium text-gray-700 mb-1">Description:</span>
+              <div className="text-gray-800 whitespace-pre-line text-sm">{p.description}</div>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Right: Links */}
+          <div className="flex flex-col justify-center min-w-[220px] md:border-l md:pl-6 border-blue-100 mt-4 md:mt-0">
             <div>
-              <span className="font-medium">Description:</span>
-              <div className="text-gray-700">{p.description}</div>
-            </div>
-            <div>
-              <span className="font-medium">Project Link:</span>
+              <span className="block font-medium text-gray-700">Project Link:</span>
               <div className="flex items-center space-x-2 mt-1">
                 {p.link?.trim() ? (
                   <>
@@ -241,37 +261,37 @@ export default function ProjectsForm({ data, onChange }: Props) {
                   <span className="text-gray-400">No link</span>
                 )}
               </div>
-              <div className="mt-2">
-                <span className="font-medium">GitHub Repository:</span>
-                <div className="flex items-center space-x-2 mt-1">
-                  {p.githubRepo?.trim() ? (
-                    <>
-                      <span className="flex items-center px-2 py-1 bg-green-50 rounded text-green-700 font-medium">
-                        Link attached
-                        <CheckCircle2 className="ml-1 text-green-500" size={18} />
-                      </span>
-                      <a
-                        href={p.githubRepo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline text-blue-600"
-                        title="View"
-                      >
-                        <Eye size={16} />
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => copyLink(p.githubRepo!)}
-                        title="Copy link"
-                        className="p-1 text-gray-500 hover:text-gray-700"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">No link</span>
-                  )}
-                </div>
+            </div>
+            <div className="mt-4">
+              <span className="block font-medium text-gray-700">GitHub Repository:</span>
+              <div className="flex items-center space-x-2 mt-1">
+                {p.githubRepo?.trim() ? (
+                  <>
+                    <span className="flex items-center px-2 py-1 bg-green-50 rounded text-green-700 font-medium">
+                      Link attached
+                      <CheckCircle2 className="ml-1 text-green-500" size={18} />
+                    </span>
+                    <a
+                      href={p.githubRepo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-blue-600"
+                      title="View"
+                    >
+                      <Eye size={16} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => copyLink(p.githubRepo!)}
+                      title="Copy link"
+                      className="p-1 text-gray-500 hover:text-gray-700"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-gray-400">No link</span>
+                )}
               </div>
             </div>
           </div>
@@ -316,7 +336,7 @@ export default function ProjectsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Start Date</label>
                 <Input
                   type="date"
-                  value={draft.startDate}
+                  value={draft.startDate ? draft.startDate.substring(0, 10) : ""}
                   max={draft.endDate ? subDays(new Date(draft.endDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={e =>
                     setDraft((d) => ({ ...d, startDate: e.target.value }))
@@ -327,7 +347,7 @@ export default function ProjectsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">End Date</label>
                 <Input
                   type="date"
-                  value={draft.endDate}
+                  value={draft.endDate ? draft.endDate.substring(0, 10) : ""}
                   min={draft.startDate ? addDays(new Date(draft.startDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={e =>
                     setDraft((d) => ({ ...d, endDate: e.target.value }))
@@ -346,7 +366,7 @@ export default function ProjectsForm({ data, onChange }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Project Link (optional)</label>
+                <label className="block text-sm font-medium mb-1">Project Link (Optional)</label>
                 {draft.link && !editingLink ? (
                   <div className="flex items-center space-x-2">
                     <span className="flex items-center px-2 py-1 bg-green-50 rounded text-green-700 font-medium">

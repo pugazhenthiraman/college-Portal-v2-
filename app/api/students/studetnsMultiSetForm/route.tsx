@@ -185,6 +185,8 @@ export async function POST(req: NextRequest) {
               block: evt.block,
               details: evt.details,
               contribution: evt.contribution,
+              startDate: evt.startDate ? new Date(evt.startDate) : null,
+              endDate: evt.endDate ? new Date(evt.endDate) : null,
             })),
           });
         }
@@ -195,21 +197,21 @@ export async function POST(req: NextRequest) {
         await prisma.socialProfile.upsert({
           where: { studentId },
           update: {
-            github: data.github,
-            gitlab: data.gitlab,
-            bitbucket: data.bitbucket,
-            linkedin: data.linkedin,
-            twitter: data.twitter,
-            portfolio: data.portfolio,
+            github: data.github === "" ? null : data.github,
+            gitlab: data.gitlab === "" ? null : data.gitlab,
+            bitbucket: data.bitbucket === "" ? null : data.bitbucket,
+            linkedin: data.linkedin === "" ? null : data.linkedin,
+            twitter: data.twitter === "" ? null : data.twitter,
+            portfolio: data.portfolio === "" ? null : data.portfolio,
           },
           create: {
             studentId,
-            github: data.github,
-            gitlab: data.gitlab,
-            bitbucket: data.bitbucket,
-            linkedin: data.linkedin,
-            twitter: data.twitter,
-            portfolio: data.portfolio,
+            github: data.github === "" ? null : data.github,
+            gitlab: data.gitlab === "" ? null : data.gitlab,
+            bitbucket: data.bitbucket === "" ? null : data.bitbucket,
+            linkedin: data.linkedin === "" ? null : data.linkedin,
+            twitter: data.twitter === "" ? null : data.twitter,
+            portfolio: data.portfolio === "" ? null : data.portfolio,
           },
         });
         updatedStudent = await prisma.student.findUnique({ where: { userId } });
@@ -222,9 +224,11 @@ export async function POST(req: NextRequest) {
             data: data.map((pl: any) => ({
               studentId,
               employer: pl.employer,
-              designation: pl.designation,
               onCampus: pl.onCampus,
               ctc: pl.ctc,
+              state: pl.state ?? "Tamil Nadu",
+              district: pl.district ?? "",
+              block: pl.block ?? "",
             })),
           });
         }
@@ -243,8 +247,11 @@ export async function POST(req: NextRequest) {
               ctc: we.ctc,
               startDate: we.startDate ? new Date(we.startDate) : null,
               endDate: we.endDate ? new Date(we.endDate) : null,
-              certificate: we.certificate || null,         // <-- add this
-              certificateName: we.certificateName || null, // <-- add this
+              certificate: we.certificate || null,
+              certificateName: we.certificateName || null,
+              state: we.state ?? "Tamil Nadu",
+              district: we.district ?? "",
+              block: we.block ?? "",
             })),
           });
         }
@@ -261,6 +268,7 @@ export async function POST(req: NextRequest) {
               abstract: pub.abstract,
               publisher: pub.publisher,
               link: pub.link,
+              publishedDate: pub.publishedDate ? new Date(pub.publishedDate) : null,
             })),
           });
         }

@@ -43,6 +43,8 @@ export async function GET() {
         academicYear: true,
         section: true,
         user: { select: { email: true } },
+        isSubmitted: true,
+        isVerified: true,
       },
     });
 

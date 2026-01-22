@@ -12,7 +12,6 @@ export type ProfileData = {
   current_degree: string;
   affiliate_university: string;
   college_name: string;
-  batch: string;
   roll_reg_no: string;
   sslc_percentage: string;
   hsc_percentage: string;
@@ -39,7 +38,6 @@ const emptyProfile: ProfileData = {
   current_degree: "",
   affiliate_university: "",
   college_name: "",
-  batch: "",
   roll_reg_no: "",
   sslc_percentage: "",
   hsc_percentage: "",

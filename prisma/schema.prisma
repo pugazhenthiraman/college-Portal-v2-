@@ -265,15 +265,17 @@ model Project {
 }
 
 model EnhancementProgram {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   studentId    Int
-  student      Student  @relation(fields: [studentId], references: [id])
+  student      Student   @relation(fields: [studentId], references: [id])
   name         String
   district     String
   block        String
   details      String
   contribution String
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  startDate    DateTime?
+  endDate      DateTime?
 }
 
 model SocialProfile {
@@ -290,14 +292,16 @@ model SocialProfile {
 }
 
 model Placement {
-  id          Int      @id @default(autoincrement())
-  studentId   Int
-  student     Student  @relation(fields: [studentId], references: [id])
-  employer    String
-  designation String
-  onCampus    Boolean
-  ctc         String
-  createdAt   DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id])
+  employer  String
+  onCampus  Boolean
+  ctc       String
+  createdAt DateTime @default(now())
+  state     String?
+  district  String?
+  block     String?
 }
 
 model WorkExperience {
@@ -313,17 +317,21 @@ model WorkExperience {
   certificate      String? // <-- file path or URL
   certificateName  String? // <-- display name
   createdAt        DateTime  @default(now())
+  state            String?
+  district         String?
+  block            String?
 }
 
 model Publication {
-  id        Int      @id @default(autoincrement())
-  studentId Int
-  student   Student  @relation(fields: [studentId], references: [id])
-  title     String
-  abstract  String
-  publisher String
-  link      String
-  createdAt DateTime @default(now())
+  id            Int       @id @default(autoincrement())
+  studentId     Int
+  student       Student   @relation(fields: [studentId], references: [id])
+  title         String
+  abstract      String
+  publisher     String
+  link          String
+  createdAt     DateTime  @default(now())
+  publishedDate DateTime?
 
   @@index([publisher])
 }
@@ -356,6 +364,7 @@ model Notification {
   relatedStudentId Int? // Optionally link to a student profile
   createdAt        DateTime @default(now())
   read             Boolean  @default(false)
+  remarks          String?
 
   sender         User     @relation("SentNotifications", fields: [senderId], references: [id])
   receiver       User     @relation("ReceivedNotifications", fields: [receiverId], references: [id])

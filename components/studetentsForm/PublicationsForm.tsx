@@ -1,17 +1,21 @@
 // components/studetentsForm/PublicationsForm.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback } from "react";
 import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy} from "lucide-react";
+import { Copy, CheckCircle2, Loader2 } from "lucide-react";
+import { useFormActions } from "@/hooks/useFormActions";
+import { useState } from "react";
+import ExpandableText from "../ExpandableText";
 
 export type Publication = {
   title: string;
   abstract: string;
   publisher: string;
-  link: string;
+  link?: string; // Make optional
+  publishedDate?: string;
 };
 
 interface Props {
@@ -24,65 +28,78 @@ const emptyPub: Publication = {
   abstract: "",
   publisher: "",
   link: "",
+  publishedDate: "",
 };
 
+function RemoveToast({ label, onConfirm, onCancel }) {
+  const [loading, setLoading] = React.useState(false);
+  const [success, setSuccess] = React.useState(false);
+  const handleRemove = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+    setSuccess(true);
+    setTimeout(onCancel, 900);
+  };
+  return (
+    <div className="bg-white rounded-xl shadow-2xl p-8 border-2 border-red-200 flex flex-col items-center min-w-[320px] max-w-[90vw]">
+      <div className="text-lg font-semibold mb-3 text-red-700">{label}</div>
+      <div className="flex gap-3 justify-center mt-2">
+        <button
+          className="px-5 py-2 bg-red-600 text-white rounded-lg font-bold flex items-center gap-2 text-base disabled:opacity-60"
+          disabled={loading || success}
+          onClick={handleRemove}
+        >
+          {loading ? <Loader2 className="animate-spin" size={20} /> : success ? <CheckCircle2 className="text-green-500" size={20} /> : null}
+          {success ? "Removed!" : loading ? "Removing..." : "Confirm"}
+        </button>
+        <button
+          className="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg font-bold text-base hover:bg-gray-300"
+          disabled={loading || success}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function PublicationsForm({ data, onChange }: Props) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [draft, setDraft] = useState<Publication>(emptyPub);
-
-  // When starting to edit or add, seed draft
-  useEffect(() => {
-    if (editingIndex === null) return;
-    if (editingIndex >= 0) {
-      setDraft(data[editingIndex]);
-    } else {
-      setDraft(emptyPub);
-    }
-  }, [editingIndex, data]);
-
-  const startAdd = useCallback(() => setEditingIndex(-1), []);
-  const startEdit = useCallback((idx: number) => setEditingIndex(idx), []);
-  const cancel = useCallback(() => setEditingIndex(null), []);
-
-  const diffFields = (orig: Publication, upd: Publication) => {
-    const diffs: string[] = [];
-    (Object.keys(orig) as (keyof Publication)[]).forEach((k) => {
-      if (orig[k] !== upd[k]) diffs.push(`${k}: "${orig[k]}" → "${upd[k]}"`);
-    });
-    return diffs;
+  // Custom validation and field checking logic
+  const getMissingFields = (pub: Publication) => {
+    const required: (keyof Publication)[] = ["title", "abstract", "publisher"];
+    return required.filter(field => !pub[field] || !pub[field].trim());
   };
 
-  const handleSave = useCallback(() => {
-    if (editingIndex === null) return;
-    const isNew = editingIndex < 0;
-    let confirmMsg: string;
-    if (isNew) {
-      confirmMsg = `Add this publication?\n\n` +
-        Object.entries(draft)
-          .map(([k, v]) => `${k}: "${v}"`)
-          .join("\n");
-    } else {
-      const changes = diffFields(data[editingIndex], draft);
-      if (changes.length === 0) {
-        alert("No changes detected.");
-        return;
-      }
-      confirmMsg = `Confirm update:\n\n` + changes.join("\n");
-    }
-    if (!window.confirm(confirmMsg)) return;
-    const next = isNew
-      ? [...data, draft]
-      : data.map((p, i) => (i === editingIndex ? draft : p));
-    onChange(next);
-    setEditingIndex(null);
-  }, [data, draft, editingIndex, onChange]);
+  const diffFields = (orig: Publication, updated: Publication) => {
+    return (Object.keys(orig) as (keyof Publication)[])
+      .filter(k => orig[k] !== updated[k]);
+  };
 
-  const removePub = useCallback((idx: number) => {
-    if (!window.confirm("Remove this publication?")) return;
-    onChange(data.filter((_, i) => i !== idx));
-    toast.success("Publication removed");
-  }, [data, onChange]);
+  // Use the shared form actions hook
+  const {
+    editingIndex,
+    draft,
+    setDraft,
+    startEdit,
+    startAdd,
+    cancel,
+    save,
+    isEditing,
+    isNew
+  } = useFormActions<Publication>({
+    onSave: onChange,
+    getMissingFields,
+    diffFields,
+    toastDuration: 4000,
+    allowPartialSave: true
+  });
 
+  const [removingIdx, setRemovingIdx] = useState<number | null>(null);
+  const [removalSuccess, setRemovalSuccess] = useState(false);
+
+  // Handle copying link to clipboard
   const copyLink = useCallback((url: string) => {
     navigator.clipboard.writeText(url);
     toast.success("Link copied");
@@ -92,104 +109,127 @@ export default function PublicationsForm({ data, onChange }: Props) {
     <div className="space-y-8">
       <h2 className="text-2xl font-semibold">Publications / Patents</h2>
 
-      {/* List existing */}
+      {/* List existing publications */}
       {data.map((pub, i) => (
         <div key={i} className="p-6 border rounded-lg bg-white shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="text-lg font-medium">{pub.title}</h3>
               <p className="text-sm text-gray-600">Publisher: {pub.publisher}</p>
+              {pub.publishedDate && (
+                <p className="text-xs text-gray-500">Published: {pub.publishedDate.substring(0, 10)}</p>
+              )}
             </div>
             <div className="space-x-2">
               <button
-                onClick={() => startEdit(i)}
+                onClick={() => startEdit(i, pub)}
                 className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 Edit
               </button>
               <button
-                onClick={() => removePub(i)}
+                onClick={() => {
+                  toast.custom((t) => (
+                    <RemoveToast
+                      label="Remove this publication?"
+                      onConfirm={async () => {
+                        await new Promise(r => setTimeout(r, 500)); // Simulate async
+                        onChange(data.filter((_, idx) => idx !== i));
+                        toast.success('Publication removed!');
+                      }}
+                      onCancel={() => toast.dismiss(t.id)}
+                    />
+                  ), { position: 'top-center', duration: 6000 });
+                }}
                 className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
               >
                 Remove
               </button>
             </div>
           </div>
-          <dl className="grid grid-cols-1 gap-y-2 text-sm">
-            <div>
-              <dt className="font-medium">Abstract:</dt>
-              <dd>{pub.abstract}</dd>
-            </div>
-            {/* The above is invalid: <div> is not allowed inside <dl>. Fix: use <div> outside, or use <dt> and <dd> directly */}
-            {/* Corrected version: */}
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <dt className="font-medium">Abstract:</dt>
-            <dd>{pub.abstract}</dd>
-            <div className="flex items-center space-x-2">
-              <dt className="font-medium">Link:</dt>
-              <dd className="flex-1">
-                <a
-                  href={pub.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-indigo-600 hover:underline truncate"
-                >
-                  {pub.link}
-                </a>
-              </dd>
-              <button
-                onClick={() => copyLink(pub.link)}
-                title="Copy link"
-                className="p-1 text-gray-500 hover:text-gray-700"
-              >
-                <Copy size={16} />
-              </button>
-            </div>
+            <dd><ExpandableText value={pub.abstract} /></dd>
+            {pub.link && (
+              <>
+                <dt className="font-medium">Link:</dt>
+                <dd className="flex items-center gap-2">
+                  <a
+                    href={pub.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {pub.link}
+                  </a>
+                  <button
+                    onClick={() => copyLink(pub.link)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                    title="Copy link"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </dd>
+              </>
+            )}
           </dl>
         </div>
       ))}
 
-      {/* Overlay add/edit form */}
-      {editingIndex !== null && (
+      {/* Edit/Add Form */}
+      {isEditing && draft && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-6">
-            <h3 className="text-xl font-semibold">
-              {editingIndex < 0 ? "Add Publication" : `Edit Publication #${editingIndex + 1}`}
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 space-y-4">
+            <h3 className="text-xl font-semibold mb-4">
+              {isNew ? "Add Publication" : "Edit Publication"}
             </h3>
-            <div className="grid grid-cols-1 gap-4">
+
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Title</label>
                 <Input
                   value={draft.title}
-                  onChange={(e: { target: { value: any; }; }) => setDraft(d => ({ ...d, title: e.target.value }))}
+                  onChange={e => setDraft({ ...draft, title: e.target.value })}
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-1">Publisher Details</label>
+                <label className="block text-sm font-medium mb-1">Publisher</label>
                 <Input
                   value={draft.publisher}
-                  onChange={(e: { target: { value: any; }; }) => setDraft(d => ({ ...d, publisher: e.target.value }))}
+                  onChange={e => setDraft({ ...draft, publisher: e.target.value })}
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">Abstract</label>
                 <Textarea
-                  rows={4}
                   value={draft.abstract}
-                  onChange={(e) => setDraft(d => ({ ...d, abstract: e.target.value }))}
+                  onChange={e => setDraft({ ...draft, abstract: e.target.value })}
+                  rows={4}
                 />
               </div>
-              <div className="flex items-center space-x-2">
-                <label className="block text-sm font-medium mb-1">Publication Link</label>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Link (Optional)</label>
                 <Input
-                  placeholder="https://..."
                   value={draft.link}
-                  onChange={(e: { target: { value: any; }; }) => setDraft(d => ({ ...d, link: e.target.value }))}
-                  className="flex-1"
+                  onChange={e => setDraft({ ...draft, link: e.target.value })}
+                  placeholder="https://"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Published Date</label>
+                <Input
+                  type="date"
+                  value={draft.publishedDate ? draft.publishedDate.substring(0, 10) : ""}
+                  onChange={e => setDraft({ ...draft, publishedDate: e.target.value })}
                 />
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4">
+            <div className="flex justify-end space-x-4 mt-6">
               <button
                 onClick={cancel}
                 className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
@@ -197,7 +237,7 @@ export default function PublicationsForm({ data, onChange }: Props) {
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                onClick={() => save(data)}
                 className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
               >
                 Save
@@ -207,13 +247,13 @@ export default function PublicationsForm({ data, onChange }: Props) {
         </div>
       )}
 
-      {/* Add new */}
-      {editingIndex === null && (
+      {/* Add new button */}
+      {!isEditing && (
         <button
-          onClick={startAdd}
-          className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+          onClick={() => startAdd(emptyPub)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
         >
-          + Add Publication
+          Add Publication
         </button>
       )}
     </div>

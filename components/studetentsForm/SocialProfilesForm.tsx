@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Copy, X, Edit2, CheckCircle2 } from "lucide-react";
 
 export type SocialProfiles = {
-  github?: string;
-  gitlab?: string;
-  bitbucket?: string;
-  linkedin?: string;
-  twitter?: string;
-  portfolio?: string;
+  github?: string | null;
+  gitlab?: string | null;
+  bitbucket?: string | null;
+  linkedin?: string | null;
+  twitter?: string | null;
+  portfolio?: string | null;
 };
 
 interface Props {
@@ -104,7 +104,13 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
       toast.success("Link removed");
     }
     setProfiles(next);
-    onChange(next);
+    // Always send all keys, missing as null
+    const allKeys: (keyof SocialProfiles)[] = ["github", "gitlab", "bitbucket", "linkedin", "twitter", "portfolio"];
+    const nextFull: SocialProfiles = {};
+    allKeys.forEach((k) => {
+      nextFull[k] = next[k] ?? null;
+    });
+    onChange(nextFull);
     setEditingKey(null);
     setDraftValue("");
     setError("");
@@ -120,11 +126,26 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
       const next = { ...profiles };
       delete next[key];
       setProfiles(next);
-      onChange(next);
+      // Always send all keys, missing as null
+      const allKeys: (keyof SocialProfiles)[] = ["github", "gitlab", "bitbucket", "linkedin", "twitter", "portfolio"];
+      const nextFull: SocialProfiles = {};
+      allKeys.forEach((k) => {
+        nextFull[k] = next[k] ?? null;
+      });
+      onChange(nextFull);
       toast.success("Link removed");
     },
     [onChange, profiles]
   );
+
+  const allEmpty = PLATFORM_LABELS.every(({ key }) => !profiles[key]);
+  if (allEmpty) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent mb-2">No Data Available</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -139,7 +160,7 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
 
           return (
             <div key={key} className="flex items-start space-x-4">
-              <label className="w-32 font-medium pt-1">{label}:</label>
+              <label className="w-32 font-medium pt-1">{label} (Optional):</label>
               <div className="flex-1">
                 {isEditing ? (
                   <div className="flex flex-col space-y-1 w-full">
@@ -147,7 +168,7 @@ export default function SocialProfilesForm({ data = {}, onChange }: Props) {
                       <Input
                         placeholder="https://..."
                         value={draftValue}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           setDraftValue(e.target.value);
                           setError("");
                         }}

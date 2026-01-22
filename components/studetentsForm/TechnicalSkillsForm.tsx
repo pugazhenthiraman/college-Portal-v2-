@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
 import { formatDateRange } from "@/utils/helper";
 import { addDays, subDays } from "date-fns";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import ExpandableText from "../ExpandableText"; 
 
 export type Skill = {
   courseName: string;
@@ -32,9 +34,46 @@ const emptySkill: Skill = {
   certificateName: undefined,
 };
 
+function RemoveToast({ label, onConfirm, onCancel }) {
+  const [loading, setLoading] = React.useState(false);
+  const [success, setSuccess] = React.useState(false);
+  const handleRemove = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+    setSuccess(true);
+    setTimeout(onCancel, 900);
+  };
+  return (
+    <div className="bg-white rounded-xl shadow-2xl p-8 border-2 border-red-200 flex flex-col items-center min-w-[320px] max-w-[90vw]">
+      <div className="text-lg font-semibold mb-3 text-red-700">{label}</div>
+      <div className="flex gap-3 justify-center mt-2">
+        <button
+          className="px-5 py-2 bg-red-600 text-white rounded-lg font-bold flex items-center gap-2 text-base disabled:opacity-60"
+          disabled={loading || success}
+          onClick={handleRemove}
+        >
+          {loading ? <Loader2 className="animate-spin" size={20} /> : success ? <CheckCircle2 className="text-green-500" size={20} /> : null}
+          {success ? "Removed!" : loading ? "Removing..." : "Confirm"}
+        </button>
+        <button
+          className="px-5 py-2 bg-gray-200 text-gray-800 rounded-lg font-bold text-base hover:bg-gray-300"
+          disabled={loading || success}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function TechnicalSkillsForm({ data, onChange }: Props) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<Skill>(emptySkill);
+  const [removingIdx, setRemovingIdx] = useState<number | null>(null);
+  const [removalSuccess, setRemovalSuccess] = useState(false);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (editingIndex == null) return;
@@ -64,26 +103,6 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
     const isNew = editingIndex < 0;
 
     // No required fields check: allow partial/incomplete save
-
-    let message = "";
-    if (isNew) {
-      message = `Add this course?\n\n` +
-        `Name: "${draft.courseName}"\n` +
-        `Duration: ${draft.startDate} → ${draft.endDate}\n` +
-        `Level: ${draft.level}\n` +
-        `Details: "${draft.details}"\n` +
-        (draft.certificateName ? `Certificate: ${draft.certificateName}` : "");
-    } else {
-      const orig = data[editingIndex];
-      const changes = diffFields(orig, draft);
-      if (changes.length === 0) {
-        toast("No changes detected.", { icon: "ℹ️" });
-        return;
-      }
-      message = "Confirm update:\n\n" + changes.join("\n");
-    }
-
-    if (!window.confirm(message)) return;
 
     const next = isNew
       ? [...data, draft]
@@ -134,13 +153,33 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
             <p className="mt-2 text-sm">
               Level: <span className="font-medium">{skill.level}</span>
             </p>
-            <p className="mt-2 text-sm">{skill.details}</p>
+            <div className="mt-2 text-sm">
+              <ExpandableText value={skill.details} />
+            </div>
             {skill.certificateName && (
               <p className="mt-2 text-sm text-indigo-600">
                 Certificate: {skill.certificateName}
               </p>
             )}
           </div>
+          <button
+            onClick={() => {
+              toast.custom((t) => (
+                <RemoveToast
+                  label="Remove this skill?"
+                  onConfirm={async () => {
+                    await new Promise(r => setTimeout(r, 500)); // Simulate async
+                    onChange(data.filter((_, i) => i !== idx));
+                    toast.success('Skill removed!');
+                  }}
+                  onCancel={() => toast.dismiss(t.id)}
+                />
+              ), { position: 'top-center', duration: 6000 });
+            }}
+            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-700 ml-2"
+          >
+            Remove
+          </button>
           <button
             onClick={() => startEdit(idx)}
             className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -176,7 +215,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">Start Date</label>
                 <Input
                   type="date"
-                  value={draft.startDate || ""}
+                  value={draft.startDate ? draft.startDate.substring(0, 10) : ""}
                   max={draft.endDate ? subDays(new Date(draft.endDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, startDate: e.target.value }))
@@ -187,7 +226,7 @@ export default function TechnicalSkillsForm({ data, onChange }: Props) {
                 <label className="block text-sm font-medium mb-1">End Date</label>
                 <Input
                   type="date"
-                  value={draft.endDate || ""}
+                  value={draft.endDate ? draft.endDate.substring(0, 10) : ""}
                   min={draft.startDate ? addDays(new Date(draft.startDate), 1).toISOString().slice(0, 10) : undefined}
                   onChange={(e: { target: { value: any; }; }) =>
                     setDraft((d) => ({ ...d, endDate: e.target.value }))

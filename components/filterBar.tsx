@@ -75,10 +75,24 @@ export default function FilterSidebar({
           </motion.button>
         </div>
       </motion.div>
-      
+      {/* Status dropdown filter */}
+      <div className="flex flex-col mb-4">
+        <label className="text-sm font-medium mb-1">Status</label>
+        <select
+          value={filters.status || ""}
+          onChange={e => handleInputChange("status", e.target.value)}
+          className="border border-black rounded p-2"
+        >
+          <option value="">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Verified">Verified</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Not Submitted">Not Submitted</option>
+        </select>
+      </div>
       {/* Filter input fields */}
       <div className="space-y-4">
-        {fields.map((field) => (
+        {fields.filter(field => field.key !== "status").map((field) => (
           <div key={field.key} className="flex flex-col">
             <label className="text-sm font-medium mb-1">{field.label}</label>
             <input

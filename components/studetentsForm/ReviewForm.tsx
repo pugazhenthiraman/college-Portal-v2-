@@ -60,6 +60,7 @@ const FILE_FIELDS = [
 // Add a set of optional fields for internships and projects
 const OPTIONAL_INTERNSHIP_FIELDS = ["stipend", "supervisorName"];
 const OPTIONAL_PROJECT_FIELDS = ["link"];
+const OPTIONAL_PUBLICATION_FIELDS = ["link"];
 
 // Helper to get file name from path or URL
 function getFileName(value: string) {
@@ -92,10 +93,97 @@ function FoldableFileName({ fileName }: { fileName: string }) {
   );
 }
 
-function renderField(k: string, v: any, item?: any) {
+// Helper to convert snake_case or camelCase to human-friendly label
+function toLabel(str: string) {
+  return str
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function renderField(k: string, v: any, item?: any, sectionKey?: string) {
   if (HIDDEN_FIELDS.includes(k)) return null;
   // Hide 'batch' from General Info
   if (k === 'batch') return null;
+
+  // Placement: skip designation, show location as a single field
+  if (sectionKey === 'placements') {
+    if (k === 'designation') return null;
+    if (k === 'state' && item) {
+      return (
+        <>
+          <dt className="font-medium text-gray-600">Location</dt>
+          <dd className="text-gray-900 break-words">{item.state || 'Tamil Nadu'}, {item.district}, {item.block}</dd>
+        </>
+      );
+    }
+    if (k === 'district' || k === 'block') return null;
+  }
+
+  // Enhancement Program: show duration
+  if (sectionKey === 'events' && (k === 'startDate' || k === 'endDate') && item && item.startDate && item.endDate) {
+    if (k === 'startDate') {
+      return (
+        <React.Fragment key="duration">
+          <dt className="font-medium text-gray-600">Duration</dt>
+          <dd className="text-gray-900 break-words">{formatDateRange(item.startDate, item.endDate)}</dd>
+        </React.Fragment>
+      );
+    } else {
+      return null; // skip endDate, already shown
+    }
+  }
+
+  // Publications: show publishedDate
+  if (sectionKey === 'publications' && k === 'publishedDate' && v) {
+    return (
+      <>
+        <dt className="font-medium text-gray-600">Published Date</dt>
+        <dd className="text-gray-900 break-words">{String(v).substring(0, 10)}</dd>
+      </>
+    );
+  }
+
+  // Show only one certificate row for work experience, internships, and skills
+  if ((sectionKey === 'workExperience' || sectionKey === 'internships') && k === 'certificate' && v && item && item.certificateName) {
+    return (
+      <>
+        <dt className="font-medium text-gray-600">Certificate</dt>
+        <dd className="flex items-center gap-2">
+          <a
+            href={v}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
+          >
+            {item.certificateName}
+            <EyeIcon className="h-4 w-4 ml-1" />
+          </a>
+        </dd>
+      </>
+    );
+  }
+  if (sectionKey === 'technicalSkills' && k === 'certificateFile' && v && item && item.certificateName) {
+    return (
+      <>
+        <dt className="font-medium text-gray-600">Certificate</dt>
+        <dd className="flex items-center gap-2">
+          <a
+            href={v}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs"
+          >
+            {item.certificateName}
+            <EyeIcon className="h-4 w-4 ml-1" />
+          </a>
+        </dd>
+      </>
+    );
+  }
+  // Don't render certificateName separately for these sections
+  if ((sectionKey === 'workExperience' || sectionKey === 'internships') && k === 'certificateName') return null;
+  if (sectionKey === 'technicalSkills' && (k === 'certificateFile' || k === 'certificateName')) return null;
 
   // If this is a startDate or endDate field and the item has both, show as a range only once
   if ((k === "startDate" || k === "endDate") && item && item.startDate && item.endDate) {
@@ -115,7 +203,7 @@ function renderField(k: string, v: any, item?: any) {
   if (k === "photo" && v) {
     return (
       <>
-        <dt className="font-medium text-gray-600">{k}</dt>
+        <dt className="font-medium text-gray-600">{toLabel(k)}</dt>
         <dd className="flex items-center gap-2">
           <img
             src={v}
@@ -141,7 +229,7 @@ function renderField(k: string, v: any, item?: any) {
     const fileName = getFileName(v);
     return (
       <>
-        <dt className="font-medium text-gray-600">{k}</dt>
+        <dt className="font-medium text-gray-600">{toLabel(k)}</dt>
         <dd className="flex items-center gap-2 whitespace-nowrap justify-end">
           <FoldableFileName fileName={fileName} />
           <a
@@ -164,7 +252,7 @@ function renderField(k: string, v: any, item?: any) {
   // For other fields, show normally
   return (
     <>
-      <dt className="font-medium text-gray-600">{k}</dt>
+      <dt className="font-medium text-gray-600">{toLabel(k)}</dt>
       <dd className="text-gray-900 break-words">{String(v)}</dd>
     </>
   );
@@ -178,7 +266,10 @@ function renderSectionContent(sectionKey: string, sectionData: any, fullData?: a
     const filtered = Object.fromEntries(
       Object.entries(ugDetails).filter(([k]) => fieldKeys.includes(k))
     );
-    // Reuse the object rendering logic
+    // For PG section, only show if isPG is true
+    if (sectionKey === "ugDetailsPG" && !ugDetails.isPG) {
+      return <span className="text-gray-400">Not applicable</span>;
+    }
     sectionData = filtered;
   }
 
@@ -218,6 +309,11 @@ function renderSectionContent(sectionKey: string, sectionData: any, fullData?: a
             optionalFields = optionalFields.concat(emptyFields.filter(([k]) => OPTIONAL_PROJECT_FIELDS.includes(k)));
             emptyFields = emptyFields.filter(([k]) => !OPTIONAL_PROJECT_FIELDS.includes(k));
           }
+          // For workExperience, treat ALL fields as optional
+          if (sectionKey === "workExperience") {
+            optionalFields = optionalFields.concat(emptyFields);
+            emptyFields = [];
+          }
           // --- Always show all unanswered fields (required + optional) ---
           const allUnanswered = [
             ...emptyFields.map(([k]) => ({ name: k, optional: false })),
@@ -227,7 +323,7 @@ function renderSectionContent(sectionKey: string, sectionData: any, fullData?: a
             <div key={i} className="border rounded p-3 bg-gray-50">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm w-full table-fixed">
                 {filledFields.map(([k, v], idx) =>
-                  <React.Fragment key={k + '-' + idx}>{renderField(k, v, item)}</React.Fragment>
+                  <React.Fragment key={k + '-' + idx}>{renderField(k, v, item, sectionKey)}</React.Fragment>
                 )}
               </dl>
               {/* Always show unanswered questions block */}
@@ -239,7 +335,7 @@ function renderSectionContent(sectionKey: string, sectionData: any, fullData?: a
                     <ul className="list-disc ml-6">
                       {allUnanswered.map(({ name, optional }, idx) => (
                         <li key={name + '-' + idx}>
-                          {name}
+                          {toLabel(name)}
                           {optional && <span className="italic text-xs text-yellow-600 ml-1">(optional)</span>}
                         </li>
                       ))}
@@ -263,12 +359,18 @@ function renderSectionContent(sectionKey: string, sectionData: any, fullData?: a
       ([k, v]) => !HIDDEN_FIELDS.includes(k) && (!v || String(v).trim() === "")
     );
     // --- Always show all unanswered fields (required + optional) ---
-    const allUnanswered = emptyFields.map(([k]) => ({ name: k, optional: false }));
+    let allUnanswered;
+    if (sectionKey === "socialProfiles") {
+      // All social fields are optional
+      allUnanswered = emptyFields.map(([k]) => ({ name: k, optional: true }));
+    } else {
+      allUnanswered = emptyFields.map(([k]) => ({ name: k, optional: false }));
+    }
     return (
       <>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm w-full table-fixed">
           {filledFields.map(([k, v], idx) =>
-            <React.Fragment key={k + '-' + idx}>{renderField(k, v, sectionData)}</React.Fragment>
+            <React.Fragment key={k + '-' + idx}>{renderField(k, v, sectionData, sectionKey)}</React.Fragment>
           )}
         </dl>
         {/* Always show unanswered questions block */}
@@ -278,8 +380,11 @@ function renderSectionContent(sectionKey: string, sectionData: any, fullData?: a
             <div>
               <strong>Unanswered Questions:</strong>
               <ul className="list-disc ml-6">
-                {allUnanswered.map(({ name }, idx) => (
-                  <li key={name + '-' + idx}>{name}</li>
+                {allUnanswered.map(({ name, optional }, idx) => (
+                  <li key={name + '-' + idx}>
+                    {toLabel(name)}
+                    {optional && <span className="italic text-xs text-yellow-600 ml-1">(optional)</span>}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -332,6 +437,7 @@ export default function ReviewForm({
             !HIDDEN_FIELDS.includes(k) &&
             !(key === "internships" && OPTIONAL_INTERNSHIP_FIELDS.includes(k)) &&
             !(key === "projects" && OPTIONAL_PROJECT_FIELDS.includes(k)) &&
+            !(key === "publications" && OPTIONAL_PUBLICATION_FIELDS.includes(k)) &&
             isEmptyValue(v)
           ) {
             unanswered.push(`${k} (item ${idx + 1})`);

@@ -43,21 +43,28 @@ export async function POST(req: NextRequest) {
         verifiedAt: new Date(),
       },
     });
-    // Update the related notification (if any)
-    await prisma.notification.updateMany({
+    // Update only the latest pending notification (if any)
+    const latestNotification = await prisma.notification.findFirst({
       where: {
         relatedStudentId: studentId,
         receiverId: faculty.userId,
         status: "action_required",
       },
-      data: {
-        status: isVerified ? "success" : "error",
-        message: isVerified
-          ? `Student ${student.firstName} ${student.lastName}'s profile has been verified.`
-          : `Student ${student.firstName} ${student.lastName}'s profile has been rejected.`,
-        read: true,
-      },
+      orderBy: { createdAt: "desc" },
     });
+    if (latestNotification) {
+      await prisma.notification.update({
+        where: { id: latestNotification.id },
+        data: {
+          status: isVerified ? "success" : "error",
+          message: isVerified
+            ? `Student ${student.firstName} ${student.lastName}'s profile has been verified.`
+            : `Student ${student.firstName} ${student.lastName}'s profile has been rejected.`,
+          read: true,
+          ...(remarks !== undefined ? { remarks } : {}),
+        },
+      });
+    }
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[Faculty Verify] Error:", err);

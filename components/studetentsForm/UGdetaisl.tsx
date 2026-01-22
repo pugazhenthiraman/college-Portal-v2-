@@ -56,6 +56,16 @@ function isValidBatch(batch?: string): boolean {
   return end - start === 4;
 }
 
+function isValidPGBatch(pgBatch?: string, ugEndYear?: number): boolean {
+  const match = pgBatch?.match(/^(\d{4})-(\d{4})$/);
+  if (!match) return false;
+  const start = parseInt(match[1], 10);
+  const end = parseInt(match[2], 10);
+  if (end - start !== 2) return false;
+  if (ugEndYear !== undefined && start < ugEndYear) return false;
+  return true;
+}
+
 export default function UGDetailsForm({
   data,
   onChange,
@@ -153,6 +163,46 @@ export default function UGDetailsForm({
     }, 2000);
     return () => clearTimeout(handler);
   }, [batchInput]);
+
+  // PG batch validation state
+  const [pgBatchInput, setPGBatchInput] = useState(data.pgBatch || "");
+  const [pgBatchValid, setPGBatchValid] = useState(false);
+  const [pgBatchError, setPGBatchError] = useState("");
+  useEffect(() => {
+    setPGBatchInput(data.pgBatch || "");
+  }, [data.pgBatch]);
+  useEffect(() => {
+    if (!pgBatchInput) {
+      setPGBatchValid(false);
+      setPGBatchError("");
+      return;
+    }
+    const ugYears = parseBatchYears(data.ugBatch);
+    const ugEndYear = ugYears ? ugYears.end : undefined;
+    const handler = setTimeout(() => {
+      if (!isValidPGBatch(pgBatchInput, ugEndYear)) {
+        setPGBatchValid(false);
+        if (!pgBatchInput.match(/^(\d{4})-(\d{4})$/)) {
+          setPGBatchError("Please enter a valid batch (e.g., 2025-2027 for a 2-year PG course)");
+        } else {
+          const match = pgBatchInput.match(/^(\d{4})-(\d{4})$/);
+          const start = match ? parseInt(match[1], 10) : 0;
+          const end = match ? parseInt(match[2], 10) : 0;
+          if (end - start !== 2) {
+            setPGBatchError("PG batch must be exactly 2 years (e.g., 2025-2027)");
+          } else if (ugEndYear !== undefined && start < ugEndYear) {
+            setPGBatchError(`PG start year must be greater than or equal to UG end year (${ugEndYear})`);
+          } else {
+            setPGBatchError("Invalid PG batch");
+          }
+        }
+      } else {
+        setPGBatchValid(true);
+        setPGBatchError("");
+      }
+    }, 2000);
+    return () => clearTimeout(handler);
+  }, [pgBatchInput, data.ugBatch]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-100 via-indigo-50 to-white">
@@ -304,9 +354,18 @@ export default function UGDetailsForm({
                 label="PG Batch"
                 placeholder="2025-2027"
                 title="Enter your PG batch in the format YYYY-YYYY, e.g., 2025-2027"
-                value={data.pgBatch || ""}
-                onChange={e => update("pgBatch", e.target.value)}
+                value={pgBatchInput}
+                onChange={e => {
+                  setPGBatchInput(e.target.value);
+                  update("pgBatch", e.target.value);
+                }}
+                rightIcon={pgBatchValid ? (
+                  <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                ) : undefined}
               />
+              {pgBatchError && (
+                <div className="text-xs text-red-500 mt-1 mb-2">{pgBatchError}</div>
+              )}
               <TestInput
                 name="pgSemesterNo"
                 label="PG Semester No"

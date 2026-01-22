@@ -15,7 +15,8 @@ export default function StudentsLayout({ children }: { children: React.ReactNode
           Links={[
             { name: "Dashboard", path: "/students/dashboard" },
             { name: "Creditor Area", path: "/students/studentsMultiSetForm" },
-            {name: "Resume", path: "/students/resume" },
+            { name: "Resume", path: "/students/resume" },
+            { name: "Submission Status", path: "/students/notifications" },
             { name: "Settings", path: "/students/settings" }
           ]}
           Header="Student Portal"

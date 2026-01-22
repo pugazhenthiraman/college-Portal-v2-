@@ -16,6 +16,7 @@ export default function FacultyLayout({ children }: { children: React.ReactNode 
           Links={[
             { name: "Dashboard", path: "/faculty/dashboard" },
             { name: "Students", path: "/faculty/students" },
+            { name: "Review Student Submission", path: "/faculty/notifications" },
             { name: "Settings", path: "/faculty/settings" }
           ]}
           Header="Faculty Portal"
